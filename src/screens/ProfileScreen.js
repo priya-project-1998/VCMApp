@@ -13,8 +13,10 @@ import Icon from "react-native-vector-icons/Feather";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { launchImageLibrary } from "react-native-image-picker";
 import LinearGradient from "react-native-linear-gradient";
+import { useNavigation } from "@react-navigation/native";
 
 export default function ProfileScreen() {
+  const navigation = useNavigation();
   const [user, setUser] = useState(null);
   const [name, setName] = useState("");
   const [username, setUsername] = useState("");
@@ -46,9 +48,7 @@ export default function ProfileScreen() {
         quality: 0.7,
       },
       (response) => {
-        if (response.didCancel) {
-          return;
-        }
+        if (response.didCancel) return;
         if (response.errorCode) {
           Alert.alert("Error", "Image Picker Error: " + response.errorMessage);
           return;
@@ -75,7 +75,6 @@ export default function ProfileScreen() {
       profilePic,
     };
 
-    // Update both loggedInUser and users list
     await AsyncStorage.setItem("loggedInUser", JSON.stringify(updatedUser));
 
     const storedUsers = await AsyncStorage.getItem("users");
@@ -86,13 +85,32 @@ export default function ProfileScreen() {
     Alert.alert("Success", "Profile updated successfully!");
   };
 
+  // Delete Account
+  const handleDeleteAccount = () => {
+    Alert.alert("Delete Account", "Do you want to delete your account?", [
+      { text: "Cancel", style: "cancel" },
+      {
+        text: "Delete",
+        style: "destructive",
+        onPress: async () => {
+          await AsyncStorage.clear(); // Clear all storage
+          navigation.replace("LoginScreen"); // Navigate to login
+        },
+      },
+    ]);
+  };
+
   return (
     <LinearGradient colors={["#0f2027", "#203a43", "#2c5364"]} style={{ flex: 1 }}>
       <ScrollView contentContainerStyle={styles.container}>
         {/* Profile Picture */}
         <View style={styles.imageContainer}>
           <Image
-            source={profilePic ? { uri: profilePic } : require("../assets/images/profile-placeholder.png")}
+            source={
+              profilePic
+                ? { uri: profilePic }
+                : require("../assets/images/profile-placeholder.png")
+            }
             style={styles.profileImage}
           />
           <TouchableOpacity style={styles.editIcon} onPress={pickImage}>
@@ -120,9 +138,17 @@ export default function ProfileScreen() {
             maxLength={10}
           />
 
+          {/* Update Button */}
           <TouchableOpacity style={{ marginTop: 20 }} onPress={handleUpdate}>
             <LinearGradient colors={["#ff7e5f", "#feb47b"]} style={styles.button}>
               <Text style={styles.buttonText}>Update Profile</Text>
+            </LinearGradient>
+          </TouchableOpacity>
+
+          {/* Delete Account Button */}
+          <TouchableOpacity style={{ marginTop: 15 }} onPress={handleDeleteAccount}>
+            <LinearGradient colors={["#ff4b5c", "#d32f2f"]} style={styles.button}>
+              <Text style={styles.buttonText}>Delete Account</Text>
             </LinearGradient>
           </TouchableOpacity>
         </View>
