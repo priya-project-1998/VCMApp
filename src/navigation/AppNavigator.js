@@ -1,18 +1,24 @@
 import React from 'react';
+import { createDrawerNavigator } from '@react-navigation/drawer';
 import { NavigationContainer } from '@react-navigation/native';
-import { createStackNavigator } from '@react-navigation/stack';
-import HomeScreen from '../screens/HomeScreen.js'
-import LoginScreen from '../screens/LoginScreen.js';
+import CustomDrawerContent from '../components/CustomDrawerContent';
+import ProfileScreen from '../screens/ProfileScreen';
+import SearchScreen from '../screens/SearchScreen';
+// Add all other screens as needed...
 
-const Stack = createStackNavigator();
+const Drawer = createDrawerNavigator();
 
 export default function AppNavigator() {
   return (
     <NavigationContainer>
-      <Stack.Navigator>
-        <Stack.Screen name="Home" component={HomeScreen} />
-        <Stack.Screen name="Login" component={LoginScreen} />
-      </Stack.Navigator>
+      <Drawer.Navigator
+        drawerContent={props => <CustomDrawerContent {...props} />}
+        screenOptions={{ headerShown: true }}
+      >
+        <Drawer.Screen name="Profile" component={ProfileScreen} />
+        <Drawer.Screen name="Search" component={SearchScreen} />
+        {/* Add other drawer screens here */}
+      </Drawer.Navigator>
     </NavigationContainer>
   );
-} // Comment by Raja
+}
