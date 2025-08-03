@@ -18,13 +18,14 @@ import PrivacyPolicyScreen from '../screens/PrivacyPolicyScreen';
 import LocationPermissionPolicyScreen from '../screens/LocationPermissionPolicyScreen';
 import TermsConditionScreen from '../screens/TermsConditionScreen';
 import SplashScreen from '../screens/SplashScreen';
+import CustomDrawer from "../screens/CustomDrawer"; 
 
 const Stack = createNativeStackNavigator();
 const Drawer = createDrawerNavigator();
 
 function DrawerNavigator() {
   return (
-    <Drawer.Navigator>
+    <Drawer.Navigator drawerContent={(props) => <CustomDrawer {...props} />}>
       <Drawer.Screen name="Home" component={HomeScreen} />
       <Drawer.Screen name="Profile" component={ProfileScreen} />
       <Drawer.Screen name="Search" component={SearchScreen} />
@@ -36,7 +37,6 @@ function DrawerNavigator() {
       <Drawer.Screen name="Privacy Policy" component={PrivacyPolicyScreen} />
       <Drawer.Screen name="Location Permission Policy" component={LocationPermissionPolicyScreen} />
       <Drawer.Screen name="Terms & Condition" component={TermsConditionScreen} />
-      <Drawer.Screen name="Logout" component={LogoutScreen} />
     </Drawer.Navigator>
   );
 }
