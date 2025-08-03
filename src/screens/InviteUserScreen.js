@@ -1,10 +1,10 @@
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 
-const SearchScreen = () => {
+const InviteUserScreen = () => {
   return (
     <View style={styles.container}>
-      <Text style={styles.text}>Search</Text>
+      <Text style={styles.text}>Invite User</Text>
     </View>
   );
 };
@@ -21,4 +21,4 @@ const styles = StyleSheet.create({
   },
 });
 
-export default SearchScreen;
+export default InviteUserScreen;
