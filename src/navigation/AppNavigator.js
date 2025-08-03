@@ -22,6 +22,7 @@ import CustomDrawer from "../screens/CustomDrawer";
 import SettingsScreen from '../screens/SettingsScreen';
 import NotificationsScreen from '../screens/Notifications';
 import AboutAppScreen from '../screens/AboutAppScreen';
+import JoinEventScreen from '../screens/JoinEvent';
 
 const Stack = createNativeStackNavigator();
 const Drawer = createDrawerNavigator();
@@ -35,6 +36,7 @@ function DrawerNavigator() {
       <Drawer.Screen name="Search" component={SearchScreen} />
       <Drawer.Screen name="Results" component={ResultsScreen} />
       <Drawer.Screen name="Become An Organiser" component={OrganiserScreen} />
+      <Drawer.Screen name="Apply or Join Event" component={JoinEventScreen} />
       <Drawer.Screen name="Feedback" component={FeedbackScreen} />
       <Drawer.Screen name="Invite User" component={InviteUserScreen} />
       <Drawer.Screen name="Rate Us" component={RateUsScreen} />
