@@ -19,6 +19,9 @@ import LocationPermissionPolicyScreen from '../screens/LocationPermissionPolicyS
 import TermsConditionScreen from '../screens/TermsConditionScreen';
 import SplashScreen from '../screens/SplashScreen';
 import CustomDrawer from "../screens/CustomDrawer"; 
+import SettingsScreen from '../screens/SettingsScreen';
+import NotificationsScreen from '../screens/Notifications';
+import AboutAppScreen from '../screens/AboutAppScreen';
 
 const Stack = createNativeStackNavigator();
 const Drawer = createDrawerNavigator();
@@ -28,6 +31,7 @@ function DrawerNavigator() {
     <Drawer.Navigator drawerContent={(props) => <CustomDrawer {...props} />}>
       <Drawer.Screen name="Home" component={HomeScreen} />
       <Drawer.Screen name="Profile" component={ProfileScreen} />
+      <Drawer.Screen name="Notifications" component={NotificationsScreen} />
       <Drawer.Screen name="Search" component={SearchScreen} />
       <Drawer.Screen name="Results" component={ResultsScreen} />
       <Drawer.Screen name="Become An Organiser" component={OrganiserScreen} />
@@ -36,7 +40,9 @@ function DrawerNavigator() {
       <Drawer.Screen name="Rate Us" component={RateUsScreen} />
       <Drawer.Screen name="Privacy Policy" component={PrivacyPolicyScreen} />
       <Drawer.Screen name="Location Permission Policy" component={LocationPermissionPolicyScreen} />
+      <Drawer.Screen name="Settings" component={SettingsScreen} />
       <Drawer.Screen name="Terms & Condition" component={TermsConditionScreen} />
+      <Drawer.Screen name="About App" component={AboutAppScreen} />
     </Drawer.Navigator>
   );
 }
