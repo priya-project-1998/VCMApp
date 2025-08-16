@@ -9,7 +9,7 @@ const menuItems = [
   { icon: 'account', label: 'Profile', screen: 'Profile' },
   { icon: 'magnify', label: 'Search', screen: 'Search' },
   { icon: 'trophy-outline', label: 'Results', screen: 'Results' },
-  { icon: 'account-star-outline', label: 'Become An Organiser', screen: 'Organiser' },
+  { icon: 'account-star-outline', label: 'Event', screen: 'Organiser' },
   { icon: 'translate', label: 'Language', screen: 'Language' },
   { icon: 'message-outline', label: 'Feedback', screen: 'Feedback' },
   { icon: 'account-multiple-plus-outline', label: 'Invite Friends', screen: 'Invite' },
@@ -21,7 +21,7 @@ const menuItems = [
   { icon: 'power', label: 'Logout', screen: 'Logout' },
 ];
 
-export default function CustomDrawerContent({ navigation }) {
+export default function CustomDrawerContent({ }) {
   const user = useSelector((state: RootState) => state.user);
 
   return (

@@ -35,7 +35,7 @@ function DrawerNavigator() {
       <Drawer.Screen name="Notifications" component={NotificationsScreen} />
       <Drawer.Screen name="Search" component={SearchScreen} />
       <Drawer.Screen name="Results" component={ResultsScreen} />
-      <Drawer.Screen name="Become An Organiser" component={OrganiserScreen} />
+      <Drawer.Screen name="Event" component={OrganiserScreen} />
       <Drawer.Screen name="Apply or Join Event" component={JoinEventScreen} />
       <Drawer.Screen name="Feedback" component={FeedbackScreen} />
       <Drawer.Screen name="Invite User" component={InviteUserScreen} />

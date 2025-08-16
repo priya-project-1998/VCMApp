@@ -1,3 +1,4 @@
+// LoginScreen.js
 import React, { useState } from "react";
 import {
   View,
@@ -12,7 +13,6 @@ import CheckBox from "@react-native-community/checkbox";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import LinearGradient from "react-native-linear-gradient";
 import Icon from "react-native-vector-icons/Feather";
-
 
 export default function LoginScreen({ navigation }) {
   const [username, setUsername] = useState("");
@@ -32,12 +32,12 @@ export default function LoginScreen({ navigation }) {
       await AsyncStorage.setItem("loggedInUser", JSON.stringify(user));
       await AsyncStorage.setItem("rememberMe", rememberMe ? "true" : "false");
 
-      if (rememberMe) {
-        const expiry = Date.now() + 60 * 1000; // 60 sec
-        await AsyncStorage.setItem("sessionExpiry", expiry.toString());
-      } else {
-        await AsyncStorage.removeItem("sessionExpiry");
-      }
+      // ⏳ Set session expiry
+      const expiry = rememberMe
+        ? Date.now() + 30 * 24 * 60 * 60 * 1000 // 30 days
+        : Date.now() + 60 * 1000; // 1 minute
+
+      await AsyncStorage.setItem("sessionExpiry", expiry.toString());
 
       navigation.replace("Drawer");
     } else {

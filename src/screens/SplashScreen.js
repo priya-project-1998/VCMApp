@@ -1,3 +1,4 @@
+// SplashScreen.js
 import React, { useEffect } from 'react';
 import { View, Text, StyleSheet, ActivityIndicator } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -15,14 +16,14 @@ export default function SplashScreen({ navigation }) {
         setTimeout(() => {
           if (loggedInUser && sessionExpiry && Number(sessionExpiry) > now) {
             if (remember === "true") {
-              navigation.replace("Drawer"); // Go Home
+              navigation.replace("Drawer"); // Go to home
             } else {
-              navigation.replace("LoginScreen"); // Require login
+              navigation.replace("LoginScreen"); // Require login again
             }
           } else {
             navigation.replace("LoginScreen"); // Expired or no session
           }
-        }, 3000); // Splash 3 sec
+        }, 3000); // Splash delay: 3 seconds
       } catch (err) {
         console.log("Session check error", err);
         navigation.replace("LoginScreen");

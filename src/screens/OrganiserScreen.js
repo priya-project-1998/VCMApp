@@ -5,36 +5,14 @@ import {
   StyleSheet,
   TouchableOpacity,
   ScrollView,
-  TextInput,
-  Alert,
-  Modal,
 } from "react-native";
 import LinearGradient from "react-native-linear-gradient";
-import DateTimePicker from "@react-native-community/datetimepicker";
 
 const OrganiserScreen = () => {
-  const [mainTab, setMainTab] = useState("create");
   const [viewTab, setViewTab] = useState("upcoming");
   const [selectedEvent, setSelectedEvent] = useState(null);
 
-  // Form fields
-  const [eventName, setEventName] = useState("");
-  const [place, setPlace] = useState("");
-  const [eventType, setEventType] = useState("Car");
-  const [members, setMembers] = useState("");
-  const [startDateTime, setStartDateTime] = useState("");
-  const [applicationDeadline, setApplicationDeadline] = useState("");
-  const [comment, setComment] = useState("");
-
-  // Date picker states
-  const [showStartPicker, setShowStartPicker] = useState(false);
-  const [showDeadlinePicker, setShowDeadlinePicker] = useState(false);
-
-  // Event type modal
-  const [showEventTypeModal, setShowEventTypeModal] = useState(false);
-
-  // Sample data
-  const [upcomingEvents, setUpcomingEvents] = useState([
+  const [upcomingEvents] = useState([
     {
       id: 1,
       name: "City Car Race",
@@ -68,315 +46,116 @@ const OrganiserScreen = () => {
     },
   ];
 
-  // Save new event
-  const handleCreateEvent = () => {
-    if (!eventName || !place || !members || !startDateTime || !applicationDeadline) {
-      Alert.alert("Error", "Please fill all required fields");
-      return;
-    }
-
-    const newEvent = {
-      id: upcomingEvents.length + 1,
-      name: eventName,
-      place,
-      eventType,
-      members: parseInt(members),
-      startDateTime,
-      applicationDeadline,
-      comment,
-    };
-
-    setUpcomingEvents([...upcomingEvents, newEvent]);
-    setEventName("");
-    setPlace("");
-    setEventType("Car");
-    setMembers("");
-    setStartDateTime("");
-    setApplicationDeadline("");
-    setComment("");
-
-    Alert.alert("Success", "Event created successfully!");
-  };
-
-  // Format date-time
-  const formatDateTime = (date) => {
-    const d = new Date(date);
-    const year = d.getFullYear();
-    const month = String(d.getMonth() + 1).padStart(2, "0");
-    const day = String(d.getDate()).padStart(2, "0");
-    const hours = String(d.getHours()).padStart(2, "0");
-    const minutes = String(d.getMinutes()).padStart(2, "0");
-    return `${year}-${month}-${day} ${hours}:${minutes}`;
-  };
-
   return (
     <LinearGradient colors={["#0f2027", "#203a43", "#2c5364"]} style={{ flex: 1 }}>
       <View style={styles.container}>
-        {/* Main Tabs */}
-        <View style={styles.tabRow}>
-          <TouchableOpacity
-            style={[styles.tab, mainTab === "create" && styles.activeTab]}
-            onPress={() => {
-              setMainTab("create");
-              setSelectedEvent(null);
-            }}
-          >
-            <Text style={styles.tabText}>Create Event</Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={[styles.tab, mainTab === "view" && styles.activeTab]}
-            onPress={() => {
-              setMainTab("view");
-              setSelectedEvent(null);
-            }}
-          >
-            <Text style={styles.tabText}>View Events</Text>
-          </TouchableOpacity>
-        </View>
-
-        {/* Create Event Form */}
-        {mainTab === "create" && (
-          <ScrollView contentContainerStyle={styles.formContainer}>
-            <Text style={styles.heading}>Create New Event</Text>
-
-            <TextInput
-              style={styles.input}
-              placeholder="Event Name"
-              placeholderTextColor="#aaa"
-              value={eventName}
-              onChangeText={setEventName}
-            />
-            <TextInput
-              style={styles.input}
-              placeholder="Place (e.g. Indore, Madhya Pradesh)"
-              placeholderTextColor="#aaa"
-              value={place}
-              onChangeText={setPlace}
-            />
-
-            {/* Custom Event Type Selector */}
+        {/* View Tabs */}
+        {!selectedEvent && (
+          <View style={styles.tabRow}>
             <TouchableOpacity
-              style={styles.input}
-              onPress={() => setShowEventTypeModal(true)}
+              style={[styles.tab, viewTab === "upcoming" && styles.activeTab]}
+              onPress={() => setViewTab("upcoming")}
             >
-              <Text style={{ color: "#fff" }}>{eventType}</Text>
+              <Text style={styles.tabText}>Upcoming</Text>
             </TouchableOpacity>
-            <Modal visible={showEventTypeModal} transparent animationType="slide">
-              <View style={styles.modalContainer}>
-                <View style={styles.modalBox}>
-                  {["Car", "Bike", "Walking"].map((type) => (
-                    <TouchableOpacity
-                      key={type}
-                      style={styles.modalOption}
-                      onPress={() => {
-                        setEventType(type);
-                        setShowEventTypeModal(false);
-                      }}
-                    >
-                      <Text style={styles.modalText}>{type}</Text>
-                    </TouchableOpacity>
-                  ))}
-                  <TouchableOpacity
-                    style={styles.modalCancel}
-                    onPress={() => setShowEventTypeModal(false)}
-                  >
-                    <Text style={{ color: "red" }}>Cancel</Text>
-                  </TouchableOpacity>
-                </View>
-              </View>
-            </Modal>
-
-            <TextInput
-              style={styles.input}
-              placeholder="Number of Members can participate"
-              placeholderTextColor="#aaa"
-              value={members}
-              onChangeText={setMembers}
-              keyboardType="numeric"
-            />
-
-            {/* Start Date and Time Picker */}
-            <TouchableOpacity onPress={() => setShowStartPicker(true)}>
-              <TextInput
-                style={styles.input}
-                placeholder="Start Date and Time"
-                placeholderTextColor="#aaa"
-                value={startDateTime}
-                editable={false}
-              />
+            <TouchableOpacity
+              style={[styles.tab, viewTab === "completed" && styles.activeTab]}
+              onPress={() => setViewTab("completed")}
+            >
+              <Text style={styles.tabText}>Completed</Text>
             </TouchableOpacity>
-            {showStartPicker && (
-              <DateTimePicker
-                value={new Date()}
-                mode="datetime"
-                display="default"
-                onChange={(event, selectedDate) => {
-                  if (event.type === "dismissed") {
-                    setShowStartPicker(false);
-                    return;
-                  }
-                  setShowStartPicker(false);
-                  if (selectedDate) {
-                    setStartDateTime(formatDateTime(selectedDate));
-                  }
-                }}
-              />
-            )}
+          </View>
+        )}
 
-            {/* Application Deadline Picker */}
-            <TouchableOpacity onPress={() => setShowDeadlinePicker(true)}>
-              <TextInput
-                style={styles.input}
-                placeholder="Application Deadline"
-                placeholderTextColor="#aaa"
-                value={applicationDeadline}
-                editable={false}
-              />
-            </TouchableOpacity>
-            {showDeadlinePicker && (
-              <DateTimePicker
-                value={new Date()}
-                mode="datetime"
-                display="default"
-                onChange={(event, selectedDate) => {
-                  if (event.type === "dismissed") {
-                    setShowDeadlinePicker(false);
-                    return;
-                  }
-                  setShowDeadlinePicker(false);
-                  if (selectedDate) {
-                    setApplicationDeadline(formatDateTime(selectedDate));
-                  }
-                }}
-              />
-            )}
-
-            <TextInput
-              style={[styles.input, styles.textArea]}
-              placeholder="Comment for participants (optional)"
-              placeholderTextColor="#aaa"
-              value={comment}
-              onChangeText={setComment}
-              multiline
-            />
-
-            <TouchableOpacity style={{ width: "100%", marginTop: 20 }} onPress={handleCreateEvent}>
-              <LinearGradient colors={["#ff7e5f", "#feb47b"]} style={styles.submitButton}>
-                <Text style={styles.submitText}>Submit</Text>
-              </LinearGradient>
-            </TouchableOpacity>
+        {/* Event List */}
+        {!selectedEvent && (
+          <ScrollView contentContainerStyle={styles.listContainer}>
+            {viewTab === "upcoming" &&
+              upcomingEvents.map((event) => (
+                <TouchableOpacity
+                  key={event.id}
+                  style={styles.listItem}
+                  onPress={() => setSelectedEvent(event)}
+                >
+                  <Text style={styles.listText}>{event.name}</Text>
+                  <Text style={styles.subText}>
+                    Place: {event.place} | Type: {event.eventType}
+                  </Text>
+                  <Text style={styles.subText}>Start: {event.startDateTime}</Text>
+                  <Text style={styles.subText}>
+                    Application Deadline: {event.applicationDeadline}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            {viewTab === "completed" &&
+              completedEvents.map((event) => (
+                <TouchableOpacity
+                  key={event.id}
+                  style={styles.listItem}
+                  onPress={() => setSelectedEvent(event)}
+                >
+                  <Text style={styles.listText}>{event.name}</Text>
+                  <Text style={styles.subText}>Tap to view details</Text>
+                </TouchableOpacity>
+              ))}
           </ScrollView>
         )}
 
-        {/* View Events */}
-        {mainTab === "view" && (
-          <>
-            {!selectedEvent && (
-              <>
-                <View style={styles.tabRow}>
-                  <TouchableOpacity
-                    style={[styles.tab, viewTab === "upcoming" && styles.activeTab]}
-                    onPress={() => setViewTab("upcoming")}
-                  >
-                    <Text style={styles.tabText}>Upcoming</Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity
-                    style={[styles.tab, viewTab === "completed" && styles.activeTab]}
-                    onPress={() => setViewTab("completed")}
-                  >
-                    <Text style={styles.tabText}>Completed</Text>
-                  </TouchableOpacity>
-                </View>
+        {/* Event Details */}
+        {selectedEvent && (
+          <ScrollView contentContainerStyle={styles.detailsContainer}>
+            <TouchableOpacity style={styles.backButton} onPress={() => setSelectedEvent(null)}>
+              <Text style={styles.backText}>← Back</Text>
+            </TouchableOpacity>
 
-                <ScrollView contentContainerStyle={styles.listContainer}>
-                  {viewTab === "upcoming" &&
-                    upcomingEvents.map((event) => (
-                      <TouchableOpacity
-                        key={event.id}
-                        style={styles.listItem}
-                        onPress={() => setSelectedEvent(event)}
-                      >
-                        <Text style={styles.listText}>{event.name}</Text>
-                        <Text style={styles.subText}>
-                          Place: {event.place} | Type: {event.eventType}
-                        </Text>
-                        <Text style={styles.subText}>Start: {event.startDateTime}</Text>
-                        <Text style={styles.subText}>
-                          Application Deadline: {event.applicationDeadline}
-                        </Text>
-                      </TouchableOpacity>
-                    ))}
-                  {viewTab === "completed" &&
-                    completedEvents.map((event) => (
-                      <TouchableOpacity
-                        key={event.id}
-                        style={styles.listItem}
-                        onPress={() => setSelectedEvent(event)}
-                      >
-                        <Text style={styles.listText}>{event.name}</Text>
-                        <Text style={styles.subText}>Tap to view details</Text>
-                      </TouchableOpacity>
-                    ))}
-                </ScrollView>
+            <Text style={styles.heading}>{selectedEvent.name}</Text>
+
+            {viewTab === "upcoming" && (
+              <>
+                <Text style={styles.subText}>Place: {selectedEvent.place}</Text>
+                <Text style={styles.subText}>Type: {selectedEvent.eventType}</Text>
+                <Text style={styles.subText}>Members: {selectedEvent.members}</Text>
+                <Text style={styles.subText}>Start: {selectedEvent.startDateTime}</Text>
+                <Text style={styles.subText}>
+                  Application Deadline: {selectedEvent.applicationDeadline}
+                </Text>
+                {selectedEvent.comment ? (
+                  <Text style={styles.subText}>Comment: {selectedEvent.comment}</Text>
+                ) : null}
               </>
             )}
 
-            {/* Event Details */}
-            {selectedEvent && (
-              <ScrollView contentContainerStyle={styles.detailsContainer}>
-                <TouchableOpacity style={styles.backButton} onPress={() => setSelectedEvent(null)}>
-                  <Text style={styles.backText}>← Back</Text>
-                </TouchableOpacity>
-
-                <Text style={styles.heading}>{selectedEvent.name}</Text>
-
-                {viewTab === "upcoming" && (
-                  <>
-                    <Text style={styles.subText}>Place: {selectedEvent.place}</Text>
-                    <Text style={styles.subText}>Type: {selectedEvent.eventType}</Text>
-                    <Text style={styles.subText}>Members: {selectedEvent.members}</Text>
-                    <Text style={styles.subText}>Start: {selectedEvent.startDateTime}</Text>
-                    <Text style={styles.subText}>
-                      Application Deadline: {selectedEvent.applicationDeadline}
-                    </Text>
-                    {selectedEvent.comment ? (
-                      <Text style={styles.subText}>Comment: {selectedEvent.comment}</Text>
-                    ) : null}
-                  </>
-                )}
-                {viewTab === "completed" && (
-                  <>
-                    {selectedEvent.checkpoints.map((cp) => (
-                      <View key={cp.sr} style={styles.checkpointRow}>
-                        <Text style={styles.checkpointText}>{cp.sr}</Text>
-                        <Text style={styles.checkpointText}>{cp.name}</Text>
-                        <Text style={styles.checkpointText}>{cp.time}</Text>
-                      </View>
-                    ))}
-                    <Text style={[styles.heading, { marginTop: 20 }]}>Your Performance</Text>
-                    <Text style={styles.subText}>
-                      Start Time: {selectedEvent.performance.startTime}
-                    </Text>
-                    <Text style={styles.subText}>
-                      End Time: {selectedEvent.performance.endTime}
-                    </Text>
-                    <Text style={styles.subText}>
-                      Checkpoints: {selectedEvent.performance.checkpoints}
-                    </Text>
-                    <Text style={styles.subText}>
-                      Bonus: {selectedEvent.performance.bonus}
-                    </Text>
-                    <Text style={styles.subText}>
-                      Speed Penalty: {selectedEvent.performance.speedPenalty}
-                    </Text>
-                    <Text style={styles.subText}>
-                      Time Taken: {selectedEvent.performance.timeTaken}
-                    </Text>
-                  </>
-                )}
-              </ScrollView>
+            {viewTab === "completed" && (
+              <>
+                {selectedEvent.checkpoints.map((cp) => (
+                  <View key={cp.sr} style={styles.checkpointRow}>
+                    <Text style={styles.checkpointText}>{cp.sr}</Text>
+                    <Text style={styles.checkpointText}>{cp.name}</Text>
+                    <Text style={styles.checkpointText}>{cp.time}</Text>
+                  </View>
+                ))}
+                <Text style={[styles.heading, { marginTop: 20 }]}>Your Performance</Text>
+                <Text style={styles.subText}>
+                  Start Time: {selectedEvent.performance.startTime}
+                </Text>
+                <Text style={styles.subText}>
+                  End Time: {selectedEvent.performance.endTime}
+                </Text>
+                <Text style={styles.subText}>
+                  Checkpoints: {selectedEvent.performance.checkpoints}
+                </Text>
+                <Text style={styles.subText}>
+                  Bonus: {selectedEvent.performance.bonus}
+                </Text>
+                <Text style={styles.subText}>
+                  Speed Penalty: {selectedEvent.performance.speedPenalty}
+                </Text>
+                <Text style={styles.subText}>
+                  Time Taken: {selectedEvent.performance.timeTaken}
+                </Text>
+              </>
             )}
-          </>
+          </ScrollView>
         )}
       </View>
     </LinearGradient>
@@ -397,17 +176,6 @@ const styles = StyleSheet.create({
   activeTab: { backgroundColor: "#ff7e5f" },
   tabText: { color: "#fff", fontWeight: "bold" },
   heading: { fontSize: 20, fontWeight: "bold", color: "#fff", marginBottom: 10 },
-  formContainer: { padding: 10 },
-  input: {
-    backgroundColor: "rgba(255,255,255,0.15)",
-    color: "#fff",
-    borderRadius: 8,
-    padding: 10,
-    marginBottom: 10,
-  },
-  textArea: { minHeight: 60, textAlignVertical: "top" },
-  submitButton: { paddingVertical: 14, borderRadius: 10, alignItems: "center" },
-  submitText: { color: "#fff", fontWeight: "bold", fontSize: 16 },
   listContainer: { paddingBottom: 20 },
   listItem: {
     backgroundColor: "rgba(255,255,255,0.1)",
@@ -428,23 +196,6 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
   },
   checkpointText: { color: "#fff", flex: 1, textAlign: "center" },
-
-  // Modal styles
-  modalContainer: {
-    flex: 1,
-    backgroundColor: "rgba(0,0,0,0.5)",
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  modalBox: {
-    backgroundColor: "#fff",
-    borderRadius: 10,
-    padding: 20,
-    width: "80%",
-  },
-  modalOption: { paddingVertical: 10 },
-  modalText: { fontSize: 18 },
-  modalCancel: { paddingVertical: 10, alignItems: "center" },
 });
 
 export default OrganiserScreen;
