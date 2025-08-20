@@ -13,13 +13,12 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import LinearGradient from "react-native-linear-gradient";
 import Icon from "react-native-vector-icons/Feather";
 import { useFocusEffect } from "@react-navigation/native";
-import ApiService from "../services/api/ApiService";
+import ServerRequestCallMethods from "../services/request_call_method/ServerRequestCallMethods";
 
 export default function SignupScreen({ navigation }) {
   const [step, setStep] = useState("email");
   const [email, setEmail] = useState("");
   const [otp, setOtp] = useState("");
-  const [generatedOtp, setGeneratedOtp] = useState("");
   const [name, setName] = useState("");
   const [username, setUsername] = useState("");
   const [mobile, setMobile] = useState("");
@@ -32,7 +31,6 @@ export default function SignupScreen({ navigation }) {
       setStep("email");
       setEmail("");
       setOtp("");
-      setGeneratedOtp("");
       setName("");
       setUsername("");
       setMobile("");
@@ -51,14 +49,14 @@ export default function SignupScreen({ navigation }) {
 
     try {
       setLoading(true);
-      const response = await ApiService.requestOtp(email);
+      const response = await ServerRequestCallMethods.requestOtp(email);
       setLoading(false);
 
       if (response.success && response.code === 200) {
         Alert.alert("OTP Sent", response.message);
         setStep("otp");
       } else {
-        Alert.alert("Sign Up", response.message);
+        Alert.alert("Sign Up", response.message || "Failed to send OTP");
       }
     } catch (error) {
       setLoading(false);
@@ -67,16 +65,25 @@ export default function SignupScreen({ navigation }) {
   };
 
   // Step 2 - OTP Verification
-  const handleOtpVerify = () => {
-    if (otp === generatedOtp || otp === "1998") {
-      Alert.alert("Verified", "Email verified successfully!");
-      setStep("details");
-    } else {
-      Alert.alert("Error", "Invalid OTP, please try again");
+  const handleOtpVerify = async () => {
+    try {
+      setLoading(true);
+      const response = await ServerRequestCallMethods.verifyOtp({ email, otp });
+      setLoading(false);
+
+      if (response.success && response.code === 200) {
+        Alert.alert("Verified", "Email verified successfully!");
+        setStep("details");
+      } else {
+        Alert.alert("Error", response.message || "Invalid OTP, please try again");
+      }
+    } catch (error) {
+      setLoading(false);
+      Alert.alert("OTP Verification Error", "Something went wrong. Please try again.");
     }
   };
 
-  // Step 3 - Save User Details
+  // Step 3 - Save User Details (register API)
   const handleSignup = async () => {
     if (!name || !username || !mobile || !password) {
       Alert.alert("Error", "Please fill all fields");
@@ -97,24 +104,19 @@ export default function SignupScreen({ navigation }) {
 
     try {
       setLoading(true);
-      const storedUsers = await AsyncStorage.getItem("users");
-      let users = storedUsers ? JSON.parse(storedUsers) : [];
-
-      if (users.find(u => u.email === email || u.mobile === mobile || u.username === username)) {
-        setLoading(false);
-        Alert.alert("Error", "User already exists");
-        return;
-      }
-
-      users.push({ name, username, mobile, email, password });
-      await AsyncStorage.setItem("users", JSON.stringify(users));
-
+      const payload = { name, username, mobile, email, password };
+      const response = await ServerRequestCallMethods.register(payload);
       setLoading(false);
-      Alert.alert("Success", "Account created successfully");
-      navigation.replace("LoginScreen");
+
+      if (response.success && response.code === 200) {
+        Alert.alert("Success", response.message || "Account created successfully");
+        navigation.replace("LoginScreen");
+      } else {
+        Alert.alert("Error", response.message || "Registration failed");
+      }
     } catch (error) {
       setLoading(false);
-      Alert.alert("OTP Verification Error", "Something went wrong. Please try again.");
+      Alert.alert("Signup Error", "Something went wrong. Please try again.");
     }
   };
 
@@ -174,7 +176,6 @@ export default function SignupScreen({ navigation }) {
                   <Text style={styles.buttonText}>Verify OTP</Text>
                 </LinearGradient>
               </TouchableOpacity>
-              <Text style={styles.note}>Tip: Enter 1998 if OTP not received (Test Mode)</Text>
             </>
           )}
 
@@ -234,16 +235,13 @@ const styles = StyleSheet.create({
   button: { paddingVertical: 14, borderRadius: 10, marginTop: 15 },
   buttonText: { color: "#fff", fontWeight: "bold", fontSize: 18, textAlign: "center" },
   link: { color: "#feb47b", textAlign: "center", marginTop: 15, fontSize: 16 },
-  note: { color: "#bbb", fontSize: 12, textAlign: "center", marginTop: 8 },
-
-  // ✅ Full screen loader style
   loadingOverlay: {
     position: "absolute",
     top: 0,
     left: 0,
     right: 0,
     bottom: 0,
-    backgroundColor: "rgba(0,0,0,0.4)", // dim background
+    backgroundColor: "rgba(0,0,0,0.4)",
     justifyContent: "center",
     alignItems: "center",
   },
