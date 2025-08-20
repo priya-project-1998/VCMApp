@@ -7,14 +7,16 @@ import {
   StyleSheet,
   Alert,
   ScrollView,
+  ActivityIndicator,
 } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import LinearGradient from "react-native-linear-gradient";
 import Icon from "react-native-vector-icons/Feather";
 import { useFocusEffect } from "@react-navigation/native";
+import ApiService from "../services/api/ApiService";
 
 export default function SignupScreen({ navigation }) {
-  const [step, setStep] = useState("email"); // email → otp → details
+  const [step, setStep] = useState("email");
   const [email, setEmail] = useState("");
   const [otp, setOtp] = useState("");
   const [generatedOtp, setGeneratedOtp] = useState("");
@@ -23,8 +25,8 @@ export default function SignupScreen({ navigation }) {
   const [mobile, setMobile] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
+  const [loading, setLoading] = useState(false);
 
-  // Reset form every time screen is focused
   useFocusEffect(
     useCallback(() => {
       setStep("email");
@@ -39,21 +41,29 @@ export default function SignupScreen({ navigation }) {
     }, [])
   );
 
-  // Step 1 - Gmail Validation
-  const handleEmailContinue = () => {
+  // Step 1 - Request OTP
+  const handleEmailContinue = async () => {
     const gmailRegex = /^[a-zA-Z0-9._%+-]+@gmail\.com$/;
     if (!gmailRegex.test(email)) {
       Alert.alert("Invalid Email", "Please enter a valid Gmail address (example@gmail.com)");
       return;
     }
-    // Generate random OTP
-    const randomOtp = Math.floor(1000 + Math.random() * 9000).toString();
-    setGeneratedOtp(randomOtp);
 
-    // Simulate sending verification email
-    Alert.alert("Verification Sent", `OTP for ${email} is: ${randomOtp} (Test Mode)`);
+    try {
+      setLoading(true);
+      const response = await ApiService.requestOtp(email);
+      setLoading(false);
 
-    setStep("otp");
+      if (response.success && response.code === 200) {
+        Alert.alert("OTP Sent", response.message);
+        setStep("otp");
+      } else {
+        Alert.alert("Sign Up", response.message);
+      }
+    } catch (error) {
+      setLoading(false);
+      Alert.alert("SignUp Error", "Something went wrong. Please try again.");
+    }
   };
 
   // Step 2 - OTP Verification
@@ -84,16 +94,28 @@ export default function SignupScreen({ navigation }) {
       Alert.alert("Error", "Password must be at least 8 characters long");
       return;
     }
-    const storedUsers = await AsyncStorage.getItem("users");
-    let users = storedUsers ? JSON.parse(storedUsers) : [];
-    if (users.find(u => u.email === email || u.mobile === mobile || u.username === username)) {
-      Alert.alert("Error", "User already exists");
-      return;
+
+    try {
+      setLoading(true);
+      const storedUsers = await AsyncStorage.getItem("users");
+      let users = storedUsers ? JSON.parse(storedUsers) : [];
+
+      if (users.find(u => u.email === email || u.mobile === mobile || u.username === username)) {
+        setLoading(false);
+        Alert.alert("Error", "User already exists");
+        return;
+      }
+
+      users.push({ name, username, mobile, email, password });
+      await AsyncStorage.setItem("users", JSON.stringify(users));
+
+      setLoading(false);
+      Alert.alert("Success", "Account created successfully");
+      navigation.replace("LoginScreen");
+    } catch (error) {
+      setLoading(false);
+      Alert.alert("OTP Verification Error", "Something went wrong. Please try again.");
     }
-    users.push({ name, username, mobile, email, password });
-    await AsyncStorage.setItem("users", JSON.stringify(users));
-    Alert.alert("Success", "Account created successfully");
-    navigation.replace("LoginScreen");
   };
 
   const renderInput = (
@@ -118,11 +140,11 @@ export default function SignupScreen({ navigation }) {
         secureTextEntry={secure}
         editable={editable}
       />
-       {toggleSecure && (
-      <TouchableOpacity onPress={() => setShowPassword(!showPassword)}>
-        <Icon name={showPassword ? "eye-off" : "eye"} size={20} color="#ccc" />
-      </TouchableOpacity>
-    )}
+      {toggleSecure && (
+        <TouchableOpacity onPress={() => setShowPassword(!showPassword)}>
+          <Icon name={showPassword ? "eye-off" : "eye"} size={20} color="#ccc" />
+        </TouchableOpacity>
+      )}
     </View>
   );
 
@@ -161,7 +183,7 @@ export default function SignupScreen({ navigation }) {
               {renderInput("mail", "Email", email, setEmail, "email-address", false, false)}
               {renderInput("user", "Full Name", name, setName, "default")}
               {renderInput("user", "Username", username, setUsername, "default")}
-              {renderInput("phone", "Mobile Number", mobile, (text) => setMobile(text.replace(/[^0-9]/g, '')), "numeric", false, true, false, 10)}
+              {renderInput("phone", "Mobile Number", mobile, (text) => setMobile(text.replace(/[^0-9]/g, "")), "numeric")}
               {renderInput("lock", "Password", password, setPassword, "default", !showPassword, true, true)}
               <TouchableOpacity activeOpacity={0.8} onPress={handleSignup}>
                 <LinearGradient colors={["#ff7e5f", "#feb47b"]} style={styles.button}>
@@ -176,6 +198,13 @@ export default function SignupScreen({ navigation }) {
           </TouchableOpacity>
         </View>
       </ScrollView>
+
+      {/* ✅ Full-screen loading overlay */}
+      {loading && (
+        <View style={styles.loadingOverlay}>
+          <ActivityIndicator size="large" color="#feb47b" />
+        </View>
+      )}
     </LinearGradient>
   );
 }
@@ -206,4 +235,16 @@ const styles = StyleSheet.create({
   buttonText: { color: "#fff", fontWeight: "bold", fontSize: 18, textAlign: "center" },
   link: { color: "#feb47b", textAlign: "center", marginTop: 15, fontSize: 16 },
   note: { color: "#bbb", fontSize: 12, textAlign: "center", marginTop: 8 },
+
+  // ✅ Full screen loader style
+  loadingOverlay: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: "rgba(0,0,0,0.4)", // dim background
+    justifyContent: "center",
+    alignItems: "center",
+  },
 });
