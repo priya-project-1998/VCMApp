@@ -1,4 +1,3 @@
-// ApiService.js
 import axios from "axios";
 import Config from "./config";
 

@@ -1,6 +1,6 @@
 import ApiService from "../api/ApiService";
 import ENDPOINTS from "../url_end_points/endpoints";
-import { ApiResponse } from "../model/ApiResponsel";
+import { ApiResponse } from "../model/ApiResponse";
 
 class ServerRequestCallMethods {
   constructor() {

@@ -1,4 +1,3 @@
-// config.js
 const ENV = {
   dev: {
     BASE_URL: "http://trail-hunt.randomsoftsolution.in:8000/api",
