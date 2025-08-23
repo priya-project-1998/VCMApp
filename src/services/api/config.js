@@ -16,7 +16,7 @@ const ENV = {
   },
 };
 
-const CURRENT_ENV = "dev"; // change this to "qa" or "prod" when needed
+const CURRENT_ENV = "prod"; // change this to "qa" or "prod" when needed
 const Config = { ...ENV[CURRENT_ENV], ENV_NAME: CURRENT_ENV };
 
 export default Config;
