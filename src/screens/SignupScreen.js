@@ -13,7 +13,7 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import LinearGradient from "react-native-linear-gradient";
 import Icon from "react-native-vector-icons/Feather";
 import { useFocusEffect } from "@react-navigation/native";
-import ServerRequestCallMethods from "../services/request_call_method/ServerRequestCallMethods";
+//import ServerRequestCallMethods from "../services/request_call_method/ServerRequestCallMethods";
 
 export default function SignupScreen({ navigation }) {
   const [step, setStep] = useState("email");
