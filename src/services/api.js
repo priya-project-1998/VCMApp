@@ -7,7 +7,8 @@ const BASE_URL = "http://trail-hunt.randomsoftsolution.in:8000/api";
 export const HEADER_TYPES = {
   DEFAULT: "default",   // Content-Type + Accept
   ACCEPT: "acceptOnly", // Accept only
-  AUTH: "auth",         // Accept + Authorization
+  AUTH: "auth", 
+  FORMDATA: "formData"  // multipart/form-data (no Content-Type here)
 };
 
 // 🔹 Build headers dynamically
@@ -30,6 +31,11 @@ async function buildHeaders(type, extraHeaders = {}) {
       headers["Accept"] = "application/json";
       if (token) headers["Authorization"] = `${tokenType} ${token}`;
       break;
+    
+    case HEADER_TYPES.FORMDATA:
+      headers["Accept"] = "application/json";
+      break;
+
 
     default:
       headers["Content-Type"] = "application/json";
@@ -44,10 +50,28 @@ async function request(endpoint, method, body = null, headerType = HEADER_TYPES.
   try {
     const headers = await buildHeaders(headerType, extraHeaders);
 
+    let requestBody = null;
+    if (body) {
+      if (headerType === HEADER_TYPES.FORMDATA) {
+        requestBody = body; // direct FormData
+      } else {
+        requestBody = JSON.stringify(body);
+      }
+    }
+
+console.log("📤 API Request:", {
+  url: `${BASE_URL}${endpoint}`,
+  method,
+  headers,
+  body: headerType === HEADER_TYPES.FORMDATA ? "FormData" : requestBody
+});
+
     const response = await fetch(`${BASE_URL}${endpoint}`, {
       method,
       headers,
-      body: body ? JSON.stringify(body) : null,
+      //body: body ? JSON.stringify(body) : null,
+      body: requestBody,
+
     });
 
     const responseText = await response.text();
@@ -58,6 +82,9 @@ async function request(endpoint, method, body = null, headerType = HEADER_TYPES.
     } catch {
       responseData = responseText;
     }
+
+    console.log("📥 API Response:", response.status, responseData);
+
 
 // inside request()
   if (!response.ok) {

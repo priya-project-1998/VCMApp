@@ -8,21 +8,28 @@ import {
   Alert,
   ScrollView,
   ActivityIndicator,
+  Image
 } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import LinearGradient from "react-native-linear-gradient";
 import Icon from "react-native-vector-icons/Feather";
 import { useFocusEffect } from "@react-navigation/native";
-//import ServerRequestCallMethods from "../services/request_call_method/ServerRequestCallMethods";
+import * as ImagePicker from 'react-native-image-picker';
+
+import SignupService from "../services/apiService/signup_service";
 
 export default function SignupScreen({ navigation }) {
   const [step, setStep] = useState("email");
   const [email, setEmail] = useState("");
   const [otp, setOtp] = useState("");
   const [name, setName] = useState("");
-  const [username, setUsername] = useState("");
   const [mobile, setMobile] = useState("");
   const [password, setPassword] = useState("");
+  const [address, setAddress] = useState("");
+  const [city, setCity] = useState("");
+  const [state, setState] = useState("");
+  const [pincode, setPincode] = useState("");
+  const [profileImage, setProfileImage] = useState(null);
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
 
@@ -32,14 +39,19 @@ export default function SignupScreen({ navigation }) {
       setEmail("");
       setOtp("");
       setName("");
-      setUsername("");
       setMobile("");
       setPassword("");
+      setAddress("");
+      setCity("");
+      setState("");
+      setPincode("");
+      setProfileImage(null);
       setShowPassword(false);
     }, [])
   );
 
-  // Step 1 - Request OTP
+  // ---------------- Handlers ----------------
+
   const handleEmailContinue = async () => {
     const gmailRegex = /^[a-zA-Z0-9._%+-]+@gmail\.com$/;
     if (!gmailRegex.test(email)) {
@@ -49,7 +61,7 @@ export default function SignupScreen({ navigation }) {
 
     try {
       setLoading(true);
-      const response = await ServerRequestCallMethods.requestOtp(email);
+      const response = await SignupService.requestOtp(email);
       setLoading(false);
 
       if (response.success && response.code === 200) {
@@ -64,11 +76,15 @@ export default function SignupScreen({ navigation }) {
     }
   };
 
-  // Step 2 - OTP Verification
   const handleOtpVerify = async () => {
+    if (!otp) {
+      Alert.alert("Error", "Please enter OTP");
+      return;
+    }
+
     try {
       setLoading(true);
-      const response = await ServerRequestCallMethods.verifyOtp({ email, otp });
+      const response = await SignupService.verifyOtp(email, otp);
       setLoading(false);
 
       if (response.success && response.code === 200) {
@@ -83,14 +99,26 @@ export default function SignupScreen({ navigation }) {
     }
   };
 
-  // Step 3 - Save User Details (register API)
+  const handlePickImage = () => {
+    const options = { mediaType: 'photo', quality: 0.7 };
+    ImagePicker.launchImageLibrary(options, (response) => {
+      if (response.didCancel) return;
+      if (response.errorCode) {
+        Alert.alert("Image Picker Error", response.errorMessage);
+        return;
+      }
+      const asset = response.assets[0];
+      setProfileImage({
+        uri: asset.uri,
+        type: asset.type,
+        name: asset.fileName
+      });
+    });
+  };
+
   const handleSignup = async () => {
-    if (!name || !username || !mobile || !password) {
+    if (!name || !mobile || !password || !address || !city || !state || !pincode) {
       Alert.alert("Error", "Please fill all fields");
-      return;
-    }
-    if (username.length < 6) {
-      Alert.alert("Error", "Username must be at least 6 characters long");
       return;
     }
     if (!/^\d{10}$/.test(mobile)) {
@@ -104,8 +132,8 @@ export default function SignupScreen({ navigation }) {
 
     try {
       setLoading(true);
-      const payload = { name, username, mobile, email, password };
-      const response = await ServerRequestCallMethods.register(payload);
+      const payload = { name, mobile, email, password, address, city, state, pincode, profileImage };
+      const response = await SignupService.registerUser(payload);
       setLoading(false);
 
       if (response.success && response.code === 200) {
@@ -150,6 +178,8 @@ export default function SignupScreen({ navigation }) {
     </View>
   );
 
+  // ---------------- Render ----------------
+
   return (
     <LinearGradient colors={["#0f2027", "#203a43", "#2c5364"]} style={styles.gradient}>
       <ScrollView contentContainerStyle={styles.container}>
@@ -183,9 +213,24 @@ export default function SignupScreen({ navigation }) {
             <>
               {renderInput("mail", "Email", email, setEmail, "email-address", false, false)}
               {renderInput("user", "Full Name", name, setName, "default")}
-              {renderInput("user", "Username", username, setUsername, "default")}
               {renderInput("phone", "Mobile Number", mobile, (text) => setMobile(text.replace(/[^0-9]/g, "")), "numeric")}
               {renderInput("lock", "Password", password, setPassword, "default", !showPassword, true, true)}
+              {renderInput("home", "Address", address, setAddress, "default")}
+              {renderInput("map-pin", "City", city, setCity, "default")}
+              {renderInput("map", "State", state, setState, "default")}
+              {renderInput("hash", "Pincode", pincode, setPincode, "numeric")}
+
+              {/* Profile Image Picker */}
+              <TouchableOpacity onPress={handlePickImage} style={styles.imageButton}>
+                <Text style={styles.imageButtonText}>
+                  {profileImage ? "Change Profile Image" : "Select Profile Image"}
+                </Text>
+              </TouchableOpacity>
+
+              {profileImage && (
+                <Image source={{ uri: profileImage.uri }} style={styles.previewImage} />
+              )}
+
               <TouchableOpacity activeOpacity={0.8} onPress={handleSignup}>
                 <LinearGradient colors={["#ff7e5f", "#feb47b"]} style={styles.button}>
                   <Text style={styles.buttonText}>Sign Up</Text>
@@ -200,7 +245,6 @@ export default function SignupScreen({ navigation }) {
         </View>
       </ScrollView>
 
-      {/* ✅ Full-screen loading overlay */}
       {loading && (
         <View style={styles.loadingOverlay}>
           <ActivityIndicator size="large" color="#feb47b" />
@@ -245,4 +289,15 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
   },
+  imageButton: {
+    backgroundColor: "rgba(255,255,255,0.15)",
+    borderRadius: 10,
+    padding: 12,
+    marginVertical: 8,
+    alignItems: "center",
+  },
+  imageButtonText: { color: "#fff", fontSize: 16 },
+  previewImage: { width: 100, height: 100, borderRadius: 50, alignSelf: "center", marginVertical: 10 },
 });
+
+
