@@ -1,3 +1,4 @@
+// SignupScreen.js
 import React, { useState, useCallback } from "react";
 import {
   View,
@@ -8,15 +9,19 @@ import {
   Alert,
   ScrollView,
   ActivityIndicator,
-  Image
+  Image,
+  Dimensions,
 } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import LinearGradient from "react-native-linear-gradient";
 import Icon from "react-native-vector-icons/Feather";
 import { useFocusEffect } from "@react-navigation/native";
-import * as ImagePicker from 'react-native-image-picker';
+import * as ImagePicker from "react-native-image-picker";
+
 
 import SignupService from "../services/apiService/signup_service";
+
+const { height: SCREEN_HEIGHT } = Dimensions.get("window");
 
 export default function SignupScreen({ navigation }) {
   const [step, setStep] = useState("email");
@@ -100,7 +105,7 @@ export default function SignupScreen({ navigation }) {
   };
 
   const handlePickImage = () => {
-    const options = { mediaType: 'photo', quality: 0.7 };
+    const options = { mediaType: "photo", quality: 0.7 };
     ImagePicker.launchImageLibrary(options, (response) => {
       if (response.didCancel) return;
       if (response.errorCode) {
@@ -111,7 +116,7 @@ export default function SignupScreen({ navigation }) {
       setProfileImage({
         uri: asset.uri,
         type: asset.type,
-        name: asset.fileName
+        name: asset.fileName,
       });
     });
   };
@@ -132,7 +137,17 @@ export default function SignupScreen({ navigation }) {
 
     try {
       setLoading(true);
-      const payload = { name, mobile, email, password, address, city, state, pincode, profileImage };
+      const payload = {
+        name,
+        mobile,
+        email,
+        password,
+        address,
+        city,
+        state,
+        pincode,
+        profileImage,
+      };
       const response = await SignupService.registerUser(payload);
       setLoading(false);
 
@@ -182,68 +197,97 @@ export default function SignupScreen({ navigation }) {
 
   return (
     <LinearGradient colors={["#0f2027", "#203a43", "#2c5364"]} style={styles.gradient}>
-      <ScrollView contentContainerStyle={styles.container}>
-        <View style={styles.card}>
-          <Text style={styles.title}>Sign Up</Text>
 
-          {step === "email" && (
-            <>
-              {renderInput("mail", "Enter Gmail", email, setEmail, "email-address")}
-              <TouchableOpacity activeOpacity={0.8} onPress={handleEmailContinue}>
-                <LinearGradient colors={["#ff7e5f", "#feb47b"]} style={styles.button}>
-                  <Text style={styles.buttonText}>Continue</Text>
-                </LinearGradient>
-              </TouchableOpacity>
-            </>
-          )}
+      <View
+        style={[
+          styles.card,
+          step === "details" && {
+            maxHeight: 650,
+            marginVertical: 30,
+            marginHorizontal: 20,
+          },
+        ]}
+      >
+        <Text style={styles.title}>Sign Up</Text>
 
-          {step === "otp" && (
-            <>
-              {renderInput("mail", "Email", email, setEmail, "email-address", false, false)}
-              {renderInput("key", "Enter OTP", otp, setOtp, "numeric")}
-              <TouchableOpacity activeOpacity={0.8} onPress={handleOtpVerify}>
-                <LinearGradient colors={["#36D1DC", "#5B86E5"]} style={styles.button}>
-                  <Text style={styles.buttonText}>Verify OTP</Text>
-                </LinearGradient>
-              </TouchableOpacity>
-            </>
-          )}
+        {step === "email" && (
+          <>
+            {renderInput("mail", "Enter Gmail", email, setEmail, "email-address")}
+            <TouchableOpacity activeOpacity={0.8} onPress={handleEmailContinue}>
+              <LinearGradient colors={["#ff7e5f", "#feb47b"]} style={styles.button}>
+                <Text style={styles.buttonText}>Continue</Text>
+              </LinearGradient>
+            </TouchableOpacity>
+          </>
+        )}
 
-          {step === "details" && (
-            <>
+        {step === "otp" && (
+          <>
+            {renderInput("mail", "Email", email, setEmail, "email-address", false, false)}
+            {renderInput("key", "Enter OTP", otp, setOtp, "numeric")}
+            <TouchableOpacity activeOpacity={0.8} onPress={handleOtpVerify}>
+              <LinearGradient colors={["#36D1DC", "#5B86E5"]} style={styles.button}>
+                <Text style={styles.buttonText}>Verify OTP</Text>
+              </LinearGradient>
+            </TouchableOpacity>
+          </>
+        )}
+
+        {step === "details" && (
+          <>
+            <ScrollView showsVerticalScrollIndicator={false}>
+              {/* Profile Image with pencil */}
+              <View style={styles.imageWrapper}>
+                <Image
+                  source={
+                    profileImage
+                      ? { uri: profileImage.uri }
+                      : require("../assets/images/profile-placeholder.png")
+                  }
+                  style={styles.previewImage}
+                />
+                <TouchableOpacity style={styles.pencilIcon} onPress={handlePickImage}>
+                  <Icon name="edit-2" size={18} color="#fff" />
+                </TouchableOpacity>
+              </View>
+
               {renderInput("mail", "Email", email, setEmail, "email-address", false, false)}
               {renderInput("user", "Full Name", name, setName, "default")}
-              {renderInput("phone", "Mobile Number", mobile, (text) => setMobile(text.replace(/[^0-9]/g, "")), "numeric")}
-              {renderInput("lock", "Password", password, setPassword, "default", !showPassword, true, true)}
+              {renderInput(
+                "phone",
+                "Mobile Number",
+                mobile,
+                (text) => setMobile(text.replace(/[^0-9]/g, "")),
+                "numeric"
+              )}
+              {renderInput(
+                "lock",
+                "Password",
+                password,
+                setPassword,
+                "default",
+                !showPassword,
+                true,
+                true
+              )}
               {renderInput("home", "Address", address, setAddress, "default")}
               {renderInput("map-pin", "City", city, setCity, "default")}
               {renderInput("map", "State", state, setState, "default")}
               {renderInput("hash", "Pincode", pincode, setPincode, "numeric")}
+            </ScrollView>
 
-              {/* Profile Image Picker */}
-              <TouchableOpacity onPress={handlePickImage} style={styles.imageButton}>
-                <Text style={styles.imageButtonText}>
-                  {profileImage ? "Change Profile Image" : "Select Profile Image"}
-                </Text>
-              </TouchableOpacity>
+            <TouchableOpacity activeOpacity={0.8} onPress={handleSignup}>
+              <LinearGradient colors={["#ff7e5f", "#feb47b"]} style={styles.button}>
+                <Text style={styles.buttonText}>Sign Up</Text>
+              </LinearGradient>
+            </TouchableOpacity>
+          </>
+        )}
 
-              {profileImage && (
-                <Image source={{ uri: profileImage.uri }} style={styles.previewImage} />
-              )}
-
-              <TouchableOpacity activeOpacity={0.8} onPress={handleSignup}>
-                <LinearGradient colors={["#ff7e5f", "#feb47b"]} style={styles.button}>
-                  <Text style={styles.buttonText}>Sign Up</Text>
-                </LinearGradient>
-              </TouchableOpacity>
-            </>
-          )}
-
-          <TouchableOpacity onPress={() => navigation.replace("LoginScreen")}>
-            <Text style={styles.link}>Already have an account? Log in</Text>
-          </TouchableOpacity>
-        </View>
-      </ScrollView>
+        <TouchableOpacity onPress={() => navigation.replace("LoginScreen")}>
+          <Text style={styles.link}>Already have an account? Log in</Text>
+        </TouchableOpacity>
+      </View>
 
       {loading && (
         <View style={styles.loadingOverlay}>
@@ -255,16 +299,22 @@ export default function SignupScreen({ navigation }) {
 }
 
 const styles = StyleSheet.create({
-  gradient: { flex: 1 },
-  container: { flexGrow: 1, justifyContent: "center", padding: 20 },
+  gradient: { flex: 1, justifyContent: "center" },
   card: {
     backgroundColor: "rgba(255,255,255,0.1)",
     borderRadius: 20,
     padding: 20,
     borderWidth: 1,
     borderColor: "rgba(255,255,255,0.3)",
+    marginHorizontal: 16,
   },
-  title: { fontSize: 26, fontWeight: "bold", color: "#fff", textAlign: "center", marginBottom: 20 },
+  title: {
+    fontSize: 26,
+    fontWeight: "bold",
+    color: "#fff",
+    textAlign: "center",
+    marginBottom: 20,
+  },
   inputContainer: {
     flexDirection: "row",
     alignItems: "center",
@@ -289,15 +339,21 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
   },
-  imageButton: {
-    backgroundColor: "rgba(255,255,255,0.15)",
-    borderRadius: 10,
-    padding: 12,
-    marginVertical: 8,
-    alignItems: "center",
+  previewImage: {
+    width: 100,
+    height: 100,
+    borderRadius: 50,
   },
-  imageButtonText: { color: "#fff", fontSize: 16 },
-  previewImage: { width: 100, height: 100, borderRadius: 50, alignSelf: "center", marginVertical: 10 },
+  imageWrapper: {
+    alignSelf: "center",
+    marginBottom: 16,
+  },
+  pencilIcon: {
+    position: "absolute",
+    right: 0,
+    bottom: 0,
+    backgroundColor: "#feb47b",
+    borderRadius: 12,
+    padding: 4,
+  },
 });
-
-
