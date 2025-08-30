@@ -1,3 +1,4 @@
+// SignupScreen.js
 import React, { useState, useCallback } from "react";
 import {
   View,
@@ -14,9 +15,9 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import LinearGradient from "react-native-linear-gradient";
 import Icon from "react-native-vector-icons/Feather";
 import { useFocusEffect } from "@react-navigation/native";
-import * as ImagePicker from 'react-native-image-picker';
+import * as ImagePicker from "react-native-image-picker";
 
-import SignupService from "../services/apiService/signup_service";
+import SignupService from "../services/apiService/signup_service"; // ✅ Uncommented
 
 export default function SignupScreen({ navigation }) {
   const [step, setStep] = useState("email");
@@ -61,18 +62,18 @@ export default function SignupScreen({ navigation }) {
 
     try {
       setLoading(true);
-      const response = await SignupService.requestOtp(email);
+      const res = await SignupService.sendOtp({ email });
       setLoading(false);
 
-      if (response.success && response.code === 200) {
-        Alert.alert("OTP Sent", response.message);
+      if (res.success) {
+        Alert.alert("OTP Sent", "Please check your email for the OTP.");
         setStep("otp");
       } else {
-        Alert.alert("Sign Up", response.message || "Failed to send OTP");
+        Alert.alert("Error", res.message || "Failed to send OTP");
       }
     } catch (error) {
       setLoading(false);
-      Alert.alert("SignUp Error", "Something went wrong. Please try again.");
+      Alert.alert("Error", "Something went wrong while sending OTP.");
     }
   };
 
@@ -84,23 +85,23 @@ export default function SignupScreen({ navigation }) {
 
     try {
       setLoading(true);
-      const response = await SignupService.verifyOtp(email, otp);
+      const res = await SignupService.verifyOtp({ email, otp });
       setLoading(false);
 
-      if (response.success && response.code === 200) {
+      if (res.success) {
         Alert.alert("Verified", "Email verified successfully!");
         setStep("details");
       } else {
-        Alert.alert("Error", response.message || "Invalid OTP, please try again");
+        Alert.alert("Error", res.message || "Invalid OTP.");
       }
     } catch (error) {
       setLoading(false);
-      Alert.alert("OTP Verification Error", "Something went wrong. Please try again.");
+      Alert.alert("Error", "Something went wrong while verifying OTP.");
     }
   };
 
   const handlePickImage = () => {
-    const options = { mediaType: 'photo', quality: 0.7 };
+    const options = { mediaType: "photo", quality: 0.7 };
     ImagePicker.launchImageLibrary(options, (response) => {
       if (response.didCancel) return;
       if (response.errorCode) {
@@ -111,7 +112,7 @@ export default function SignupScreen({ navigation }) {
       setProfileImage({
         uri: asset.uri,
         type: asset.type,
-        name: asset.fileName
+        name: asset.fileName,
       });
     });
   };
@@ -132,19 +133,38 @@ export default function SignupScreen({ navigation }) {
 
     try {
       setLoading(true);
-      const payload = { name, mobile, email, password, address, city, state, pincode, profileImage };
-      const response = await SignupService.registerUser(payload);
+
+      // ✅ Prepare form data for profile image upload
+      const formData = new FormData();
+      formData.append("email", email);
+      formData.append("name", name);
+      formData.append("mobile", mobile);
+      formData.append("password", password);
+      formData.append("address", address);
+      formData.append("city", city);
+      formData.append("state", state);
+      formData.append("pincode", pincode);
+
+      if (profileImage) {
+        formData.append("profileImage", {
+          uri: profileImage.uri,
+          type: profileImage.type,
+          name: profileImage.name,
+        });
+      }
+
+      const res = await SignupService.register(formData);
       setLoading(false);
 
-      if (response.success && response.code === 200) {
-        Alert.alert("Success", response.message || "Account created successfully");
+      if (res.success) {
+        Alert.alert("Success", "Account created successfully!");
         navigation.replace("LoginScreen");
       } else {
-        Alert.alert("Error", response.message || "Registration failed");
+        Alert.alert("Error", res.message || "Signup failed");
       }
     } catch (error) {
       setLoading(false);
-      Alert.alert("Signup Error", "Something went wrong. Please try again.");
+      Alert.alert("Error", "Something went wrong during signup.");
     }
   };
 
@@ -182,7 +202,7 @@ export default function SignupScreen({ navigation }) {
 
   return (
     <LinearGradient colors={["#0f2027", "#203a43", "#2c5364"]} style={styles.gradient}>
-      <ScrollView contentContainerStyle={styles.container}>
+      <View style={styles.container}>
         <View style={styles.card}>
           <Text style={styles.title}>Sign Up</Text>
 
@@ -210,40 +230,48 @@ export default function SignupScreen({ navigation }) {
           )}
 
           {step === "details" && (
-            <>
+            <ScrollView
+              style={{ maxHeight: 550 }}
+              showsVerticalScrollIndicator={false}
+            >
+              {/* 👇 Profile Image (Default + Selected) */}
+              <TouchableOpacity onPress={handlePickImage} style={styles.imageWrapper}>
+                <Image
+                  source={
+                    profileImage
+                      ? { uri: profileImage.uri }
+                      : require("../assets/images/profile-placeholder.png")
+                  }
+                  style={styles.profileImage}
+                />
+                {/* Pencil icon overlay */}
+                <View style={styles.editIconWrapper}>
+                  <Icon name="edit-2" size={18} color="#fff" />
+                </View>
+              </TouchableOpacity>
+
               {renderInput("mail", "Email", email, setEmail, "email-address", false, false)}
               {renderInput("user", "Full Name", name, setName, "default")}
-              {renderInput("phone", "Mobile Number", mobile, (text) => setMobile(text.replace(/[^0-9]/g, "")), "numeric")}
+              {renderInput("phone", "Mobile Number", mobile, (t) => setMobile(t.replace(/[^0-9]/g, "")), "numeric")}
               {renderInput("lock", "Password", password, setPassword, "default", !showPassword, true, true)}
               {renderInput("home", "Address", address, setAddress, "default")}
               {renderInput("map-pin", "City", city, setCity, "default")}
               {renderInput("map", "State", state, setState, "default")}
-              {renderInput("hash", "Pincode", pincode, setPincode, "numeric")}
-
-              {/* Profile Image Picker */}
-              <TouchableOpacity onPress={handlePickImage} style={styles.imageButton}>
-                <Text style={styles.imageButtonText}>
-                  {profileImage ? "Change Profile Image" : "Select Profile Image"}
-                </Text>
-              </TouchableOpacity>
-
-              {profileImage && (
-                <Image source={{ uri: profileImage.uri }} style={styles.previewImage} />
-              )}
+              {renderInput("hash", "Pincode", pincode, "numeric")}
 
               <TouchableOpacity activeOpacity={0.8} onPress={handleSignup}>
                 <LinearGradient colors={["#ff7e5f", "#feb47b"]} style={styles.button}>
                   <Text style={styles.buttonText}>Sign Up</Text>
                 </LinearGradient>
               </TouchableOpacity>
-            </>
+            </ScrollView>
           )}
 
           <TouchableOpacity onPress={() => navigation.replace("LoginScreen")}>
             <Text style={styles.link}>Already have an account? Log in</Text>
           </TouchableOpacity>
         </View>
-      </ScrollView>
+      </View>
 
       {loading && (
         <View style={styles.loadingOverlay}>
@@ -289,15 +317,27 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
   },
-  imageButton: {
-    backgroundColor: "rgba(255,255,255,0.15)",
-    borderRadius: 10,
-    padding: 12,
-    marginVertical: 8,
-    alignItems: "center",
+  imageWrapper: {
+    alignSelf: "center",
+    marginBottom: 15,
+    position: "relative",
   },
-  imageButtonText: { color: "#fff", fontSize: 16 },
-  previewImage: { width: 100, height: 100, borderRadius: 50, alignSelf: "center", marginVertical: 10 },
+  profileImage: {
+    width: 100,
+    height: 100,
+    borderRadius: 50,
+    borderWidth: 2,
+    borderColor: "#feb47b",
+  },
+  editIconWrapper: {
+    position: "absolute",
+    bottom: 0,
+    right: 0,
+    backgroundColor: "#feb47b",
+    borderRadius: 12,
+    padding: 4,
+    borderWidth: 2,
+    borderColor: "#fff",
+  },
+
 });
-
-
