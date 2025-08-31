@@ -27,15 +27,17 @@ async function buildHeaders(type, extraHeaders = {}) {
 
     case HEADER_TYPES.AUTH:
       const token = await AsyncStorage.getItem("authToken");
-      const tokenType = (await AsyncStorage.getItem("tokenType")) || "Bearer";
-      headers["Accept"] = "application/json";
-      if (token) headers["Authorization"] = `${tokenType} ${token}`;
+      if (token) {
+        headers["Accept"] = "application/json";
+        headers["Authorization"] = `Bearer ${token}`;
+      } else {
+        console.warn("Auth token not found in AsyncStorage");
+      }
       break;
     
     case HEADER_TYPES.FORMDATA:
       headers["Accept"] = "application/json";
       break;
-
 
     default:
       headers["Content-Type"] = "application/json";
@@ -100,6 +102,11 @@ console.log("📤 API Request:", {
 
 // ✅ Easy methods
 export async function getRequest(endpoint, headerType = HEADER_TYPES.DEFAULT, extraHeaders = {}) {
+    console.log("🔎 getRequest called with:", {
+    endpoint,
+    headerType,
+    extraHeaders
+  });
   return request(endpoint, "GET", null, headerType, extraHeaders);
 }
 
