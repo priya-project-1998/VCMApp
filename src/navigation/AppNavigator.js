@@ -23,6 +23,7 @@ import SettingsScreen from '../screens/SettingsScreen';
 import NotificationsScreen from '../screens/Notifications';
 import AboutAppScreen from '../screens/AboutAppScreen';
 import JoinEventScreen from '../screens/JoinEvent';
+import ForgetPasswordScreen from '../screens/ForgetPasswordScreen';
 
 const Stack = createNativeStackNavigator();
 const Drawer = createDrawerNavigator();
@@ -57,8 +58,8 @@ export default function AppNavigator() {
         <Stack.Screen name="LoginScreen" component={LoginScreen} />
         <Stack.Screen name="Signup" component={SignupScreen} />
         <Stack.Screen name="Drawer" component={DrawerNavigator} />
+        <Stack.Screen name="ForgetPassword" component={ForgetPasswordScreen} />
       </Stack.Navigator>
-
     </NavigationContainer>
   );
 }

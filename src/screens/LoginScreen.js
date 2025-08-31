@@ -64,9 +64,16 @@ export default function LoginScreen({ navigation }) {
             </LinearGradient>
           </TouchableOpacity>
 
+          <TouchableOpacity onPress={() => navigation.navigate("ForgetPassword")}>
+            <Text style={styles.link}>Forget Password</Text>
+          </TouchableOpacity>
+
+
           <TouchableOpacity onPress={() => navigation.navigate("Signup")}>
             <Text style={styles.link}>Don't have an account? Sign up</Text>
           </TouchableOpacity>
+
+          
         </View>
       </ScrollView>
     </LinearGradient>
