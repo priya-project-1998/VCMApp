@@ -1,6 +1,6 @@
 const ENDPOINTS = {
   REQUEST_OTP: "/request-otp",
-  VERIFY_OTP: "/verify-otp",
+  VERIFY_OTP: "/verify-register-otp",
   LOGIN: "/login",
   REGISTER: "/register",
   RESET_PASSWORD: "/reset-password",

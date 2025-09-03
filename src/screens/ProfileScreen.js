@@ -1,155 +1,148 @@
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import {
   View,
   Text,
   TextInput,
   TouchableOpacity,
   StyleSheet,
-  Image,
-  Alert,
   ScrollView,
+  StatusBar,
+  Platform,
+  Alert,
 } from "react-native";
-import Icon from "react-native-vector-icons/Feather";
-import AsyncStorage from "@react-native-async-storage/async-storage";
-import { launchImageLibrary } from "react-native-image-picker";
 import LinearGradient from "react-native-linear-gradient";
+import Icon from "react-native-vector-icons/Feather";
 import { useNavigation } from "@react-navigation/native";
+import SignupService from "../services/apiService/signup_service"; // ✅ Correct service class
 
-export default function ProfileScreen() {
+export default function SignupScreen() {
   const navigation = useNavigation();
-  const [user, setUser] = useState(null);
+
   const [name, setName] = useState("");
   const [username, setUsername] = useState("");
   const [mobile, setMobile] = useState("");
   const [email, setEmail] = useState("");
-  const [profilePic, setProfilePic] = useState(null);
+  const [password, setPassword] = useState("");
+  const [otp, setOtp] = useState("");
+  const [step, setStep] = useState(1); // 1 = signup, 2 = otp
 
-  // Load user data from AsyncStorage
-  useEffect(() => {
-    (async () => {
-      const storedUser = await AsyncStorage.getItem("loggedInUser");
-      if (storedUser) {
-        const parsedUser = JSON.parse(storedUser);
-        setUser(parsedUser);
-        setName(parsedUser.name || "");
-        setUsername(parsedUser.username || "");
-        setMobile(parsedUser.mobile || "");
-        setEmail(parsedUser.email || "");
-        setProfilePic(parsedUser.profilePic || null);
-      }
-    })();
-  }, []);
-
-  // Pick Image from gallery
-  const pickImage = () => {
-    launchImageLibrary(
-      {
-        mediaType: "photo",
-        quality: 0.7,
-      },
-      (response) => {
-        if (response.didCancel) return;
-        if (response.errorCode) {
-          Alert.alert("Error", "Image Picker Error: " + response.errorMessage);
-          return;
-        }
-        if (response.assets && response.assets.length > 0) {
-          setProfilePic(response.assets[0].uri);
-        }
-      }
-    );
-  };
-
-  // Save updated profile
-  const handleUpdate = async () => {
-    if (!name || !username || !mobile) {
-      Alert.alert("Error", "Please fill all editable fields");
+  // 🔹 Signup API
+  const handleSignup = async () => {
+    if (!name || !username || !mobile || !email || !password) {
+      Alert.alert("Error", "Please fill all fields");
       return;
     }
 
-    const updatedUser = {
-      ...user,
-      name,
-      username,
-      mobile,
-      profilePic,
-    };
+    try {
+      const response = await SignupService.register({
+        name,
+        username,
+        mobile,
+        email,
+        password,
+      });
 
-    await AsyncStorage.setItem("loggedInUser", JSON.stringify(updatedUser));
-
-    const storedUsers = await AsyncStorage.getItem("users");
-    let users = storedUsers ? JSON.parse(storedUsers) : [];
-    users = users.map((u) => (u.email === email ? updatedUser : u));
-    await AsyncStorage.setItem("users", JSON.stringify(users));
-
-    Alert.alert("Success", "Profile updated successfully!");
+      if (response.status) {
+        Alert.alert("Success", response.message || "OTP sent!");
+        setStep(2);
+      } else {
+        Alert.alert("Error", response.message || "Signup failed");
+      }
+    } catch (error) {
+      Alert.alert("Error", "Network error, try again later");
+    }
   };
 
-  // Delete Account
-  const handleDeleteAccount = () => {
-    Alert.alert("Delete Account", "Do you want to delete your account?", [
-      { text: "Cancel", style: "cancel" },
-      {
-        text: "Delete",
-        style: "destructive",
-        onPress: async () => {
-          await AsyncStorage.clear(); // Clear all storage
-          navigation.replace("LoginScreen"); // Navigate to login
-        },
-      },
-    ]);
+  // 🔹 Verify OTP API
+  const handleVerifyOtp = async () => {
+    if (!otp) {
+      Alert.alert("Error", "Please enter OTP");
+      return;
+    }
+
+    try {
+      const response = await SignupService.verifyOtp({ email, otp });
+
+      if (response.status) {
+        Alert.alert("Success", response.message || "Account verified!");
+        navigation.replace("LoginScreen");
+      } else {
+        Alert.alert("Error", response.message || "Invalid OTP");
+      }
+    } catch (error) {
+      Alert.alert("Error", "Network error, try again later");
+    }
   };
 
   return (
     <LinearGradient colors={["#0f2027", "#203a43", "#2c5364"]} style={{ flex: 1 }}>
-      <ScrollView contentContainerStyle={styles.container}>
-        {/* Profile Picture */}
-        <View style={styles.imageContainer}>
-          <Image
-            source={
-              profilePic
-                ? { uri: profilePic }
-                : require("../assets/images/profile-placeholder.png")
-            }
-            style={styles.profileImage}
-          />
-          <TouchableOpacity style={styles.editIcon} onPress={pickImage}>
-            <Icon name="edit-2" size={18} color="#fff" />
-          </TouchableOpacity>
-        </View>
+      <StatusBar barStyle="light-content" backgroundColor="transparent" translucent />
 
-        {/* Fields */}
+      <ScrollView contentContainerStyle={styles.container} keyboardShouldPersistTaps="handled">
         <View style={styles.card}>
-          <Text style={styles.label}>Email (Read Only)</Text>
-          <TextInput style={styles.input} value={email} editable={false} />
+          <Text style={styles.title}>{step === 1 ? "Create Account" : "Verify OTP"}</Text>
 
-          <Text style={styles.label}>Full Name</Text>
-          <TextInput style={styles.input} value={name} onChangeText={setName} />
+          {step === 1 ? (
+            <>
+              <InputField icon="user" placeholder="Full Name" value={name} onChangeText={setName} />
+              <InputField
+                icon="user-check"
+                placeholder="Username"
+                value={username}
+                onChangeText={setUsername}
+              />
+              <InputField
+                icon="phone"
+                placeholder="Mobile"
+                keyboardType="numeric"
+                maxLength={10}
+                value={mobile}
+                onChangeText={(text) => setMobile(text.replace(/[^0-9]/g, ""))}
+              />
+              <InputField
+                icon="mail"
+                placeholder="Email"
+                keyboardType="email-address"
+                value={email}
+                onChangeText={setEmail}
+              />
+              <InputField
+                icon="lock"
+                placeholder="Password"
+                secureTextEntry
+                value={password}
+                onChangeText={setPassword}
+              />
 
-          <Text style={styles.label}>Username</Text>
-          <TextInput style={styles.input} value={username} onChangeText={setUsername} />
+              <TouchableOpacity style={{ marginTop: 20 }} onPress={handleSignup}>
+                <LinearGradient colors={["#36d1dc", "#5b86e5"]} style={styles.button}>
+                  <Text style={styles.buttonText}>Sign Up</Text>
+                </LinearGradient>
+              </TouchableOpacity>
+            </>
+          ) : (
+            <>
+              <InputField
+                icon="key"
+                placeholder="Enter OTP"
+                keyboardType="numeric"
+                value={otp}
+                onChangeText={setOtp}
+              />
 
-          <Text style={styles.label}>Mobile Number</Text>
-          <TextInput
-            style={styles.input}
-            value={mobile}
-            keyboardType="numeric"
-            onChangeText={(text) => setMobile(text.replace(/[^0-9]/g, ""))}
-            maxLength={10}
-          />
+              <TouchableOpacity style={{ marginTop: 20 }} onPress={handleVerifyOtp}>
+                <LinearGradient colors={["#ff7e5f", "#feb47b"]} style={styles.button}>
+                  <Text style={styles.buttonText}>Verify OTP</Text>
+                </LinearGradient>
+              </TouchableOpacity>
+            </>
+          )}
 
-          {/* Update Button */}
-          <TouchableOpacity style={{ marginTop: 20 }} onPress={handleUpdate}>
-            <LinearGradient colors={["#ff7e5f", "#feb47b"]} style={styles.button}>
-              <Text style={styles.buttonText}>Update Profile</Text>
-            </LinearGradient>
-          </TouchableOpacity>
-
-          {/* Delete Account Button */}
-          <TouchableOpacity style={{ marginTop: 15 }} onPress={handleDeleteAccount}>
-            <LinearGradient colors={["#ff4b5c", "#d32f2f"]} style={styles.button}>
-              <Text style={styles.buttonText}>Delete Account</Text>
-            </LinearGradient>
+          <TouchableOpacity
+            onPress={() => navigation.replace("LoginScreen")}
+            style={{ marginTop: 20 }}
+          >
+            <Text style={styles.loginText}>Already have an account? Login</Text>
           </TouchableOpacity>
         </View>
       </ScrollView>
@@ -157,56 +150,74 @@ export default function ProfileScreen() {
   );
 }
 
+// 🔹 Reusable Input Component
+const InputField = ({ icon, ...props }) => (
+  <View style={styles.inputWrapper}>
+    <Icon name={icon} size={18} color="#fff" style={styles.inputIcon} />
+    <TextInput
+      style={styles.input}
+      placeholderTextColor="rgba(255,255,255,0.6)"
+      {...props}
+    />
+  </View>
+);
+
 const styles = StyleSheet.create({
   container: {
+    flexGrow: 1,
+    justifyContent: "center",
     padding: 20,
-    alignItems: "center",
-  },
-  imageContainer: {
-    position: "relative",
-    marginBottom: 20,
-  },
-  profileImage: {
-    width: 120,
-    height: 120,
-    borderRadius: 60,
-    borderWidth: 3,
-    borderColor: "#fff",
-  },
-  editIcon: {
-    position: "absolute",
-    bottom: 5,
-    right: 5,
-    backgroundColor: "#ff7e5f",
-    borderRadius: 15,
-    padding: 5,
   },
   card: {
-    backgroundColor: "rgba(255,255,255,0.1)",
-    padding: 20,
-    borderRadius: 15,
-    width: "100%",
+    backgroundColor: "rgba(255,255,255,0.08)",
+    padding: 25,
+    borderRadius: 20,
+    shadowColor: "#000",
+    shadowOpacity: 0.2,
+    shadowRadius: 6,
+    elevation: 5,
   },
-  label: {
+  title: {
+    fontSize: 22,
+    fontWeight: "700",
     color: "#fff",
-    marginTop: 10,
-    marginBottom: 5,
-    fontWeight: "bold",
+    textAlign: "center",
+    marginBottom: 25,
+  },
+  inputWrapper: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "rgba(255,255,255,0.15)",
+    borderRadius: 12,
+    paddingHorizontal: 12,
+    marginBottom: 15,
+  },
+  inputIcon: {
+    marginRight: 10,
   },
   input: {
-    backgroundColor: "rgba(255,255,255,0.15)",
-    borderRadius: 10,
-    padding: 10,
+    flex: 1,
     color: "#fff",
+    fontSize: 15,
+    paddingVertical: Platform.OS === "ios" ? 12 : 8,
   },
   button: {
     paddingVertical: 14,
-    borderRadius: 10,
+    borderRadius: 12,
+    shadowColor: "#000",
+    shadowOpacity: 0.3,
+    shadowRadius: 6,
+    elevation: 4,
   },
   buttonText: {
     color: "#fff",
-    fontWeight: "bold",
+    fontWeight: "700",
     fontSize: 16,
+    textAlign: "center",
+  },
+  loginText: {
+    color: "#ddd",
+    fontSize: 14,
     textAlign: "center",
   },
 });
