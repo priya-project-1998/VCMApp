@@ -48,7 +48,13 @@ async function buildHeaders(type, extraHeaders = {}) {
 }
 
 // 🔹 Generic request
-async function request(endpoint, method, body = null, headerType = HEADER_TYPES.DEFAULT, extraHeaders = {}) {
+async function request(
+  endpoint,
+  method,
+  body = null,
+  headerType = HEADER_TYPES.DEFAULT,
+  extraHeaders = {}
+) {
   try {
     const headers = await buildHeaders(headerType, extraHeaders);
 
@@ -61,19 +67,17 @@ async function request(endpoint, method, body = null, headerType = HEADER_TYPES.
       }
     }
 
-console.log("📤 API Request:", {
-  url: `${BASE_URL}${endpoint}`,
-  method,
-  headers,
-  body: headerType === HEADER_TYPES.FORMDATA ? "FormData" : requestBody
-});
+    console.log("📤 API Request:", {
+      url: `${BASE_URL}${endpoint}`,
+      method,
+      headers,
+      body: headerType === HEADER_TYPES.FORMDATA ? "FormData" : requestBody,
+    });
 
     const response = await fetch(`${BASE_URL}${endpoint}`, {
       method,
       headers,
-      //body: body ? JSON.stringify(body) : null,
       body: requestBody,
-
     });
 
     const responseText = await response.text();
@@ -87,18 +91,32 @@ console.log("📤 API Request:", {
 
     console.log("📥 API Response:", response.status, responseData);
 
+    // 🔹 If HTTP error
+    if (!response.ok) {
+      let errorMessage =
+        responseData?.detail || responseData?.message || "Request failed";
+      return new ApiResponse("error", response.status, errorMessage, responseData);
+    }
 
-// inside request()
-  if (!response.ok) {
-    let errorMessage = responseData?.detail || responseData?.message || "Request failed";
-    return new ApiResponse(false, response.status, errorMessage, responseData);
-  }
+    // 🔹 Preserve backend "status" and "message"
+    return new ApiResponse(
+      responseData?.status || "success",
+      response.status,
+      responseData?.message || "",
+      responseData
+    );
 
-    return new ApiResponse(true, response.status, "Success", responseData);
   } catch (error) {
-    return new ApiResponse(false, 500, error.message || "Network error");
+    // 🔹 Catch network / unexpected errors
+    return new ApiResponse(
+      "error",
+      500,
+      error?.message || "Network error",
+      null
+    );
   }
 }
+
 
 // ✅ Easy methods
 export async function getRequest(endpoint, headerType = HEADER_TYPES.DEFAULT, extraHeaders = {}) {

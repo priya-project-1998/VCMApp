@@ -78,18 +78,17 @@ export default function SignupScreen({ navigation }) {
       setLoading(true);
       const payload = { name, username, email, password, contact: mobile, address, city, state, pincode };
       const response = await SignupService.registerUser(payload);
+      console.log('show me resonse',response);
       setLoading(false);
 
-      if (response.status === "success" && response.code === 200) {
-        Alert.alert("Success", response.message || "Account created, please verify OTP");
+      if (response.status === "success") {
+        Alert.alert("Success", response.message);
         setStep("otp");
-      } if (response.status === "error" && response.code === 200) {
-        Alert.alert("Success", response.message || "Email already registered");
-        setStep("otp");
-
-      }else {
-        Alert.alert("Error", response.message || "Registration failed");
+      } else {
+        Alert.alert("Error", response.message);
       }
+
+
     } catch (error) {
       setLoading(false);
       Alert.alert("Signup Error", "Something went wrong. Please try again.");
@@ -107,7 +106,7 @@ export default function SignupScreen({ navigation }) {
       const response = await SignupService.verifyOtp(email, otp);
       setLoading(false);
 
-      if (response.success && response.code === 200) {
+      if (response.status === "success") {
         Alert.alert("Success", response.message || "OTP Verified successfully");
         navigation.replace("LoginScreen");
       } else {

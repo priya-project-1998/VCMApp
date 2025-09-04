@@ -10,97 +10,163 @@ import {
 } from "react-native";
 import LinearGradient from "react-native-linear-gradient";
 import Icon from "react-native-vector-icons/Feather";
-import SignupService from "../services/apiService/signup_service";
+import AuthService from "../services/apiService/auth_service";
 
 export default function ForgetPasswordScreen({ navigation }) {
+  const [step, setStep] = useState(1);
   const [email, setEmail] = useState("");
+  const [otp, setOtp] = useState("");
   const [password, setPassword] = useState("");
-  const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  const [loading, setLoading] = useState(false);
 
-  const handleResetPassword = async () => {
-    const gmailRegex = /^[a-zA-Z0-9._%+-]+@gmail\.com$/;
-    if (!gmailRegex.test(email)) {
-      Alert.alert("Invalid Email", "Please enter a valid Gmail address (example@gmail.com)");
+  // 🔹 Step 1 → Request OTP
+  const handleRequestOtp = async () => {
+    if (!email) {
+      Alert.alert("Error", "Please enter your email");
       return;
     }
-    if (!password || password.length < 8) {
-      Alert.alert("Error", "Password must be at least 8 characters long");
-      return;
-    }
-
     try {
       setLoading(true);
-      const response = await SignupService.resetPassword(email, password);
+      const response = await AuthService.requestOTP(email);
       setLoading(false);
 
-      if (response.success && response.code === 200) {
-        Alert.alert("Success", response.message, [
-          {
-            text: "OK",
-            onPress: () => navigation.goBack(), // 👈 Back to login
-          },
-        ]);
+      if (response.status === "success") {
+        Alert.alert("OTP Sent", response.message || "Check your email for OTP");
+        setStep(2);
       } else {
-        Alert.alert("Error", "Email issue, please try again");
+        Alert.alert("Error", response.message || "Failed to send OTP");
       }
     } catch (err) {
       setLoading(false);
-      Alert.alert("Error", "Something went wrong, please try again");
+      Alert.alert("Error", "Something went wrong, try again later");
     }
   };
+
+  // 🔹 Step 2 → Reset Password
+  const handleResetPassword = async () => {
+    if (!otp || !password) {
+      Alert.alert("Error", "Please enter OTP and new password");
+      return;
+    }
+    try {
+      setLoading(true);
+      const response = await AuthService.resetPassword(email, otp, password);
+      setLoading(false);
+
+      if (response.status === "success") {
+        Alert.alert("Success", response.message || "Password reset successfully", [
+          {
+            text: "OK",
+            onPress: () => navigation.goBack(),
+          },
+        ]);
+      } else {
+        Alert.alert("Error", response.message || "Failed to reset password");
+      }
+    } catch (err) {
+      setLoading(false);
+      Alert.alert("Error", "Something went wrong, try again later");
+    }
+  };
+
+  // 🔹 Step Indicator Component
+  const StepIndicator = ({ number, label, active }) => (
+    <View style={styles.stepContainer}>
+      {active ? (
+        <LinearGradient colors={["#4facfe", "#00f2fe"]} style={styles.activeStepCircle}>
+          <Text style={styles.stepNumber}>{number}</Text>
+        </LinearGradient>
+      ) : (
+        <View style={styles.inactiveStepCircle}>
+          <Text style={styles.stepNumber}>{number}</Text>
+        </View>
+      )}
+      <Text style={[styles.stepLabel, active && { color: "#4facfe" }]}>{label}</Text>
+    </View>
+  );
 
   return (
     <LinearGradient colors={["#0f2027", "#203a43", "#2c5364"]} style={styles.gradient}>
       <View style={styles.card}>
         <Text style={styles.title}>Reset Password</Text>
 
+        {/* Stepper */}
+        <View style={styles.stepperRow}>
+          <StepIndicator number="1" label="Request OTP" active={step === 1} />
+          <View style={styles.stepLine} />
+          <StepIndicator number="2" label="Reset Password" active={step === 2} />
+        </View>
+
         {/* Email Input */}
         <View style={styles.inputContainer}>
           <Icon name="mail" size={20} color="#ccc" style={styles.icon} />
           <TextInput
-            style={styles.input}
-            placeholder="Enter Gmail ID"
+            style={[styles.input, step === 2 && { color: "#bbb" }]}
+            placeholder="Enter Email"
             placeholderTextColor="#aaa"
             keyboardType="email-address"
             autoCapitalize="none"
             value={email}
-            onChangeText={setEmail}
+            onChangeText={step === 1 ? setEmail : undefined}
+            editable={step === 1}
           />
         </View>
 
-        {/* Password Input */}
-        <View style={styles.inputContainer}>
-          <Icon name="lock" size={20} color="#ccc" style={styles.icon} />
-          <TextInput
-            style={styles.input}
-            placeholder="Enter New Password"
-            placeholderTextColor="#aaa"
-            secureTextEntry={!showPassword}
-            value={password}
-            onChangeText={setPassword}
-          />
-          <TouchableOpacity onPress={() => setShowPassword(!showPassword)}>
-            <Icon name={showPassword ? "eye-off" : "eye"} size={20} color="#ccc" />
+        {step === 1 ? (
+          <TouchableOpacity activeOpacity={0.8} onPress={handleRequestOtp}>
+            <LinearGradient colors={["#4facfe", "#00f2fe"]} style={styles.button}>
+              <Text style={styles.buttonText}>Request OTP</Text>
+            </LinearGradient>
           </TouchableOpacity>
-        </View>
+        ) : (
+          <>
+            {/* OTP Input */}
+            <View style={styles.inputContainer}>
+              <Icon name="key" size={20} color="#ccc" style={styles.icon} />
+              <TextInput
+                style={styles.input}
+                placeholder="Enter OTP"
+                placeholderTextColor="#aaa"
+                keyboardType="numeric"
+                value={otp}
+                onChangeText={setOtp}
+              />
+            </View>
 
-        {/* Reset Button */}
-        <TouchableOpacity activeOpacity={0.8} onPress={handleResetPassword}>
-          <LinearGradient colors={["#ff7e5f", "#feb47b"]} style={styles.button}>
-            <Text style={styles.buttonText}>Continue</Text>
-          </LinearGradient>
-        </TouchableOpacity>
+            {/* Password Input */}
+            <View style={styles.inputContainer}>
+              <Icon name="lock" size={20} color="#ccc" style={styles.icon} />
+              <TextInput
+                style={styles.input}
+                placeholder="Enter New Password"
+                placeholderTextColor="#aaa"
+                secureTextEntry={!showPassword}
+                value={password}
+                onChangeText={setPassword}
+              />
+              <TouchableOpacity onPress={() => setShowPassword(!showPassword)}>
+                <Icon name={showPassword ? "eye-off" : "eye"} size={20} color="#ccc" />
+              </TouchableOpacity>
+            </View>
+
+            <TouchableOpacity activeOpacity={0.8} onPress={handleResetPassword}>
+              <LinearGradient colors={["#4facfe", "#00f2fe"]} style={styles.button}>
+                <Text style={styles.buttonText}>Reset Password</Text>
+              </LinearGradient>
+            </TouchableOpacity>
+          </>
+        )}
 
         {/* Back to Login */}
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-          <Text style={styles.backText}>Back to Login</Text>
+          <Text style={[styles.link, { color: "#36D1DC" }]}>Back to Login</Text>
         </TouchableOpacity>
       </View>
 
       {loading && (
         <View style={styles.loadingOverlay}>
-          <ActivityIndicator size="large" color="#feb47b" />
+          <ActivityIndicator size="large" color="#4facfe" />
         </View>
       )}
     </LinearGradient>
@@ -124,6 +190,39 @@ const styles = StyleSheet.create({
     textAlign: "center",
     marginBottom: 20,
   },
+  stepperRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: 20,
+  },
+  stepContainer: { alignItems: "center" },
+  activeStepCircle: {
+    width: 35,
+    height: 35,
+    borderRadius: 18,
+    justifyContent: "center",
+    alignItems: "center",
+    marginBottom: 5,
+  },
+  inactiveStepCircle: {
+    width: 35,
+    height: 35,
+    borderRadius: 18,
+    borderWidth: 2,
+    borderColor: "#888",
+    justifyContent: "center",
+    alignItems: "center",
+    marginBottom: 5,
+  },
+  stepNumber: { color: "#fff", fontWeight: "bold" },
+  stepLabel: { color: "#aaa", fontSize: 12 },
+  stepLine: {
+    height: 2,
+    flex: 1,
+    backgroundColor: "#888",
+    marginHorizontal: 8,
+  },
   inputContainer: {
     flexDirection: "row",
     alignItems: "center",
@@ -138,7 +237,7 @@ const styles = StyleSheet.create({
   button: { paddingVertical: 14, borderRadius: 10, marginTop: 15 },
   buttonText: { color: "#fff", fontWeight: "bold", fontSize: 18, textAlign: "center" },
   backButton: { marginTop: 12, alignItems: "center" },
-  backText: { color: "#feb47b", fontSize: 16, fontWeight: "600" },
+  link: { fontSize: 16, fontWeight: "600" },
   loadingOverlay: {
     position: "absolute",
     top: 0,

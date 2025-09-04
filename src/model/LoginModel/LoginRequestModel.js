@@ -1,12 +1,12 @@
 export default class LoginRequestModel {
   constructor(email, password) {
-    this.email = email;
-    this.password = password;
+    this.email = email || "";
+    this.password = password || "";
   }
 
   toJson() {
     return {
-      email: this.email,
+      username: this.email,
       password: this.password,
     };
   }
