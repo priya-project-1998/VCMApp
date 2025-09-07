@@ -1,4 +1,4 @@
-// src/model/UserProfileUpdateRequest.js
+// models/UpdateProfileModel/UserProfileUpdateRequestModel.js
 class UserProfileUpdateRequestModel {
   constructor({ name, contact, address, city, state, pincode }) {
     this.name = name || "";
@@ -7,6 +7,17 @@ class UserProfileUpdateRequestModel {
     this.city = city || "";
     this.state = state || "";
     this.pincode = pincode || "";
+  }
+
+  toJson() {
+    return {
+      name: this.name,
+      contact: this.contact,
+      address: this.address,
+      city: this.city,
+      state: this.state,
+      pincode: this.pincode,
+    };
   }
 }
 

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useCallback } from "react";
 import {
   View,
   Text,
@@ -13,13 +13,10 @@ import {
 } from "react-native";
 import LinearGradient from "react-native-linear-gradient";
 import Icon from "react-native-vector-icons/Feather";
-import { useNavigation } from "@react-navigation/native";
+import { useFocusEffect } from "@react-navigation/native";
 import ProfileService from "../services/apiService/profile_service";
-import UserProfileUpdateRequestModel from "../model/UpdateProfileModel/UserProfileUpdateRequestModel";
 
 export default function ProfileScreen() {
-  const navigation = useNavigation();
-
   const [name, setName] = useState("");
   const [username, setUsername] = useState("");
   const [mobile, setMobile] = useState("");
@@ -30,30 +27,30 @@ export default function ProfileScreen() {
   const [pincode, setPincode] = useState("");
   const [loading, setLoading] = useState(false);
 
-  // ✅ Fetch profile when screen loads
-  useEffect(() => {
-    const fetchProfile = async () => {
-      setLoading(true);
-      const res = await ProfileService.getUserProfile();
-      setLoading(false);
+  // 🔹 Fetch profile every time screen is focused
+  useFocusEffect(
+    useCallback(() => {
+      const fetchProfile = async () => {
+        setLoading(true);
+        const res = await ProfileService.getUserProfile();
+        setLoading(false);
 
-      if (res.success && res.data) {
-        const user = res.data; // UserProfileModel
-        setName(user.name);
-        setUsername(user.username);
-        setMobile(user.contact);
-        setEmail(user.email);
-        setAddress(user.address);
-        setCity(user.city);
-        setStateVal(user.state);
-        setPincode(user.pincode);
-      } else {
-        Alert.alert("Error", res.message || "Failed to fetch profile");
-      }
-    };
+        if (res && res.data) {
+          const user = res.data;
+          setName(user.name);
+          setUsername(user.username);
+          setMobile(user.contact);
+          setEmail(user.email);
+          setAddress(user.address);
+          setCity(user.city);
+          setStateVal(user.state);
+          setPincode(user.pincode);
+        }
+      };
 
-    fetchProfile();
-  }, []);
+      fetchProfile();
+    }, [])
+  );
 
   // 🔹 Update Profile API
   const handleUpdateProfile = async () => {
@@ -64,14 +61,14 @@ export default function ProfileScreen() {
 
     setLoading(true);
 
-    const updateData = new UserProfileUpdateRequestModel({ 
+    const updateData = {
       name,
       contact: mobile,
       address,
       city,
       state: stateVal,
       pincode,
-    });
+    };
 
     const res = await ProfileService.updateUserProfile(updateData);
     setLoading(false);
@@ -96,25 +93,23 @@ export default function ProfileScreen() {
           <View style={styles.card}>
             <Text style={styles.title}>Profile</Text>
 
-            <InputField icon="user-check" placeholder="Username" value={username} editable={false} />
-            <InputField icon="mail" placeholder="Email" value={email} editable={false} />
-
-            {/* Editable fields */}
-            <InputField icon="user" placeholder="Full Name" value={name} onChangeText={setName} />
+            <InputField label="Username" icon="user-check" value={username} editable={false} />
+            <InputField label="Email" icon="mail" value={email} editable={false} />
+            <InputField label="Full Name" icon="user" value={name} onChangeText={setName} />
             <InputField
+              label="Mobile"
               icon="phone"
-              placeholder="Mobile"
               keyboardType="numeric"
               maxLength={10}
               value={mobile}
               onChangeText={(text) => setMobile(text.replace(/[^0-9]/g, ""))}
             />
-            <InputField icon="map-pin" placeholder="Address" value={address} onChangeText={setAddress} />
-            <InputField icon="home" placeholder="City" value={city} onChangeText={setCity} />
-            <InputField icon="map" placeholder="State" value={stateVal} onChangeText={setStateVal} />
+            <InputField label="Address" icon="map-pin" value={address} onChangeText={setAddress} />
+            <InputField label="City" icon="home" value={city} onChangeText={setCity} />
+            <InputField label="State" icon="map" value={stateVal} onChangeText={setStateVal} />
             <InputField
+              label="Pincode"
               icon="hash"
-              placeholder="Pincode"
               keyboardType="numeric"
               maxLength={6}
               value={pincode}
@@ -133,21 +128,29 @@ export default function ProfileScreen() {
   );
 }
 
-// 🔹 Reusable Input Component
-const InputField = ({ icon, editable = true, ...props }) => (
-  <View
-    style={[
-      styles.inputWrapper,
-      !editable && { backgroundColor: "rgba(255,255,255,0.08)" },
-    ]}
-  >
-    <Icon name={icon} size={18} color={editable ? "#fff" : "#bbb"} style={styles.inputIcon} />
-    <TextInput
-      style={[styles.input, !editable && { color: "#bbb" }]}
-      placeholderTextColor={editable ? "rgba(255,255,255,0.6)" : "rgba(187,187,187,0.7)"}
-      editable={editable}
-      {...props}
-    />
+// 🔹 Reusable Input Component with label
+const InputField = ({ label, icon, editable = true, ...props }) => (
+  <View style={{ marginBottom: 15 }}>
+    {label && <Text style={styles.inputLabel}>{label}</Text>}
+    <View
+      style={[
+        styles.inputWrapper,
+        !editable && { backgroundColor: "rgba(255,255,255,0.08)" },
+      ]}
+    >
+      <Icon
+        name={icon}
+        size={18}
+        color={editable ? "#fff" : "#bbb"}
+        style={styles.inputIcon}
+      />
+      <TextInput
+        style={[styles.input, !editable && { color: "#bbb" }]}
+        placeholderTextColor={editable ? "rgba(255,255,255,0.6)" : "rgba(187,187,187,0.7)"}
+        editable={editable}
+        {...props}
+      />
+    </View>
   </View>
 );
 
@@ -173,13 +176,18 @@ const styles = StyleSheet.create({
     textAlign: "center",
     marginBottom: 25,
   },
+  inputLabel: {
+    color: "#fff",
+    marginBottom: 5,
+    fontSize: 14,
+    fontWeight: "600",
+  },
   inputWrapper: {
     flexDirection: "row",
     alignItems: "center",
     backgroundColor: "rgba(255,255,255,0.15)",
     borderRadius: 12,
     paddingHorizontal: 12,
-    marginBottom: 15,
   },
   inputIcon: {
     marginRight: 10,
