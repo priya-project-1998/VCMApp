@@ -125,6 +125,7 @@ export async function getRequest(endpoint, headerType = HEADER_TYPES.DEFAULT, ex
     headerType,
     extraHeaders
   });
+  console.log("Calling URL:", `${BASE_URL}${endpoint}`);
   return request(endpoint, "GET", null, headerType, extraHeaders);
 }
 

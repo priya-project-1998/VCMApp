@@ -8,6 +8,7 @@ const ENDPOINTS = {
   GET_EVENT: "/event",
   CREATE_NEW_EVENT: "/event",
   GET_EVENT_LIST: "/events",
+  GET_USER_PROFILE_DETAIL: "/user-profile",
 };
 
 export default ENDPOINTS;

@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   View,
   Text,
@@ -9,68 +9,77 @@ import {
   StatusBar,
   Platform,
   Alert,
+  ActivityIndicator,
 } from "react-native";
 import LinearGradient from "react-native-linear-gradient";
 import Icon from "react-native-vector-icons/Feather";
 import { useNavigation } from "@react-navigation/native";
-import SignupService from "../services/apiService/signup_service"; // ✅ Correct service class
+import ProfileService from "../services/apiService/profile_service";
+import UserProfileUpdateRequestModel from "../model/UpdateProfileModel/UserProfileUpdateRequestModel";
 
-export default function SignupScreen() {
+export default function ProfileScreen() {
   const navigation = useNavigation();
 
   const [name, setName] = useState("");
   const [username, setUsername] = useState("");
   const [mobile, setMobile] = useState("");
   const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [otp, setOtp] = useState("");
-  const [step, setStep] = useState(1); // 1 = signup, 2 = otp
+  const [address, setAddress] = useState("");
+  const [city, setCity] = useState("");
+  const [stateVal, setStateVal] = useState("");
+  const [pincode, setPincode] = useState("");
+  const [loading, setLoading] = useState(false);
 
-  // 🔹 Signup API
-  const handleSignup = async () => {
-    if (!name || !username || !mobile || !email || !password) {
-      Alert.alert("Error", "Please fill all fields");
+  // ✅ Fetch profile when screen loads
+  useEffect(() => {
+    const fetchProfile = async () => {
+      setLoading(true);
+      const res = await ProfileService.getUserProfile();
+      setLoading(false);
+
+      if (res.success && res.data) {
+        const user = res.data; // UserProfileModel
+        setName(user.name);
+        setUsername(user.username);
+        setMobile(user.contact);
+        setEmail(user.email);
+        setAddress(user.address);
+        setCity(user.city);
+        setStateVal(user.state);
+        setPincode(user.pincode);
+      } else {
+        Alert.alert("Error", res.message || "Failed to fetch profile");
+      }
+    };
+
+    fetchProfile();
+  }, []);
+
+  // 🔹 Update Profile API
+  const handleUpdateProfile = async () => {
+    if (!name || !mobile || !address || !city || !stateVal || !pincode) {
+      Alert.alert("Error", "Please fill all editable fields");
       return;
     }
 
-    try {
-      const response = await SignupService.register({
-        name,
-        username,
-        mobile,
-        email,
-        password,
-      });
+    setLoading(true);
 
-      if (response.status) {
-        Alert.alert("Success", response.message || "OTP sent!");
-        setStep(2);
-      } else {
-        Alert.alert("Error", response.message || "Signup failed");
-      }
-    } catch (error) {
-      Alert.alert("Error", "Network error, try again later");
-    }
-  };
+    const updateData = new UserProfileUpdateRequestModel({ 
+      name,
+      contact: mobile,
+      address,
+      city,
+      state: stateVal,
+      pincode,
+    });
 
-  // 🔹 Verify OTP API
-  const handleVerifyOtp = async () => {
-    if (!otp) {
-      Alert.alert("Error", "Please enter OTP");
-      return;
-    }
+    const res = await ProfileService.updateUserProfile(updateData);
+    setLoading(false);
 
-    try {
-      const response = await SignupService.verifyOtp({ email, otp });
-
-      if (response.status) {
-        Alert.alert("Success", response.message || "Account verified!");
-        navigation.replace("LoginScreen");
-      } else {
-        Alert.alert("Error", response.message || "Invalid OTP");
-      }
-    } catch (error) {
-      Alert.alert("Error", "Network error, try again later");
+    if (res.success) {
+      Alert.alert("Success", res.message || "Profile updated successfully");
+    } else {
+      Alert.alert("Error", res.message || "Profile update failed");
     }
   };
 
@@ -78,85 +87,65 @@ export default function SignupScreen() {
     <LinearGradient colors={["#0f2027", "#203a43", "#2c5364"]} style={{ flex: 1 }}>
       <StatusBar barStyle="light-content" backgroundColor="transparent" translucent />
 
-      <ScrollView contentContainerStyle={styles.container} keyboardShouldPersistTaps="handled">
-        <View style={styles.card}>
-          <Text style={styles.title}>{step === 1 ? "Create Account" : "Verify OTP"}</Text>
-
-          {step === 1 ? (
-            <>
-              <InputField icon="user" placeholder="Full Name" value={name} onChangeText={setName} />
-              <InputField
-                icon="user-check"
-                placeholder="Username"
-                value={username}
-                onChangeText={setUsername}
-              />
-              <InputField
-                icon="phone"
-                placeholder="Mobile"
-                keyboardType="numeric"
-                maxLength={10}
-                value={mobile}
-                onChangeText={(text) => setMobile(text.replace(/[^0-9]/g, ""))}
-              />
-              <InputField
-                icon="mail"
-                placeholder="Email"
-                keyboardType="email-address"
-                value={email}
-                onChangeText={setEmail}
-              />
-              <InputField
-                icon="lock"
-                placeholder="Password"
-                secureTextEntry
-                value={password}
-                onChangeText={setPassword}
-              />
-
-              <TouchableOpacity style={{ marginTop: 20 }} onPress={handleSignup}>
-                <LinearGradient colors={["#36d1dc", "#5b86e5"]} style={styles.button}>
-                  <Text style={styles.buttonText}>Sign Up</Text>
-                </LinearGradient>
-              </TouchableOpacity>
-            </>
-          ) : (
-            <>
-              <InputField
-                icon="key"
-                placeholder="Enter OTP"
-                keyboardType="numeric"
-                value={otp}
-                onChangeText={setOtp}
-              />
-
-              <TouchableOpacity style={{ marginTop: 20 }} onPress={handleVerifyOtp}>
-                <LinearGradient colors={["#ff7e5f", "#feb47b"]} style={styles.button}>
-                  <Text style={styles.buttonText}>Verify OTP</Text>
-                </LinearGradient>
-              </TouchableOpacity>
-            </>
-          )}
-
-          <TouchableOpacity
-            onPress={() => navigation.replace("LoginScreen")}
-            style={{ marginTop: 20 }}
-          >
-            <Text style={styles.loginText}>Already have an account? Login</Text>
-          </TouchableOpacity>
+      {loading ? (
+        <View style={styles.loaderContainer}>
+          <ActivityIndicator size="large" color="#ff7e5f" />
         </View>
-      </ScrollView>
+      ) : (
+        <ScrollView contentContainerStyle={styles.container} keyboardShouldPersistTaps="handled">
+          <View style={styles.card}>
+            <Text style={styles.title}>Profile</Text>
+
+            <InputField icon="user-check" placeholder="Username" value={username} editable={false} />
+            <InputField icon="mail" placeholder="Email" value={email} editable={false} />
+
+            {/* Editable fields */}
+            <InputField icon="user" placeholder="Full Name" value={name} onChangeText={setName} />
+            <InputField
+              icon="phone"
+              placeholder="Mobile"
+              keyboardType="numeric"
+              maxLength={10}
+              value={mobile}
+              onChangeText={(text) => setMobile(text.replace(/[^0-9]/g, ""))}
+            />
+            <InputField icon="map-pin" placeholder="Address" value={address} onChangeText={setAddress} />
+            <InputField icon="home" placeholder="City" value={city} onChangeText={setCity} />
+            <InputField icon="map" placeholder="State" value={stateVal} onChangeText={setStateVal} />
+            <InputField
+              icon="hash"
+              placeholder="Pincode"
+              keyboardType="numeric"
+              maxLength={6}
+              value={pincode}
+              onChangeText={(text) => setPincode(text.replace(/[^0-9]/g, ""))}
+            />
+
+            <TouchableOpacity style={{ marginTop: 20 }} onPress={handleUpdateProfile}>
+              <LinearGradient colors={["#36d1dc", "#5b86e5"]} style={styles.button}>
+                <Text style={styles.buttonText}>Update Profile</Text>
+              </LinearGradient>
+            </TouchableOpacity>
+          </View>
+        </ScrollView>
+      )}
     </LinearGradient>
   );
 }
 
 // 🔹 Reusable Input Component
-const InputField = ({ icon, ...props }) => (
-  <View style={styles.inputWrapper}>
-    <Icon name={icon} size={18} color="#fff" style={styles.inputIcon} />
+const InputField = ({ icon, editable = true, ...props }) => (
+  <View
+    style={[
+      styles.inputWrapper,
+      !editable && { backgroundColor: "rgba(255,255,255,0.08)" },
+    ]}
+  >
+    <Icon name={icon} size={18} color={editable ? "#fff" : "#bbb"} style={styles.inputIcon} />
     <TextInput
-      style={styles.input}
-      placeholderTextColor="rgba(255,255,255,0.6)"
+      style={[styles.input, !editable && { color: "#bbb" }]}
+      placeholderTextColor={editable ? "rgba(255,255,255,0.6)" : "rgba(187,187,187,0.7)"}
+      editable={editable}
       {...props}
     />
   </View>
@@ -215,9 +204,10 @@ const styles = StyleSheet.create({
     fontSize: 16,
     textAlign: "center",
   },
-  loginText: {
-    color: "#ddd",
-    fontSize: 14,
-    textAlign: "center",
+  loaderContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    backgroundColor: "rgba(0,0,0,0.3)",
   },
 });
