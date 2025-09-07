@@ -8,11 +8,12 @@ class EventService {
   async getEvents() {
     try {
       const response = await getRequest(
-        ENDPOINTS.GET_EVENT,
+        ENDPOINTS.GET_EVENT_LIST,
         HEADER_TYPES.AUTH // Bearer token header
       );
 
-      if (response.success && response.data) {
+      if (response.code === 200) {
+       
         return new ApiResponse(true, response.code, "Events fetched successfully", response.data);
       } else {
         return new ApiResponse(false, response.code, response.message, response.data);
