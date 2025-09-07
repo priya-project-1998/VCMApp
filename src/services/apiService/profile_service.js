@@ -10,7 +10,7 @@ class ProfileService {
   // 🔹 Get User Profile Details
   async getUserProfile() {
     try {
-      const response = await getRequest(
+      const response = await postRequest(
         ENDPOINTS.GET_USER_PROFILE_DETAIL,
         HEADER_TYPES.AUTH
       );
@@ -32,7 +32,7 @@ class ProfileService {
       const requestData = new UserProfileUpdateRequestModel(updateData);
 
       const response = await postRequest(
-        ENDPOINTS.GET_USER_PROFILE_DETAIL,
+        ENDPOINTS.UPDATE_USER_PROFILE_UPDATE,
         requestData,
         HEADER_TYPES.AUTH
       );

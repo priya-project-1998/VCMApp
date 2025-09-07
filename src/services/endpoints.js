@@ -9,6 +9,7 @@ const ENDPOINTS = {
   CREATE_NEW_EVENT: "/event",
   GET_EVENT_LIST: "/events",
   GET_USER_PROFILE_DETAIL: "/user-profile",
+  UPDATE_USER_PROFILE_UPDATE: "/update-profile",
 };
 
 export default ENDPOINTS;
