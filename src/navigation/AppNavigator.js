@@ -2,6 +2,7 @@ import React from 'react';
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { createDrawerNavigator } from '@react-navigation/drawer';
+import LinearGradient from 'react-native-linear-gradient';
 
 import HomeScreen from '../screens/HomeScreen';
 import LoginScreen from '../screens/LoginScreen';
@@ -28,10 +29,98 @@ import ForgetPasswordScreen from '../screens/ForgetPasswordScreen';
 const Stack = createNativeStackNavigator();
 const Drawer = createDrawerNavigator();
 
+const defaultScreenOptions = {
+  headerBackground: () => (
+    <LinearGradient
+      colors={['#0f2027', '#203a43']}
+      style={{ flex: 1 }}
+      start={{ x: 0, y: 0 }}
+      end={{ x: 1, y: 0 }}
+    />
+  ),
+  headerTintColor: '#fff',
+  headerTitleStyle: {
+    fontSize: 16,
+    fontWeight: '600',
+    letterSpacing: 0.5,
+  },
+  headerShadowVisible: false,
+};
+
 function DrawerNavigator() {
   return (
-    <Drawer.Navigator drawerContent={(props) => <CustomDrawer {...props} />}>
-      <Drawer.Screen name="Home" component={HomeScreen} />
+    <Drawer.Navigator 
+      drawerContent={(props) => <CustomDrawer {...props} />}
+      screenOptions={{
+        ...defaultScreenOptions,
+        headerStyle: {
+          height: 65,
+          backgroundColor: 'transparent',
+          elevation: 0,
+          shadowOpacity: 0,
+        },
+        headerLeftContainerStyle: {
+          paddingLeft: 10,
+        },
+        headerRightContainerStyle: {
+          paddingRight: 10,
+        },
+        headerTitleAlign: 'center',
+        drawerStyle: {
+          backgroundColor: '#203a43',
+          borderRightWidth: 1,
+          borderColor: 'rgba(255,255,255,0.1)',
+          width: '75%',
+        },
+        drawerActiveTintColor: '#ffffff',
+        drawerInactiveTintColor: '#ffffff',
+        drawerActiveBackgroundColor: 'transparent',
+        drawerItemStyle: {
+          borderRadius: 25,
+          marginHorizontal: 12,
+          marginVertical: 4,
+          overflow: 'hidden',
+        },
+        drawerContentStyle: {
+          backgroundColor: 'transparent',
+        },
+        drawerLabelStyle: {
+          fontSize: 14,
+          fontWeight: '500',
+          letterSpacing: 0.3,
+        },
+        drawerContentContainerStyle: {
+          paddingTop: 10,
+        },
+        drawerItemBackground: ({ focused }) => 
+          focused ? (
+            <LinearGradient
+              colors={['#feb47b', '#ff7e5f']}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 0 }}
+              style={{
+                position: 'absolute',
+                left: 0,
+                right: 0,
+                top: 0,
+                bottom: 0,
+              }}
+            />
+          ) : null
+      }}
+    >
+      <Drawer.Screen 
+        name="Dashboard" 
+        component={HomeScreen}
+        options={{
+          headerTitle: "VCM App",
+          headerTitleStyle: {
+            color: '#feb47b',
+            fontWeight: '700',
+            fontSize: 18,
+            letterSpacing: 0.5,
+          }
+        }} />
       <Drawer.Screen name="Profile" component={ProfileScreen} />
       <Drawer.Screen name="Notifications" component={NotificationsScreen} />
       <Drawer.Screen name="Search" component={SearchScreen} />
