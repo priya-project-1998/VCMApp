@@ -1,21 +1,20 @@
 buildscript {
     ext {
-        buildToolsVersion = "33.0.2"       // RN 0.81.1 ke liye safe
-        minSdkVersion = 21                // RN default minimum
-        compileSdkVersion = 33             // RN recommended
-        targetSdkVersion = 33
-        ndkVersion = "27.1.12297006"
-        kotlinVersion = "1.8.22"          // gesture-handler compatible
+        buildToolsVersion = "35.0.0"
+        minSdkVersion = 23
+        compileSdkVersion = 35
+        targetSdkVersion = 34
+        ndkVersion = "26.1.10909125"
+        kotlinVersion = "1.9.22"
     }
     repositories {
         google()
         mavenCentral()
-        // jcenter is deprecated, remove if possible
     }
     dependencies {
-        classpath("com.android.tools.build:gradle:8.1.0")   // specify version
+        classpath("com.android.tools.build:gradle:8.5.2")
         classpath("com.facebook.react:react-native-gradle-plugin")
-        classpath("org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlinVersion")
+        classpath("org.jetbrains.kotlin:kotlin-gradle-plugin")
     }
 }
 
