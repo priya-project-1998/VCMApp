@@ -73,22 +73,29 @@ function DrawerNavigator() {
           width: '75%',
         },
         drawerActiveTintColor: '#ffffff',
-        drawerInactiveTintColor: '#ffffff',
+        drawerInactiveTintColor: 'rgba(255,255,255,0.8)',
         drawerActiveBackgroundColor: 'transparent',
         drawerItemStyle: {
-          borderRadius: 25,
+          borderRadius: 12,
           marginHorizontal: 12,
           marginVertical: 4,
           overflow: 'hidden',
+          borderWidth: 1,
+          borderColor: 'transparent',
         },
         drawerContentStyle: {
           backgroundColor: 'transparent',
         },
-        drawerLabelStyle: {
+        drawerLabelStyle: ({ focused }) => ({
           fontSize: 14,
-          fontWeight: '500',
+          fontWeight: focused ? '700' : '500',
           letterSpacing: 0.3,
-        },
+          textShadowColor: focused ? 'rgba(0,0,0,0.3)' : 'transparent',
+          textShadowOffset: { width: 1, height: 1 },
+          textShadowRadius: 2,
+        }),
+        pressColor: 'rgba(254, 180, 123, 0.1)',
+        pressOpacity: 0.8,
         drawerContentContainerStyle: {
           paddingTop: 10,
         },
@@ -104,22 +111,44 @@ function DrawerNavigator() {
                 right: 0,
                 top: 0,
                 bottom: 0,
+                opacity: 0.9,
+                shadowColor: '#000',
+                shadowOffset: { width: 0, height: 2 },
+                shadowOpacity: 0.25,
+                shadowRadius: 3.84,
+                elevation: 5,
               }}
             />
-          ) : null
+          ) : (
+            <LinearGradient
+              colors={['rgba(32, 58, 67, 0.4)', 'transparent']}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 0 }}
+              style={{
+                position: 'absolute',
+                left: 0,
+                right: 0,
+                top: 0,
+                bottom: 0,
+              }}
+            />
+          )
       }}
     >
       <Drawer.Screen 
         name="Dashboard" 
         component={HomeScreen}
         options={{
-          headerTitle: "VCM App",
+          headerTitle: "NaviQuest",
           headerTitleStyle: {
             color: '#feb47b',
             fontWeight: '700',
-            fontSize: 18,
-            letterSpacing: 0.5,
-          }
+            fontSize: 20,
+            letterSpacing: 0.8,
+            textAlign: 'center',
+            flex: 1,
+          },
+          headerTitleAlign: 'center',
         }} />
       <Drawer.Screen name="Profile" component={ProfileScreen} />
       <Drawer.Screen name="Notifications" component={NotificationsScreen} />
