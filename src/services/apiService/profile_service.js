@@ -31,33 +31,38 @@ class ProfileService {
   }
 
     // 🔹 Update User Profile (fixed)
-  async updateUserProfile(updateData) {
-    try {
-      // Convert model to plain JSON
-      const requestBody = new UserProfileUpdateRequestModel(updateData).toJson();
+async updateUserProfile(updateData) {
+  try {
+    const requestBody = new UserProfileUpdateRequestModel(updateData).toJson();
 
-      // Send POST request with Authorization & Content-Type automatically added
-      const res = await postRequest(
-        ENDPOINTS.UPDATE_PROFILE,
-        requestBody,
-        HEADER_TYPES.AUTH
-      );
+    console.log("📤 API Request URL:", ENDPOINTS.UPDATE_PROFILE);
+    console.log("📤 API Request Body:", requestBody);
+    console.log("📤 API Headers:", HEADER_TYPES.AUTH);
 
-      console.log("📌 updateUserProfile - full response:", res);
+    const res = await postRequest(
+      ENDPOINTS.UPDATE_PROFILE,
+      requestBody,
+      HEADER_TYPES.AUTH
+    );
 
-      const userObj = res?.data?.user || null;
+    console.log("📥 API Raw Response:", JSON.stringify(res, null, 2));
 
-      if (res.status === "success" && userObj) {
-        const updatedProfile = new UserProfileModel(userObj);
-        return new ApiResponse(true, 200, res.message || "Profile updated successfully", updatedProfile);
-      } else {
-        return new ApiResponse(false, res.code || 500, res.message || "Profile update failed", null);
-      }
-    } catch (err) {
-      console.error("❌ updateUserProfile - error:", err);
-      return new ApiResponse(false, 500, err.message || "Profile update failed", null);
+    const userObj = res?.data?.user || null;
+    console.log("📥 userObj Raw Response:", userObj);
+
+    // try matching what backend actually sends
+    if ((res.status === "success" || res.success === true) && userObj) {
+      const updatedProfile = new UserProfileModel(userObj);
+      return new ApiResponse(true, 200, res.message || "Profile updated successfully", updatedProfile);
+    } else {
+      return new ApiResponse(false, res.code || 500, res.message || "Profile update failed", null);
     }
+  } catch (err) {
+    console.error("❌ updateUserProfile - error:", err);
+    return new ApiResponse(false, 500, err.message || "Profile update failed", null);
   }
+}
+
 
 }
 

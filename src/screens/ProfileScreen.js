@@ -71,9 +71,10 @@ export default function ProfileScreen() {
     };
 
     const res = await ProfileService.updateUserProfile(updateData);
+    console.log('profile res check',res);
     setLoading(false);
 
-    if (res.success) {
+    if (res.status) {
       Alert.alert("Success", res.message || "Profile updated successfully");
     } else {
       Alert.alert("Error", res.message || "Profile update failed");
