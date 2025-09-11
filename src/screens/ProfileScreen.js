@@ -70,17 +70,37 @@ export default function ProfileScreen() {
       const img = await pickImage();
       if (img) {
         setAvatarUri(img.uri);
-        setSelectedImage(img); // kept for future use if backend supports upload
+        setSelectedImage(img); // Store for upload
       }
     } catch (e) {
-      Alert.alert("Image Picker", e?.toString() || "Unable to pick image");
+      // 🔹 Beautiful Image Picker Error Alert
+      Alert.alert(
+        "📷 Image Selection Failed", 
+        `${e?.toString() || "Unable to pick image"}\n\n🤔 Please check your permissions and try again.`,
+        [
+          {
+            text: "📱 Try Again",
+            style: "default"
+          }
+        ]
+      );
     }
   };
 
   // 🔹 Update Profile API
   const handleUpdateProfile = async () => {
     if (!name || !mobile || !address || !city || !stateVal || !pincode) {
-      Alert.alert("Error", "Please fill all editable fields");
+      // 🔹 Beautiful Validation Alert
+      Alert.alert(
+        "⚠️ Incomplete Information", 
+        "Please fill all required fields:\n\n📝 Name\n📱 Mobile\n🏠 Address\n🏙️ City\n🗺️ State\n📮 Pincode",
+        [
+          {
+            text: "📝 Got it!",
+            style: "default"
+          }
+        ]
+      );
       return;
     }
 
@@ -93,17 +113,49 @@ export default function ProfileScreen() {
       city,
       state: stateVal,
       pincode,
-      // NOTE: Image is not being sent as per request (no API logic change)
     };
+
+    // 🔹 Add profile pic if selected
+    if (selectedImage) {
+      updateData.profile_pic = selectedImage;
+    }
 
     const res = await ProfileService.updateUserProfile(updateData);
     console.log('profile res check',res);
     setLoading(false);
 
     if (res.status) {
-      Alert.alert("Success", res.message || "Profile updated successfully");
+      // 🔹 Beautiful Success Alert
+      Alert.alert(
+        "✅ Success!", 
+        `${res.message || "Profile updated successfully"}\n\n🎉 Your changes have been saved!`,
+        [
+          {
+            text: "🏠 Go to Dashboard",
+            style: "default",
+            onPress: () => {
+              navigation.navigate('Dashboard');
+              // Clear selected image after success
+              setSelectedImage(null);
+            }
+          }
+        ],
+        { 
+          cancelable: false,
+        }
+      );
     } else {
-      Alert.alert("Error", res.message || "Profile update failed");
+      // 🔹 Beautiful Error Alert  
+      Alert.alert(
+        "❌ Update Failed", 
+        `${res.message || "Profile update failed"}\n\n😔 Please try again later.`,
+        [
+          {
+            text: "🔄 Try Again",
+            style: "default"
+          }
+        ]
+      );
     }
   };
 

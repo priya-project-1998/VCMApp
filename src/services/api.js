@@ -8,7 +8,8 @@ export const HEADER_TYPES = {
   DEFAULT: "default",   // Content-Type + Accept
   ACCEPT: "acceptOnly", // Accept only
   AUTH: "auth", 
-  FORMDATA: "formData"  // multipart/form-data (no Content-Type here)
+  FORMDATA: "formData",  // multipart/form-data (no Content-Type here)
+  AUTH_FORMDATA: "authFormData"  // multipart/form-data with auth
 };
 
 // 🔹 Build headers dynamically
@@ -39,6 +40,16 @@ async function buildHeaders(type, extraHeaders = {}) {
       headers["Accept"] = "application/json";
       break;
 
+    case HEADER_TYPES.AUTH_FORMDATA:
+      const authToken = await AsyncStorage.getItem("authToken");
+      headers["Accept"] = "application/json";
+      if (authToken) {
+        headers["Authorization"] = `Bearer ${authToken}`;
+      } else {
+        console.warn("Auth token not found in AsyncStorage for FormData");
+      }
+      break;
+
     default:
       headers["Content-Type"] = "application/json";
       headers["Accept"] = "application/json";
@@ -60,7 +71,7 @@ async function request(
 
     let requestBody = null;
     if (body) {
-      if (headerType === HEADER_TYPES.FORMDATA) {
+      if (headerType === HEADER_TYPES.FORMDATA || headerType === HEADER_TYPES.AUTH_FORMDATA) {
         requestBody = body; // direct FormData
       } else {
         requestBody = JSON.stringify(body);

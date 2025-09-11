@@ -30,19 +30,36 @@ class ProfileService {
     }
   }
 
-    // 🔹 Update User Profile (fixed)
+    // 🔹 Update User Profile (with profile pic support)
 async updateUserProfile(updateData) {
   try {
-    const requestBody = new UserProfileUpdateRequestModel(updateData).toJson();
+    const requestModel = new UserProfileUpdateRequestModel(updateData);
+    
+    // Check if profile_pic is being uploaded
+    const hasProfilePic = updateData.profile_pic ? true : false;
+    
+    let requestBody;
+    let headerType;
+    
+    if (hasProfilePic) {
+      // Use FormData for file upload
+      requestBody = requestModel.toFormData();
+      headerType = HEADER_TYPES.AUTH_FORMDATA;
+      console.log("📤 Using FormData for file upload");
+    } else {
+      // Use JSON for regular update (existing logic)
+      requestBody = requestModel.toJson();
+      headerType = HEADER_TYPES.AUTH;
+      console.log("📤 Using JSON for regular update");
+    }
 
     console.log("📤 API Request URL:", ENDPOINTS.UPDATE_PROFILE);
-    console.log("📤 API Request Body:", requestBody);
-    console.log("📤 API Headers:", HEADER_TYPES.AUTH);
+    console.log("📤 API Headers Type:", headerType);
 
     const res = await postRequest(
       ENDPOINTS.UPDATE_PROFILE,
       requestBody,
-      HEADER_TYPES.AUTH
+      headerType
     );
 
     console.log("📥 API Raw Response:", JSON.stringify(res, null, 2));
@@ -50,7 +67,7 @@ async updateUserProfile(updateData) {
     const userObj = res?.data?.user || null;
     console.log("📥 userObj Raw Response:", userObj);
 
-    // try matching what backend actually sends
+    // try matching what backend actually sends (existing logic unchanged)
     if ((res.status === "success" || res.success === true) && userObj) {
       const updatedProfile = new UserProfileModel(userObj);
       return new ApiResponse(true, 200, res.message || "Profile updated successfully", updatedProfile);
