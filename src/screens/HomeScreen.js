@@ -18,7 +18,7 @@ const cardWidth = (width * 0.44); // Slightly less than 50% to account for margi
 
 export default function Dashboard() {
   const [autoPlayTimer, setAutoPlayTimer] = useState(null);
-
+  
   React.useEffect(() => {
     startAutoPlay();
     return () => {
