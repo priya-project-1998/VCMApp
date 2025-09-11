@@ -7,73 +7,62 @@ import {
   StyleSheet,
   Alert,
   ScrollView,
+  ActivityIndicator,
+  Dimensions,
 } from "react-native";
-import AsyncStorage from "@react-native-async-storage/async-storage";
 import LinearGradient from "react-native-linear-gradient";
 import Icon from "react-native-vector-icons/Feather";
 import { useFocusEffect } from "@react-navigation/native";
 
+import SignupService from "../services/apiService/signup_service";
+
+const { height: SCREEN_HEIGHT } = Dimensions.get("window");
+
 export default function SignupScreen({ navigation }) {
-  const [step, setStep] = useState("email"); // email → otp → details
+  // ---------------- State ----------------
+  const [step, setStep] = useState("register"); // "register" | "otp"
   const [email, setEmail] = useState("");
-  const [otp, setOtp] = useState("");
-  const [generatedOtp, setGeneratedOtp] = useState("");
   const [name, setName] = useState("");
   const [username, setUsername] = useState("");
   const [mobile, setMobile] = useState("");
   const [password, setPassword] = useState("");
+  const [address, setAddress] = useState("");
+  const [city, setCity] = useState("");
+  const [state, setState] = useState("");
+  const [pincode, setPincode] = useState("");
+  const [otp, setOtp] = useState("");
   const [showPassword, setShowPassword] = useState(false);
+  const [loading, setLoading] = useState(false);
 
-  // Reset form every time screen is focused
   useFocusEffect(
     useCallback(() => {
-      setStep("email");
-      setEmail("");
-      setOtp("");
-      setGeneratedOtp("");
-      setName("");
-      setUsername("");
-      setMobile("");
-      setPassword("");
-      setShowPassword(false);
+      resetForm();
     }, [])
   );
 
-  // Step 1 - Gmail Validation
-  const handleEmailContinue = () => {
-    const gmailRegex = /^[a-zA-Z0-9._%+-]+@gmail\.com$/;
-    if (!gmailRegex.test(email)) {
-      Alert.alert("Invalid Email", "Please enter a valid Gmail address (example@gmail.com)");
-      return;
-    }
-    // Generate random OTP
-    const randomOtp = Math.floor(1000 + Math.random() * 9000).toString();
-    setGeneratedOtp(randomOtp);
-
-    // Simulate sending verification email
-    Alert.alert("Verification Sent", `OTP for ${email} is: ${randomOtp} (Test Mode)`);
-
-    setStep("otp");
+  const resetForm = () => {
+    setStep("register");
+    setEmail("");
+    setName("");
+    setUsername("");
+    setMobile("");
+    setPassword("");
+    setAddress("");
+    setCity("");
+    setState("");
+    setPincode("");
+    setOtp("");
+    setShowPassword(false);
   };
 
-  // Step 2 - OTP Verification
-  const handleOtpVerify = () => {
-    if (otp === generatedOtp || otp === "1998") {
-      Alert.alert("Verified", "Email verified successfully!");
-      setStep("details");
-    } else {
-      Alert.alert("Error", "Invalid OTP, please try again");
-    }
-  };
-
-  // Step 3 - Save User Details
+  // ---------------- Handlers ----------------
   const handleSignup = async () => {
-    if (!name || !username || !mobile || !password) {
+    if (!email || !name || !username || !mobile || !password || !address || !city || !state || !pincode) {
       Alert.alert("Error", "Please fill all fields");
       return;
     }
-    if (username.length < 6) {
-      Alert.alert("Error", "Username must be at least 6 characters long");
+    if (!/^[a-zA-Z0-9._%+-]+@gmail\.com$/.test(email)) {
+      Alert.alert("Error", "Please enter a valid Gmail address");
       return;
     }
     if (!/^\d{10}$/.test(mobile)) {
@@ -84,18 +73,52 @@ export default function SignupScreen({ navigation }) {
       Alert.alert("Error", "Password must be at least 8 characters long");
       return;
     }
-    const storedUsers = await AsyncStorage.getItem("users");
-    let users = storedUsers ? JSON.parse(storedUsers) : [];
-    if (users.find(u => u.email === email || u.mobile === mobile || u.username === username)) {
-      Alert.alert("Error", "User already exists");
-      return;
+
+    try {
+      setLoading(true);
+      const payload = { name, username, email, password, contact: mobile, address, city, state, pincode };
+      const response = await SignupService.registerUser(payload);
+      console.log('show me resonse',response);
+      setLoading(false);
+
+      if (response.status === "success") {
+        Alert.alert("Success", response.message);
+        setStep("otp");
+      } else {
+        Alert.alert("Error", response.message);
+      }
+
+
+    } catch (error) {
+      setLoading(false);
+      Alert.alert("Signup Error", "Something went wrong. Please try again.");
     }
-    users.push({ name, username, mobile, email, password });
-    await AsyncStorage.setItem("users", JSON.stringify(users));
-    Alert.alert("Success", "Account created successfully");
-    navigation.replace("LoginScreen");
   };
 
+  const handleOtpVerify = async () => {
+    if (!otp) {
+      Alert.alert("Error", "Please enter OTP");
+      return;
+    }
+
+    try {
+      setLoading(true);
+      const response = await SignupService.verifyOtp(email, otp);
+      setLoading(false);
+
+      if (response.status === "success") {
+        Alert.alert("Success", response.message || "OTP Verified successfully");
+        navigation.replace("LoginScreen");
+      } else {
+        Alert.alert("Error", response.message || "OTP verification failed");
+      }
+    } catch (error) {
+      setLoading(false);
+      Alert.alert("OTP Error", "Something went wrong. Please try again.");
+    }
+  };
+
+  // ---------------- Input Component ----------------
   const renderInput = (
     icon,
     placeholder,
@@ -118,28 +141,39 @@ export default function SignupScreen({ navigation }) {
         secureTextEntry={secure}
         editable={editable}
       />
-       {toggleSecure && (
-      <TouchableOpacity onPress={() => setShowPassword(!showPassword)}>
-        <Icon name={showPassword ? "eye-off" : "eye"} size={20} color="#ccc" />
-      </TouchableOpacity>
-    )}
+      {toggleSecure && (
+        <TouchableOpacity onPress={() => setShowPassword(!showPassword)}>
+          <Icon name={showPassword ? "eye-off" : "eye"} size={20} color="#ccc" />
+        </TouchableOpacity>
+      )}
     </View>
   );
 
+  // ---------------- Render ----------------
   return (
     <LinearGradient colors={["#0f2027", "#203a43", "#2c5364"]} style={styles.gradient}>
-      <ScrollView contentContainerStyle={styles.container}>
-        <View style={styles.card}>
-          <Text style={styles.title}>Sign Up</Text>
+      <View
+        style={[
+          styles.card,
+          { maxHeight: SCREEN_HEIGHT * 0.8, marginVertical: 20, marginHorizontal: 16 },
+        ]}
+      >
+        <Text style={styles.title}>
+          {step === "register" ? "Create Account" : "Verify OTP"}
+        </Text>
 
-          {step === "email" && (
+        <ScrollView showsVerticalScrollIndicator={false}>
+          {step === "register" && (
             <>
-              {renderInput("mail", "Enter Gmail", email, setEmail, "email-address")}
-              <TouchableOpacity activeOpacity={0.8} onPress={handleEmailContinue}>
-                <LinearGradient colors={["#ff7e5f", "#feb47b"]} style={styles.button}>
-                  <Text style={styles.buttonText}>Continue</Text>
-                </LinearGradient>
-              </TouchableOpacity>
+              {renderInput("mail", "Email (Gmail only)", email, setEmail, "email-address")}
+              {renderInput("user", "Full Name", name, setName, "default")}
+              {renderInput("user", "Username", username, setUsername, "default")}
+              {renderInput("phone", "Mobile Number", mobile, (t) => setMobile(t.replace(/[^0-9]/g, "")), "numeric")}
+              {renderInput("lock", "Password", password, setPassword, "default", !showPassword, true, true)}
+              {renderInput("home", "Address", address, setAddress, "default")}
+              {renderInput("map-pin", "City", city, setCity, "default")}
+              {renderInput("map", "State", state, setState, "default")}
+              {renderInput("hash", "Pincode", pincode, setPincode, "numeric")}
             </>
           )}
 
@@ -147,63 +181,89 @@ export default function SignupScreen({ navigation }) {
             <>
               {renderInput("mail", "Email", email, setEmail, "email-address", false, false)}
               {renderInput("key", "Enter OTP", otp, setOtp, "numeric")}
-              <TouchableOpacity activeOpacity={0.8} onPress={handleOtpVerify}>
-                <LinearGradient colors={["#36D1DC", "#5B86E5"]} style={styles.button}>
-                  <Text style={styles.buttonText}>Verify OTP</Text>
-                </LinearGradient>
-              </TouchableOpacity>
-              <Text style={styles.note}>Tip: Enter 1998 if OTP not received (Test Mode)</Text>
             </>
           )}
+        </ScrollView>
 
-          {step === "details" && (
-            <>
-              {renderInput("mail", "Email", email, setEmail, "email-address", false, false)}
-              {renderInput("user", "Full Name", name, setName, "default")}
-              {renderInput("user", "Username", username, setUsername, "default")}
-              {renderInput("phone", "Mobile Number", mobile, (text) => setMobile(text.replace(/[^0-9]/g, '')), "numeric", false, true, false, 10)}
-              {renderInput("lock", "Password", password, setPassword, "default", !showPassword, true, true)}
-              <TouchableOpacity activeOpacity={0.8} onPress={handleSignup}>
-                <LinearGradient colors={["#ff7e5f", "#feb47b"]} style={styles.button}>
-                  <Text style={styles.buttonText}>Sign Up</Text>
-                </LinearGradient>
-              </TouchableOpacity>
-            </>
-          )}
+        {step === "register" ? (
+          <TouchableOpacity activeOpacity={0.85} onPress={handleSignup}>
+            <LinearGradient colors={["#36D1DC", "#5B86E5"]} style={styles.button}>
+              <Text style={styles.buttonText}>Sign Up</Text>
+            </LinearGradient>
+          </TouchableOpacity>
+        ) : (
+          <TouchableOpacity activeOpacity={0.8} onPress={handleOtpVerify}>
+            <LinearGradient colors={["#36D1DC", "#5B86E5"]} style={styles.button}>
+              <Text style={styles.buttonText}>Verify OTP</Text>
+            </LinearGradient>
+          </TouchableOpacity>
+        )}
 
+        {step === "register" && (
           <TouchableOpacity onPress={() => navigation.replace("LoginScreen")}>
             <Text style={styles.link}>Already have an account? Log in</Text>
           </TouchableOpacity>
+        )}
+      </View>
+
+      {loading && (
+        <View style={styles.loadingOverlay}>
+          <ActivityIndicator size="large" color="#36D1DC" />
         </View>
-      </ScrollView>
+      )}
     </LinearGradient>
   );
 }
 
 const styles = StyleSheet.create({
-  gradient: { flex: 1 },
-  container: { flexGrow: 1, justifyContent: "center", padding: 20 },
+  gradient: { flex: 1, justifyContent: "center" },
   card: {
-    backgroundColor: "rgba(255,255,255,0.1)",
+    backgroundColor: "rgba(255,255,255,0.08)",
     borderRadius: 20,
     padding: 20,
     borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.3)",
+    borderColor: "rgba(255,255,255,0.2)",
+    marginHorizontal: 16,
   },
-  title: { fontSize: 26, fontWeight: "bold", color: "#fff", textAlign: "center", marginBottom: 20 },
+  title: {
+    fontSize: 28,
+    fontWeight: "bold",
+    color: "#fff",
+    textAlign: "center",
+    marginBottom: 24,
+    letterSpacing: 1,
+  },
   inputContainer: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "rgba(255,255,255,0.15)",
+    backgroundColor: "rgba(255,255,255,0.12)",
     borderRadius: 10,
     marginVertical: 8,
-    paddingHorizontal: 10,
-    paddingVertical: 12,
+    paddingHorizontal: 12,
+    paddingVertical: 14,
   },
-  icon: { marginRight: 10 },
+  icon: { marginRight: 12 },
   input: { flex: 1, color: "#fff", fontSize: 16 },
-  button: { paddingVertical: 14, borderRadius: 10, marginTop: 15 },
+  button: {
+    paddingVertical: 14,
+    borderRadius: 12,
+    marginTop: 20,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.3,
+    shadowRadius: 6,
+    elevation: 4,
+  },
   buttonText: { color: "#fff", fontWeight: "bold", fontSize: 18, textAlign: "center" },
-  link: { color: "#feb47b", textAlign: "center", marginTop: 15, fontSize: 16 },
-  note: { color: "#bbb", fontSize: 12, textAlign: "center", marginTop: 8 },
+  link: { color: "#36D1DC", textAlign: "center", marginTop: 20, fontSize: 15 },
+  loadingOverlay: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: "rgba(0,0,0,0.45)",
+    justifyContent: "center",
+    alignItems: "center",
+  },
 });

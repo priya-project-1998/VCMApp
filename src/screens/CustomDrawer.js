@@ -1,8 +1,12 @@
 import React, { useState, useCallback } from "react";
-import { View, Text, TouchableOpacity, Alert, StyleSheet, Image } from "react-native";
+import { View, Text, TouchableOpacity, Alert, StyleSheet, Image, Dimensions } from "react-native";
 import { DrawerContentScrollView, DrawerItemList } from "@react-navigation/drawer";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useFocusEffect } from "@react-navigation/native";
+import LinearGradient from "react-native-linear-gradient";
+import ProfileStorage from "../utils/ProfileStorage";
+
+const { width } = Dimensions.get("window");
 
 export default function CustomDrawer(props) {
   const [user, setUser] = useState(null);
@@ -11,9 +15,9 @@ export default function CustomDrawer(props) {
   useFocusEffect(
     useCallback(() => {
       const fetchUser = async () => {
-        const storedUser = await AsyncStorage.getItem("loggedInUser");
-        if (storedUser) {
-          setUser(JSON.parse(storedUser));
+        const storedUserProfile = await ProfileStorage.getUserProfile();
+        if (storedUserProfile) {
+          setUser(storedUserProfile);
         } else {
           setUser(null);
         }
@@ -31,6 +35,7 @@ export default function CustomDrawer(props) {
           await AsyncStorage.setItem("rememberMe", "false");
           await AsyncStorage.removeItem("sessionExpiry");
           await AsyncStorage.removeItem("loggedInUser");
+          await ProfileStorage.clearUserProfile(); // Clear stored profile
           props.navigation.replace("LoginScreen");
         },
       },
@@ -64,7 +69,17 @@ export default function CustomDrawer(props) {
 
         {/* Logout Button */}
         <TouchableOpacity style={styles.logoutBtn} onPress={handleLogout}>
-          <Text style={styles.logoutText}>Logout</Text>
+          <LinearGradient
+            colors={['#0f2027', '#203a43', '#2c5364']}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 0 }}
+            style={{
+              borderWidth: 1,
+              borderColor: 'rgba(255,255,255,0.2)',
+            }}
+          >
+            <Text style={styles.logoutText}>Logout</Text>
+          </LinearGradient>
         </TouchableOpacity>
       </DrawerContentScrollView>
 
@@ -82,7 +97,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     padding: 15,
     borderBottomWidth: 1,
-    borderColor: "#ccc",
+    borderColor: "rgba(255,255,255,0.1)",
     marginBottom: 10,
   },
   profileImage: {
@@ -90,35 +105,57 @@ const styles = StyleSheet.create({
     height: 50,
     borderRadius: 25,
     marginRight: 15,
+    borderWidth: 2,
+    borderColor: '#feb47b',
   },
   profileName: {
     fontSize: 16,
-    fontWeight: "bold",
-    color: "#000",
+    fontWeight: "700",
+    color: "#ffffff",
+    marginBottom: 2,
+    textShadowColor: 'rgba(0, 0, 0, 0.3)',
+    textShadowOffset: {width: 1, height: 1},
+    textShadowRadius: 3,
   },
   profileEmail: {
-    fontSize: 14,
-    color: "#555",
+    fontSize: 13,
+    color: "rgba(255,255,255,0.7)",
+    letterSpacing: 0.2,
   },
   separator: {
     height: 1,
-    backgroundColor: "#ccc",
-    marginTop: 10,
+    backgroundColor: "rgba(255,255,255,0.1)",
+    marginVertical: 10,
+    marginHorizontal: width * 0.05,
   },
   logoutBtn: {
-    padding: 15,
+    marginHorizontal: 12,
+    marginTop: 5,
+    borderRadius: 12,
+    overflow: 'hidden',
   },
   logoutText: {
-    color: "red",
-    fontWeight: "bold",
+    color: "#ffffff",
+    fontWeight: "600",
+    fontSize: 14,
+    letterSpacing: 0.5,
+    paddingVertical: 12,
+    paddingHorizontal: 15,
+    textAlign: 'center',
+    textShadowColor: 'rgba(0, 0, 0, 0.25)',
+    textShadowOffset: {width: 1, height: 1},
+    textShadowRadius: 2,
   },
   versionContainer: {
-    paddingVertical: 5,
+    paddingVertical: 15,
     alignItems: "center",
-    marginBottom: 20, // space from bottom
+    marginBottom: 10,
+    borderTopWidth: 1,
+    borderColor: "rgba(255,255,255,0.1)",
   },
   versionText: {
-    fontSize: 14,
-    color: "#888",
+    fontSize: 12,
+    color: "rgba(255,255,255,0.5)",
+    letterSpacing: 0.5,
   },
 });
