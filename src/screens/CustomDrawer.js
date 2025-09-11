@@ -4,6 +4,7 @@ import { DrawerContentScrollView, DrawerItemList } from "@react-navigation/drawe
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useFocusEffect } from "@react-navigation/native";
 import LinearGradient from "react-native-linear-gradient";
+import ProfileStorage from "../utils/ProfileStorage";
 
 const { width } = Dimensions.get("window");
 
@@ -14,9 +15,9 @@ export default function CustomDrawer(props) {
   useFocusEffect(
     useCallback(() => {
       const fetchUser = async () => {
-        const storedUser = await AsyncStorage.getItem("loggedInUser");
-        if (storedUser) {
-          setUser(JSON.parse(storedUser));
+        const storedUserProfile = await ProfileStorage.getUserProfile();
+        if (storedUserProfile) {
+          setUser(storedUserProfile);
         } else {
           setUser(null);
         }
@@ -34,6 +35,7 @@ export default function CustomDrawer(props) {
           await AsyncStorage.setItem("rememberMe", "false");
           await AsyncStorage.removeItem("sessionExpiry");
           await AsyncStorage.removeItem("loggedInUser");
+          await ProfileStorage.clearUserProfile(); // Clear stored profile
           props.navigation.replace("LoginScreen");
         },
       },

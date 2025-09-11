@@ -4,6 +4,8 @@ import CheckBox from "@react-native-community/checkbox";
 import LinearGradient from "react-native-linear-gradient";
 import Icon from "react-native-vector-icons/Feather";
 import AuthService from "../services/apiService/auth_service";
+import ProfileService from "../services/apiService/profile_service";
+import ProfileStorage from "../utils/ProfileStorage";
 
 export default function LoginScreen({ navigation }) {
   const [username, setUsername] = useState("");
@@ -30,10 +32,23 @@ export default function LoginScreen({ navigation }) {
     }
     setLoading(true);
     const response = await AuthService.login(username, password, rememberMe);
-    setLoading(false);
-    if (response.data.status=="success") {
+    
+    if (response.data.status === "success") {
+      // Call getUserProfile after successful login
+      const profileResponse = await ProfileService.getUserProfile();
+      
+      if (profileResponse.status && profileResponse.data) {
+        // Store user profile using ProfileStorage
+        await ProfileStorage.storeUserProfile(profileResponse.data);
+        console.log("✅ User profile stored after login");
+      } else {
+        console.warn("⚠️ Failed to fetch user profile after login:", profileResponse.message);
+      }
+      
+      setLoading(false);
       navigation.replace("Drawer"); // Redirect on success
     } else {
+      setLoading(false);
       Alert.alert("Login Failed", response.message || "Invalid credentials");
     }
   };
