@@ -9,6 +9,7 @@ import {
   TouchableOpacity,
   ActivityIndicator,
   Alert,
+  RefreshControl,
 } from "react-native";
 import LinearGradient from "react-native-linear-gradient";
 import AsyncStorage from "@react-native-async-storage/async-storage";
@@ -32,6 +33,7 @@ export default function Dashboard({ navigation }) {
   const [isLoading, setIsLoading] = useState(true);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [showAuthPrompt, setShowAuthPrompt] = useState(false);
+  const [isRefreshing, setIsRefreshing] = useState(false);
   const bannerRef = useRef(null);
 
   // Static images for banners and events (as requested)
@@ -58,6 +60,25 @@ export default function Dashboard({ navigation }) {
       console.error("Error checking authentication:", error);
       setIsAuthenticated(false);
       return false;
+    }
+  };
+
+  // Refresh function for pull-to-refresh
+  const onRefresh = async () => {
+    setIsRefreshing(true);
+    console.log("🔄 Pull-to-refresh triggered - Fetching latest data...");
+    
+    try {
+      // Fetch both banners and events in parallel
+      await Promise.all([
+        fetchBanners(),
+        fetchEvents()
+      ]);
+      console.log("✅ Refresh completed successfully");
+    } catch (error) {
+      console.error("❌ Refresh failed:", error);
+    } finally {
+      setIsRefreshing(false);
     }
   };
 
@@ -454,6 +475,16 @@ export default function Dashboard({ navigation }) {
         keyExtractor={(item) => item.id}
         numColumns={2}
         columnWrapperStyle={{ justifyContent: "space-between", paddingHorizontal: width * 0.02 }}
+        refreshControl={
+          <RefreshControl
+            refreshing={isRefreshing}
+            onRefresh={onRefresh}
+            colors={['#feb47b']} // Android
+            tintColor={'#feb47b'} // iOS
+            title="Pull to refresh..." // iOS
+            titleColor={'#feb47b'} // iOS
+          />
+        }
         renderItem={({ item }) => {
           const { startDate, endDate } = formatEventStartEndDateTime(
             item.event_start_date, 
