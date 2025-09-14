@@ -36,7 +36,7 @@ const NotificationBell = ({ notificationCount = 0 }) => {
 const styles = StyleSheet.create({
   container: {
     marginRight: 8,
-    padding: 8,
+    padding: 6, // Reduced from 8
   },
   bellContainer: {
     position: 'relative',
@@ -44,7 +44,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   bellIcon: {
-    fontSize: 24,
+    fontSize: 18, // Reduced from 20
     color: '#feb47b',
     textShadowColor: 'rgba(0, 0, 0, 0.3)',
     textShadowOffset: { width: 1, height: 1 },
@@ -52,12 +52,12 @@ const styles = StyleSheet.create({
   },
   badge: {
     position: 'absolute',
-    top: -8,
-    right: -8,
+    top: -5, // Reduced from -6
+    right: -5, // Reduced from -6
     backgroundColor: '#ff4444',
-    borderRadius: 10,
-    minWidth: 20,
-    height: 20,
+    borderRadius: 7, // Reduced from 8
+    minWidth: 14, // Reduced from 16
+    height: 14, // Reduced from 16
     justifyContent: 'center',
     alignItems: 'center',
     borderWidth: 2,
@@ -70,10 +70,10 @@ const styles = StyleSheet.create({
   },
   badgeText: {
     color: '#fff',
-    fontSize: 12,
+    fontSize: 9, // Reduced from 10
     fontWeight: '700',
     textAlign: 'center',
-    lineHeight: 16,
+    lineHeight: 11, // Reduced from 12
   },
 });
 

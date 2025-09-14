@@ -308,7 +308,7 @@ const styles = StyleSheet.create({
   },
   header: {
     paddingTop: Platform.OS === 'ios' ? 50 : 30,
-    paddingBottom: 40,
+    paddingBottom: 25, // Reduced from 40
     alignItems: 'center',
     borderBottomLeftRadius: 30,
     borderBottomRightRadius: 30,
@@ -379,14 +379,14 @@ const styles = StyleSheet.create({
   },
   imageWrapper: {
     position: 'relative',
-    marginBottom: 15,
+    marginBottom: 10, // Reduced from 15
   },
   profileImageBorder: {
-    width: 130,
-    height: 130,
-    borderRadius: 65,
+    width: 110, // Reduced from 130
+    height: 110, // Reduced from 130
+    borderRadius: 55, // Reduced from 65
     backgroundColor: 'rgba(255,255,255,0.2)',
-    padding: 5,
+    padding: 4, // Reduced from 5
     shadowColor: '#000',
     shadowOffset: {
       width: 0,
@@ -397,15 +397,15 @@ const styles = StyleSheet.create({
     elevation: 15,
   },
   profileImage: {
-    width: 120,
-    height: 120,
-    borderRadius: 60,
+    width: 102, // Reduced from 120
+    height: 102, // Reduced from 120
+    borderRadius: 51, // Reduced from 60
   },
   editIconContainer: {
     position: 'absolute',
-    bottom: 5,
-    right: 5,
-    borderRadius: 18,
+    bottom: 3, // Reduced from 5
+    right: 3, // Reduced from 5
+    borderRadius: 16, // Reduced from 18
     overflow: 'hidden',
     shadowColor: '#000',
     shadowOffset: {
@@ -417,25 +417,25 @@ const styles = StyleSheet.create({
     elevation: 8,
   },
   editIconGradient: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
+    width: 32, // Reduced from 36
+    height: 32, // Reduced from 36
+    borderRadius: 16, // Reduced from 18
     alignItems: 'center',
     justifyContent: 'center',
   },
   profileName: {
-    fontSize: 26,
+    fontSize: 22, // Reduced from 26
     fontWeight: 'bold',
     color: '#fff',
-    marginBottom: 5,
+    marginBottom: 4, // Reduced from 5
     textShadowColor: 'rgba(0, 0, 0, 0.3)',
     textShadowOffset: { width: 0, height: 2 },
     textShadowRadius: 4,
   },
   profileEmail: {
-    fontSize: 16,
+    fontSize: 14, // Reduced from 16
     color: 'rgba(255, 255, 255, 0.9)',
-    marginBottom: 10,
+    marginBottom: 8, // Reduced from 10
   },
   profileStats: {
     flexDirection: 'row',
@@ -445,18 +445,18 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: 'rgba(255, 255, 255, 0.2)',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 15,
+    paddingHorizontal: 10, // Reduced from 12
+    paddingVertical: 4, // Reduced from 6
+    borderRadius: 12, // Reduced from 15
   },
   statText: {
     color: 'rgba(255, 255, 255, 0.9)',
-    fontSize: 12,
+    fontSize: 11, // Reduced from 12
     fontWeight: '500',
     marginLeft: 4,
   },
   statEmoji: {
-    fontSize: 12,
+    fontSize: 11, // Reduced from 12
     marginRight: 2,
   },
   formContainer: {
