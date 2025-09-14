@@ -12,6 +12,7 @@ import {
 import LinearGradient from "react-native-linear-gradient";
 import BannerService from "../services/apiService/banner_service";
 import EventService from "../services/apiService/event_service";
+import { formatEventStartEndDateTime } from "../utils/helpers";
 
 const { width, height } = Dimensions.get("window");
 const isSmallDevice = width < 375; // For iPhone SE and similar small devices
@@ -328,77 +329,140 @@ export default function Dashboard() {
         keyExtractor={(item) => item.id}
         numColumns={2}
         columnWrapperStyle={{ justifyContent: "space-between", paddingHorizontal: width * 0.02 }}
-        renderItem={({ item }) => (
-          <View style={styles.eventCard}>
-            <Image source={item.image} style={styles.eventImage} resizeMode="cover" />
-            <View style={{
-              position: 'absolute',
-              top: 8,
-              right: 8,
-              backgroundColor: 'rgba(0, 0, 0, 0.75)',
-              paddingVertical: 4,
-              paddingHorizontal: 8,
-              borderRadius: 8,
-              borderWidth: 1,
-              borderColor: '#feb47b',
-            }}>
-              <Text style={[styles.eventOrg, { 
-                fontSize: 11,
-                color: '#feb47b',
-                textShadowColor: 'rgba(0, 0, 0, 0.75)',
-                textShadowOffset: {width: 0, height: 1},
-                textShadowRadius: 3,
-              }]} numberOfLines={1}>{item.event_organised_by}</Text>
-            </View>
-            <LinearGradient
-              colors={['transparent', 'rgba(0,0,0,0.75)', 'rgba(0,0,0,0.9)']}
-              style={{
+        renderItem={({ item }) => {
+          const { startTime, startDate, endTime, endDate } = formatEventStartEndDateTime(
+            item.event_start_date, 
+            item.event_end_date
+          );
+          
+          return (
+            <View style={styles.eventCard}>
+              <Image source={item.image} style={styles.eventImage} resizeMode="cover" />
+              <View style={{
                 position: 'absolute',
-                left: 0,
-                right: 0,
-                top: 0,
-                height: 130,
-                opacity: 0.95,
-              }}
-            />
-            <View style={styles.eventContent}>
-              <Text style={styles.eventName}>{item.event_name}</Text>
-              <View style={{flexDirection: 'row', alignItems: 'center'}}>
+                top: 8,
+                right: 8,
+                backgroundColor: 'rgba(0, 0, 0, 0.75)',
+                paddingVertical: 4,
+                paddingHorizontal: 8,
+                borderRadius: 8,
+                borderWidth: 1,
+                borderColor: '#feb47b',
+              }}>
+                <Text style={[styles.eventOrg, { 
+                  fontSize: 11,
+                  color: '#feb47b',
+                  textShadowColor: 'rgba(0, 0, 0, 0.75)',
+                  textShadowOffset: {width: 0, height: 1},
+                  textShadowRadius: 3,
+                }]} numberOfLines={1}>{item.event_organised_by}</Text>
+              </View>
+              <LinearGradient
+                colors={['transparent', 'rgba(0,0,0,0.75)', 'rgba(0,0,0,0.9)']}
+                style={{
+                  position: 'absolute',
+                  left: 0,
+                  right: 0,
+                  top: 0,
+                  height: 130,
+                  opacity: 0.95,
+                }}
+              />
+              <View style={styles.eventContent}>
+                <Text style={styles.eventName}>{item.event_name}</Text>
+                <View style={{flexDirection: 'row', alignItems: 'center'}}>
+                  <View style={{ 
+                    flexDirection: 'row', 
+                    alignItems: 'center',
+                    backgroundColor: 'rgba(255,255,255,0.08)',
+                    paddingVertical: 4,
+                    paddingHorizontal: 8,
+                    borderRadius: 8,
+                    marginBottom: 6,
+                  }}>
+                    <Text style={[styles.eventVenue, { marginBottom: 0 }]}>
+                      <Text style={{ fontSize: 14, opacity: 0.9 }}>📍</Text> {item.event_venue}
+                    </Text>
+                  </View>
+                </View>
                 <View style={{ 
                   flexDirection: 'row', 
                   alignItems: 'center',
-                  backgroundColor: 'rgba(255,255,255,0.08)',
-                  paddingVertical: 4,
-                  paddingHorizontal: 8,
-                  borderRadius: 8,
-                  marginBottom: 6,
+                  gap: 6,
+                  flexWrap: 'wrap',
                 }}>
-                  <Text style={[styles.eventVenue, { marginBottom: 0 }]}>
-                    <Text style={{ fontSize: 14, opacity: 0.9 }}>📍</Text> {item.event_venue}
-                  </Text>
-                </View>
-              </View>
-              <View style={{ 
-                flexDirection: 'row', 
-                alignItems: 'center',
-                gap: 8,
-              }}>
-                <View style={{
-                  flexDirection: 'row',
-                  alignItems: 'center',
-                  backgroundColor: 'rgba(255,255,255,0.08)',
-                  paddingVertical: 4,
-                  paddingHorizontal: 8,
-                  borderRadius: 8,
-                }}>
-                  <Text style={[styles.eventDate, { marginBottom: 0 }]}>
-                    <Text style={{ fontSize: 13, opacity: 0.9 }}>📅</Text> {item.event_start_date.split('-').reverse().join('/')}
-                  </Text>
+                  {/* Start Time */}
+                  {startTime && (
+                    <View style={{
+                      flexDirection: 'row',
+                      alignItems: 'center',
+                      backgroundColor: 'rgba(254, 180, 123, 0.2)',
+                      paddingVertical: 3,
+                      paddingHorizontal: 6,
+                      borderRadius: 6,
+                      borderWidth: 1,
+                      borderColor: 'rgba(254, 180, 123, 0.4)',
+                    }}>
+                      <Text style={[styles.eventTime, { fontSize: 11, marginBottom: 0 }]}>
+                        <Text style={{ fontSize: 11, opacity: 0.9 }}>🕐</Text> {startTime}
+                      </Text>
+                    </View>
+                  )}
+                  
+                  {/* Start Date */}
+                  <View style={{
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    backgroundColor: 'rgba(255,255,255,0.08)',
+                    paddingVertical: 3,
+                    paddingHorizontal: 6,
+                    borderRadius: 6,
+                  }}>
+                    <Text style={[styles.eventDate, { fontSize: 11, marginBottom: 0 }]}>
+                      <Text style={{ fontSize: 11, opacity: 0.9 }}>📅</Text> {startDate}
+                    </Text>
+                  </View>
+                  
+                  {/* End Time */}
+                  {endTime && (
+                    <View style={{
+                      flexDirection: 'row',
+                      alignItems: 'center',
+                      backgroundColor: 'rgba(254, 180, 123, 0.15)',
+                      paddingVertical: 3,
+                      paddingHorizontal: 6,
+                      borderRadius: 6,
+                      borderWidth: 1,
+                      borderColor: 'rgba(254, 180, 123, 0.3)',
+                    }}>
+                      <Text style={[styles.eventTime, { fontSize: 11, marginBottom: 0 }]}>
+                        <Text style={{ fontSize: 11, opacity: 0.9 }}>⏰</Text> {endTime}
+                      </Text>
+                    </View>
+                  )}
+                  
+                  {/* End Date */}
+                  {endDate && startDate !== endDate && (
+                    <View style={{
+                      flexDirection: 'row',
+                      alignItems: 'center',
+                      backgroundColor: 'rgba(255,255,255,0.06)',
+                      paddingVertical: 3,
+                      paddingHorizontal: 6,
+                      borderRadius: 6,
+                      borderWidth: 1,
+                      borderColor: 'rgba(255,255,255,0.15)',
+                    }}>
+                      <Text style={[styles.eventDate, { fontSize: 11, marginBottom: 0 }]}>
+                        <Text style={{ fontSize: 11, opacity: 0.9 }}>🏁</Text> {endDate}
+                      </Text>
+                    </View>
+                  )}
                 </View>
               </View>
             </View>
-          </View>
-        )}
+          );
+        }}
         contentContainerStyle={{ paddingBottom: 20 }}
       />
     </LinearGradient>
@@ -542,6 +606,13 @@ const styles = StyleSheet.create({
     letterSpacing: 0.2,
     opacity: 0.9,
     fontWeight: "500",
+  },
+  eventTime: { 
+    fontSize: 12, 
+    color: "#feb47b",
+    letterSpacing: 0.2,
+    opacity: 1,
+    fontWeight: "600",
   },
   eventOrg: { 
     fontSize: 12, 
