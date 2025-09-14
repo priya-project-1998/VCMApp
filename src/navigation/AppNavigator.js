@@ -23,8 +23,8 @@ import CustomDrawer from "../screens/CustomDrawer";
 import SettingsScreen from '../screens/SettingsScreen';
 import AboutAppScreen from '../screens/AboutAppScreen';
 import ForgetPasswordScreen from '../screens/ForgetPasswordScreen';
-import NotificationsScreen from '../screens/Notifications';
 import NotificationBell from '../components/NotificationBell';
+import MyEventsScreen from '../screens/MyEventsScreen';
 
 const Stack = createNativeStackNavigator();
 const Drawer = createDrawerNavigator();
@@ -155,7 +155,6 @@ function DrawerNavigator() {
       <Drawer.Screen name="Event" component={OrganiserScreen} />
       <Drawer.Screen name="Results" component={ResultsScreen} />
       <Drawer.Screen name="Search" component={SearchScreen} />
-      <Drawer.Screen name="Notifications" component={NotificationsScreen} />
       <Drawer.Screen name="Feedback" component={FeedbackScreen} />
       <Drawer.Screen name="Invite User" component={InviteUserScreen} />
       <Drawer.Screen name="Rate Us" component={RateUsScreen} />
@@ -177,6 +176,7 @@ export default function AppNavigator() {
         <Stack.Screen name="Signup" component={SignupScreen} />
         <Stack.Screen name="Drawer" component={DrawerNavigator} />
         <Stack.Screen name="ForgetPassword" component={ForgetPasswordScreen} />
+        <Stack.Screen name="My Events" component={MyEventsScreen} />
       </Stack.Navigator>
     </NavigationContainer>
   );

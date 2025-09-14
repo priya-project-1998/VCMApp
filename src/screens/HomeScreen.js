@@ -66,7 +66,6 @@ export default function Dashboard({ navigation }) {
   // Refresh function for pull-to-refresh
   const onRefresh = async () => {
     setIsRefreshing(true);
-    console.log("🔄 Pull-to-refresh triggered - Fetching latest data...");
     
     try {
       // Fetch both banners and events in parallel
@@ -74,7 +73,6 @@ export default function Dashboard({ navigation }) {
         fetchBanners(),
         fetchEvents()
       ]);
-      console.log("✅ Refresh completed successfully");
     } catch (error) {
       console.error("❌ Refresh failed:", error);
     } finally {
@@ -119,7 +117,6 @@ export default function Dashboard({ navigation }) {
       }
 
       const response = await BannerService.getBanners();
-      console.log("Banner API Response:", response);
       
       if (response.status && response.data) {
         // Map API data and add static images when image_url is null
@@ -136,7 +133,6 @@ export default function Dashboard({ navigation }) {
           })
         }));
         setBanners(bannersWithImages);
-        console.log("Banners processed:", bannersWithImages);
       } else {
         console.error("Failed to fetch banners:", response.message);
         // Fallback to static data if API fails
@@ -229,9 +225,15 @@ export default function Dashboard({ navigation }) {
       }
 
       const response = await EventService.getEvents();
-      console.log("Events API Response:", response);
       
-      if (response.status && response.data && Array.isArray(response.data)) {
+      console.log("=== HomeScreen Events API Response ===");
+      console.log("Response:", response);
+      console.log("Response Status:", response.status);
+      console.log("Response Data:", response.data);
+      console.log("Response Code:", response.code);
+      console.log("Response Message:", response.message);
+      
+      if (response.status === "success" && response.data && Array.isArray(response.data)) {
         // Map API data and add static images when event_pic is null
         const eventsWithImages = response.data.map((event, index) => ({
           ...event,
@@ -240,35 +242,105 @@ export default function Dashboard({ navigation }) {
             : { uri: staticEventImages[index % staticEventImages.length] }
         }));
         setEvents(eventsWithImages);
-        console.log("Events set successfully:", eventsWithImages.length, "events");
+      } else if (response.status === "success" && response.data && response.data.events && Array.isArray(response.data.events)) {
+        // Handle nested events structure: {status: "success", data: {events: [...]}}
+        const eventsWithImages = response.data.events.map((event, index) => ({
+          ...event,
+          image: event.event_pic 
+            ? { uri: `https://e-pickup.randomsoftsolution.in/${event.event_pic}` }
+            : { uri: staticEventImages[index % staticEventImages.length] }
+        }));
+        setEvents(eventsWithImages);
+      } else if (response.code === 200 && response.data) {
+        // Handle other successful response formats
+        let eventsArray = [];
+        if (Array.isArray(response.data)) {
+          eventsArray = response.data;
+        } else if (response.data.events && Array.isArray(response.data.events)) {
+          eventsArray = response.data.events;
+        }
+        
+        if (eventsArray.length > 0) {
+          const eventsWithImages = eventsArray.map((event, index) => ({
+            ...event,
+            image: event.event_pic 
+              ? { uri: `https://e-pickup.randomsoftsolution.in/${event.event_pic}` }
+              : { uri: staticEventImages[index % staticEventImages.length] }
+          }));
+          setEvents(eventsWithImages);
+        } else {
+          // Show fallback events
+          setEvents([
+            {
+              id: "fallback-1",
+              event_name: "Trail Hunt Championship",
+              event_venue: "Indore, Madhya Pradesh",
+              event_start_date: "2025-09-15",
+              event_end_date: "2025-09-18",
+              event_organised_by: "Mahindra Adventure",
+              image: { uri: staticEventImages[0] },
+            },
+            {
+              id: "fallback-2",
+              event_name: "Quest Trail Adventure",
+              event_venue: "Jaipur, Rajasthan",
+              event_start_date: "2025-09-15",
+              event_end_date: "2025-09-18",
+              event_organised_by: "Mahindra Adventure",
+              image: { uri: staticEventImages[1] },
+            },
+            {
+              id: "fallback-3",
+              event_name: "Desert Storm Rally",
+              event_venue: "Jodhpur, Rajasthan",
+              event_start_date: "2025-09-20",
+              event_end_date: "2025-09-22",
+              event_organised_by: "Mahindra Adventure",
+              image: { uri: staticEventImages[2] },
+            },
+          ]);
+        }
       } else {
-        console.error("Failed to fetch events or invalid data structure:", response.message);
-        console.log("Falling back to static data");
-        // Fallback to static data if API fails
+        console.error("=== HomeScreen Events API Failed ===");
+        console.error("Failed to fetch events or invalid data structure:");
+        console.error("Response status:", response.status);
+        console.error("Response message:", response.message);
+        console.error("Response code:", response.code);
+        console.error("Response data:", response.data);
+        
+        // Always show fallback events so the page is not empty
         setEvents([
           {
-            id: "1",
-            event_name: "Trail Hunt",
-            event_venue: "Indore",
+            id: "fallback-1",
+            event_name: "Trail Hunt Championship",
+            event_venue: "Indore, Madhya Pradesh",
             event_start_date: "2025-09-15",
             event_end_date: "2025-09-18",
-            event_organised_by: "Mahindra",
+            event_organised_by: "Mahindra Adventure",
             image: { uri: staticEventImages[0] },
           },
           {
-            id: "2",
-            event_name: "Quest Trail",
-            event_venue: "Jaipur",
+            id: "fallback-2",
+            event_name: "Quest Trail Adventure",
+            event_venue: "Jaipur, Rajasthan",
             event_start_date: "2025-09-15",
             event_end_date: "2025-09-18",
-            event_organised_by: "Mahindra",
+            event_organised_by: "Mahindra Adventure",
             image: { uri: staticEventImages[1] },
+          },
+          {
+            id: "fallback-3",
+            event_name: "Desert Storm Rally",
+            event_venue: "Jodhpur, Rajasthan",
+            event_start_date: "2025-09-20",
+            event_end_date: "2025-09-22",
+            event_organised_by: "Mahindra Adventure",
+            image: { uri: staticEventImages[2] },
           },
         ]);
       }
     } catch (error) {
       console.error("Error fetching events:", error);
-      console.log("Falling back to static data due to error");
       // Fallback to static data - reduced to 2 events to match API
       setEvents([
         {

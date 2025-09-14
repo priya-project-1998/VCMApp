@@ -25,129 +25,111 @@ const { width, height } = Dimensions.get("window");
 const isSmallDevice = width < 375;
 const cardWidth = width * 0.9;
 
-// Default event images for fallback
-const getEventImage = (index) => {
-  const images = [
-    { uri: 'https://images.unsplash.com/photo-1533473359331-0135ef1b58bf?auto=format&fit=crop&q=80' },
-    { uri: 'https://images.unsplash.com/photo-1536244636800-a3f74db0f3cf?auto=format&fit=crop&q=80' },
-    { uri: 'https://images.unsplash.com/photo-1542282088-fe8426682b8f?auto=format&fit=crop&q=80' },
-    { uri: 'https://images.unsplash.com/photo-1533240332313-0db49b459ad6?auto=format&fit=crop&q=80' },
-    { uri: 'https://images.unsplash.com/photo-1506015391300-4802dc74de2e?auto=format&fit=crop&q=80' },
-  ];
-  return images[index % images.length];
-};
-
 // Join Event Form Component
 const JoinEventForm = ({ event, onClose }) => {
   const [formData, setFormData] = useState({
     event_id: event?.id || '',
     category_id: '',
     class_id: '',
-    crew_members: [
-      { name: '', mobile: '', email: '' },
-      { name: '', mobile: '', email: '' }
-    ]
+    crew_members: [] // Start with empty array - no default members
   });
   const [loading, setLoading] = useState(false);
+  const [selectedCategory, setSelectedCategory] = useState(null);
+  const [selectedClass, setSelectedClass] = useState(null);
   const [categories, setCategories] = useState([]);
   const [classes, setClasses] = useState([]);
-  const [categoriesLoading, setCategoriesLoading] = useState(true);
+  const [dataLoading, setDataLoading] = useState(true);
   const [classesLoading, setClassesLoading] = useState(false);
 
   // Load categories when component mounts
   useEffect(() => {
-    loadCategories();
-  }, []);
-
-  // Load classes when category changes
-  useEffect(() => {
-    if (formData.category_id) {
-      loadClasses(formData.category_id);
-    } else {
-      setClasses([]);
-      setFormData(prev => ({ ...prev, class_id: '' }));
+    loadEventCategories();
+    // Ensure event_id is set in form data
+    if (event?.id && !formData.event_id) {
+      setFormData(prev => ({ ...prev, event_id: event.id }));
     }
-  }, [formData.category_id]);
+  }, [event?.id]);
 
-  const loadCategories = async () => {
+  const loadEventCategories = async () => {
     try {
-      setCategoriesLoading(true);
-      console.log("Loading categories for event:", event?.id);
+      setDataLoading(true);
       
-      // For debugging - add mock data fallback
-      const mockCategories = [
-        { id: 1, name: "Solo Race" },
-        { id: 2, name: "Team Race" },
-        { id: 3, name: "Endurance Race" }
-      ];
-
-      const response = await EventService.getEventCategories(event?.id);
+      // Load categories
+      const categoriesResponse = await EventService.getEventCategories(event?.id);
       
-      console.log("Categories response:", response);
-      
-      if (response.success && response.data?.data) {
-        setCategories(response.data.data);
-      } else if (response.success && response.data) {
-        // Handle different response structures
-        setCategories(response.data);
+      if (categoriesResponse.status === "success" && categoriesResponse.data) {
+        // Categories are directly in the data array
+        const categoriesArray = Array.isArray(categoriesResponse.data) ? categoriesResponse.data : [];
+        
+        setCategories(categoriesArray);
+        
+        if (categoriesArray.length === 0) {
+          Alert.alert('Warning', 'No categories available for this event');
+        }
       } else {
-        console.error("Categories API failed:", response);
-        // Use mock data for now
-        console.log("Using mock categories for testing");
-        setCategories(mockCategories);
+        Alert.alert('Error', 'Failed to load event categories');
+        setCategories([]);
       }
     } catch (error) {
-      console.error("Categories error:", error);
-      // Use mock data as fallback
-      setCategories([
-        { id: 1, name: "Solo Race" },
-        { id: 2, name: "Team Race" },
-        { id: 3, name: "Endurance Race" }
-      ]);
-      Alert.alert('Info', 'Using test categories due to API error');
+      console.error("Load Categories Error:", error);
+      Alert.alert('Error', 'Failed to load categories: ' + error.message);
+      setCategories([]);
     } finally {
-      setCategoriesLoading(false);
+      setDataLoading(false);
     }
   };
 
-  const loadClasses = async (categoryId) => {
+  // Function to load classes when a category is selected
+  const loadClassesForCategory = async (categoryId) => {
     try {
       setClassesLoading(true);
-      console.log("Loading classes for event:", event?.id, "category:", categoryId);
       
-      // Mock classes data
-      const mockClasses = [
-        { id: 1, name: "Beginner Class" },
-        { id: 2, name: "Intermediate Class" },
-        { id: 3, name: "Advanced Class" }
-      ];
-
-      const response = await EventService.getCategoryClasses(event?.id, categoryId);
+      const classesResponse = await EventService.getCategoryClasses(event?.id, categoryId);
       
-      console.log("Classes response:", response);
-      
-      if (response.success && response.data?.data) {
-        setClasses(response.data.data);
-      } else if (response.success && response.data) {
-        // Handle different response structures
-        setClasses(response.data);
+      if (classesResponse.status === "success" && classesResponse.data) {
+        const classesArray = Array.isArray(classesResponse.data) ? classesResponse.data : [];
+        
+        setClasses(classesArray);
+        // Reset selected class when category changes
+        setSelectedClass(null);
+        setFormData(prev => ({ ...prev, class_id: null }));
+        
+        if (classesArray.length === 0) {
+          Alert.alert('Warning', 'No classes available for this category');
+        }
       } else {
-        console.error("Classes API failed:", response);
-        // Use mock data for now
-        console.log("Using mock classes for testing");
-        setClasses(mockClasses);
+        Alert.alert('Error', 'Failed to load classes for this category');
+        setClasses([]);
       }
     } catch (error) {
-      console.error("Classes error:", error);
-      // Use mock data as fallback
-      setClasses([
-        { id: 1, name: "Beginner Class" },
-        { id: 2, name: "Intermediate Class" },
-        { id: 3, name: "Advanced Class" }
-      ]);
+      console.error("Load Classes Error:", error);
+      Alert.alert('Error', 'Failed to load classes: ' + error.message);
+      setClasses([]);
     } finally {
       setClassesLoading(false);
     }
+  };
+
+  // Handle category selection
+  const handleCategoryChange = (categoryId) => {
+    const category = categories.find(cat => cat.id === categoryId);
+    setSelectedCategory(category);
+    setFormData(prev => ({ ...prev, category_id: categoryId }));
+    
+    if (categoryId) {
+      loadClassesForCategory(categoryId);
+    } else {
+      setClasses([]);
+      setSelectedClass(null);
+      setFormData(prev => ({ ...prev, class_id: null }));
+    }
+  };
+
+  // Handle class selection
+  const handleClassChange = (classId) => {
+    const classObj = classes.find(cls => cls.id === classId);
+    setSelectedClass(classObj);
+    setFormData(prev => ({ ...prev, class_id: classId }));
   };
 
   const updateCrewMember = (index, field, value) => {
@@ -157,38 +139,49 @@ const JoinEventForm = ({ event, onClose }) => {
   };
 
   const addCrewMember = () => {
-    if (formData.crew_members.length < 5) {
+    if (formData.crew_members.length < 4) {
       setFormData({
         ...formData,
         crew_members: [...formData.crew_members, { name: '', mobile: '', email: '' }]
       });
+    } else {
+      Alert.alert('Limit Reached', 'You can add maximum 4 crew members only');
     }
   };
 
   const removeCrewMember = (index) => {
-    if (formData.crew_members.length > 1) {
-      const updatedMembers = formData.crew_members.filter((_, i) => i !== index);
-      setFormData({ ...formData, crew_members: updatedMembers });
-    }
+    const updatedMembers = formData.crew_members.filter((_, i) => i !== index);
+    setFormData({ ...formData, crew_members: updatedMembers });
   };
 
   const validateAndFormatData = () => {
     // Ensure all required fields are present and properly formatted
+    const eventId = parseInt(formData.event_id) || parseInt(event?.id);
+    const categoryId = parseInt(formData.category_id);
+    const classId = parseInt(formData.class_id);
+
+    // Validate required IDs
+    if (!eventId || isNaN(eventId)) {
+      throw new Error('Invalid event ID');
+    }
+    if (!categoryId || isNaN(categoryId)) {
+      throw new Error('Invalid category ID');
+    }
+    if (!classId || isNaN(classId)) {
+      throw new Error('Invalid class ID');
+    }
+
+    // Format crew members exactly as API expects
     const cleanData = {
-      event_id: parseInt(formData.event_id) || parseInt(event?.id),
-      category_id: parseInt(formData.category_id),
-      class_id: parseInt(formData.class_id),
-      crew_members: formData.crew_members.map(member => ({
+      event_id: eventId,
+      category_id: categoryId,
+      class_id: classId,
+      crew_members: formData.crew_members.map((member) => ({
         name: member.name.trim(),
         mobile: member.mobile.trim(),
         email: member.email.trim().toLowerCase()
       }))
     };
-
-    console.log("=== Data Validation Debug ===");
-    console.log("Original Data:", formData);
-    console.log("Cleaned Data:", cleanData);
-    console.log("Event Object:", event);
 
     return cleanData;
   };
@@ -196,9 +189,6 @@ const JoinEventForm = ({ event, onClose }) => {
   const checkAuthToken = async () => {
     try {
       const token = await AsyncStorage.getItem("authToken");
-      console.log("=== Auth Token Check ===");
-      console.log("Token exists:", !!token);
-      console.log("Token preview:", token ? `${token.substring(0, 30)}...` : "null");
       return !!token;
     } catch (error) {
       console.error("Error checking auth token:", error);
@@ -215,6 +205,11 @@ const JoinEventForm = ({ event, onClose }) => {
     
     if (!formData.class_id) {
       Alert.alert('Error', 'Please select a class');
+      return;
+    }
+
+    if (formData.crew_members.length === 0) {
+      Alert.alert('Error', 'Please add at least one crew member');
       return;
     }
 
@@ -238,34 +233,43 @@ const JoinEventForm = ({ event, onClose }) => {
       }
       
       // Validate and format data
-      const cleanedData = validateAndFormatData();
+      let cleanedData;
+      try {
+        cleanedData = validateAndFormatData();
+      } catch (validationError) {
+        Alert.alert('Validation Error', validationError.message);
+        return;
+      }
       
-      console.log("=== Join Event API Call Debug ===");
-      console.log("Original Form Data:", formData);
-      console.log("Cleaned Data for API:", cleanedData);
-      console.log("Event Object:", event);
+      // Debug: Log the data being sent
+      console.log("=== JOIN EVENT DEBUG ===");
+      console.log("Event ID:", event?.id);
+      console.log("Form Data:", formData);
+      console.log("Cleaned Data:", cleanedData);
+      console.log("API Endpoint: /events/join");
       
       const response = await EventService.joinEvent(cleanedData);
       
-      console.log("=== Join Event Response Debug ===");
-      console.log("Response Success:", response.success);
-      console.log("Response Code:", response.code);
-      console.log("Response Message:", response.message);
-      console.log("Response Data:", response.data);
+      // Debug: Log the response
+      console.log("=== JOIN EVENT RESPONSE ===");
+      console.log("Status:", response.status);
+      console.log("Code:", response.code);
+      console.log("Message:", response.message);
+      console.log("Data:", response.data);
       console.log("Full Response:", response);
       
-      if (response.success) {
+      if (response.status === "success") {
         Alert.alert('Success', response.message || 'Event registration submitted successfully!', [
           { text: 'OK', onPress: onClose }
         ]);
       } else {
-        Alert.alert('Registration Failed', `${response.message || 'Failed to submit registration'}\n\nError Code: ${response.code || 'Unknown'}`);
+        // Show specific error message from API
+        const errorMessage = response.message || 'Failed to submit registration';
+        const errorCode = response.code ? `\n\nError Code: ${response.code}` : '';
+        Alert.alert('Registration Failed', `${errorMessage}${errorCode}`);
       }
     } catch (error) {
-      console.error("=== Join Event Error Debug ===");
-      console.error("Error:", error);
-      console.error("Error Message:", error.message);
-      console.error("Error Stack:", error.stack);
+      console.error("Join Event Error:", error);
       Alert.alert('Network Error', `Failed to submit registration: ${error.message || 'Network connection error'}`);
     } finally {
       setLoading(false);
@@ -286,7 +290,7 @@ const JoinEventForm = ({ event, onClose }) => {
 
         {/* Event Info Card */}
         <View style={styles.eventInfoCard}>
-          <Image source={getEventImage(0)} style={styles.eventInfoImage} resizeMode="cover" />
+          <Image source={(event?.pic || event?.headerImg) ? { uri: event.pic || event.headerImg } : { uri: 'https://via.placeholder.com/80x80/333333/ffffff?text=Event' }} style={styles.eventInfoImage} resizeMode="cover" />
           <View style={styles.eventInfoContent}>
             <Text style={styles.eventInfoTitle}>{event?.name}</Text>
             <Text style={styles.eventInfoDetail}>📍 {event?.venue}</Text>
@@ -300,7 +304,7 @@ const JoinEventForm = ({ event, onClose }) => {
           
           <View style={styles.inputGroup}>
             <Text style={styles.inputLabel}>Category</Text>
-            {categoriesLoading ? (
+            {dataLoading ? (
               <View style={styles.loadingContainer}>
                 <ActivityIndicator size="small" color="#fff" />
                 <Text style={styles.loadingText}>Loading categories...</Text>
@@ -308,18 +312,17 @@ const JoinEventForm = ({ event, onClose }) => {
             ) : (
               <View style={styles.pickerContainer}>
                 <Picker
-                  selectedValue={formData.category_id}
-                  onValueChange={(value) => setFormData({ ...formData, category_id: value })}
+                  selectedValue={selectedCategory?.id || ''}
+                  onValueChange={handleCategoryChange}
                   style={styles.picker}
                   dropdownIconColor="#fff"
                 >
-                  <Picker.Item label="Select Category" value="" color="#999" />
+                  <Picker.Item label="Select a category" value="" />
                   {categories.map((category) => (
                     <Picker.Item 
                       key={category.id} 
-                      label={category.name} 
+                      label={category.category_name || category.name} 
                       value={category.id} 
-                      color="#333"
                     />
                   ))}
                 </Picker>
@@ -337,19 +340,21 @@ const JoinEventForm = ({ event, onClose }) => {
             ) : (
               <View style={styles.pickerContainer}>
                 <Picker
-                  selectedValue={formData.class_id}
-                  onValueChange={(value) => setFormData({ ...formData, class_id: value })}
+                  selectedValue={selectedClass?.id || ''}
+                  onValueChange={handleClassChange}
                   style={styles.picker}
                   dropdownIconColor="#fff"
-                  enabled={!!formData.category_id}
+                  enabled={selectedCategory !== null && !classesLoading} // Only enable when category is selected and not loading
                 >
-                  <Picker.Item label="Select Class" value="" color="#999" />
+                  <Picker.Item 
+                    label={selectedCategory ? "Select a class" : "Select category first"} 
+                    value="" 
+                  />
                   {classes.map((classItem) => (
                     <Picker.Item 
                       key={classItem.id} 
-                      label={classItem.name} 
+                      label={classItem.class_name || classItem.name} 
                       value={classItem.id} 
-                      color="#333"
                     />
                   ))}
                 </Picker>
@@ -361,62 +366,72 @@ const JoinEventForm = ({ event, onClose }) => {
         {/* Crew Members */}
         <View style={styles.formSection}>
           <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>Crew Members</Text>
-            <TouchableOpacity style={styles.addButton} onPress={addCrewMember}>
-              <Text style={styles.addButtonText}>+ Add Member</Text>
-            </TouchableOpacity>
+            <View style={styles.sectionTitleContainer}>
+              <Text style={styles.sectionTitle}>Crew Members</Text>
+              <Text style={styles.memberCount}>({formData.crew_members.length}/4)</Text>
+            </View>
+            {formData.crew_members.length < 4 && (
+              <TouchableOpacity style={styles.addButton} onPress={addCrewMember}>
+                <Text style={styles.addButtonText}>+ Add Member</Text>
+              </TouchableOpacity>
+            )}
           </View>
 
-          {formData.crew_members.map((member, index) => (
-            <View key={index} style={styles.crewMemberCard}>
-              <View style={styles.crewMemberHeader}>
-                <Text style={styles.crewMemberTitle}>Member {index + 1}</Text>
-                {formData.crew_members.length > 1 && (
+          {formData.crew_members.length === 0 ? (
+            <View style={styles.emptyMembersContainer}>
+              <Text style={styles.emptyMembersText}>No crew members added yet</Text>
+              <Text style={styles.emptyMembersSubtext}>Click "Add Member" to add your first crew member</Text>
+            </View>
+          ) : (
+            formData.crew_members.map((member, index) => (
+              <View key={index} style={styles.crewMemberCard}>
+                <View style={styles.crewMemberHeader}>
+                  <Text style={styles.crewMemberTitle}>Member {index + 1}</Text>
                   <TouchableOpacity 
                     style={styles.removeButton} 
                     onPress={() => removeCrewMember(index)}
                   >
                     <Text style={styles.removeButtonText}>✕</Text>
                   </TouchableOpacity>
-                )}
-              </View>
+                </View>
 
-              <View style={styles.inputGroup}>
-                <Text style={styles.inputLabel}>Full Name</Text>
-                <TextInput
-                  style={styles.input}
-                  value={member.name}
-                  onChangeText={(text) => updateCrewMember(index, 'name', text)}
-                  placeholder="Enter full name"
-                  placeholderTextColor="rgba(255,255,255,0.5)"
-                />
-              </View>
+                <View style={styles.inputGroup}>
+                  <Text style={styles.inputLabel}>Full Name</Text>
+                  <TextInput
+                    style={styles.input}
+                    value={member.name}
+                    onChangeText={(text) => updateCrewMember(index, 'name', text)}
+                    placeholder="Enter full name"
+                    placeholderTextColor="rgba(255,255,255,0.5)"
+                  />
+                </View>
 
-              <View style={styles.inputGroup}>
-                <Text style={styles.inputLabel}>Mobile Number</Text>
-                <TextInput
-                  style={styles.input}
-                  value={member.mobile}
-                  onChangeText={(text) => updateCrewMember(index, 'mobile', text)}
-                  keyboardType="phone-pad"
-                  placeholder="Enter mobile number"
-                  placeholderTextColor="rgba(255,255,255,0.5)"
-                />
-              </View>
+                <View style={styles.inputGroup}>
+                  <Text style={styles.inputLabel}>Mobile Number</Text>
+                  <TextInput
+                    style={styles.input}
+                    value={member.mobile}
+                    onChangeText={(text) => updateCrewMember(index, 'mobile', text)}
+                    keyboardType="phone-pad"
+                    placeholder="Enter mobile number"
+                    placeholderTextColor="rgba(255,255,255,0.5)"
+                  />
+                </View>
 
-              <View style={styles.inputGroup}>
-                <Text style={styles.inputLabel}>Email Address</Text>
-                <TextInput
-                  style={styles.input}
-                  value={member.email}
-                  onChangeText={(text) => updateCrewMember(index, 'email', text)}
-                  keyboardType="email-address"
-                  placeholder="Enter email address"
-                  placeholderTextColor="rgba(255,255,255,0.5)"
-                />
+                <View style={styles.inputGroup}>
+                  <Text style={styles.inputLabel}>Email Address</Text>
+                  <TextInput
+                    style={styles.input}
+                    value={member.email}
+                    onChangeText={(text) => updateCrewMember(index, 'email', text)}
+                    keyboardType="email-address"
+                    placeholder="Enter email address"
+                    placeholderTextColor="rgba(255,255,255,0.5)"
+                  />
+                </View>
               </View>
-            </View>
-          ))}
+            ))
+          )}
         </View>
 
         {/* Submit Button */}
@@ -446,7 +461,7 @@ const JoinEventForm = ({ event, onClose }) => {
   );
 };
 
-const OrganiserScreen = () => {
+const OrganiserScreen = ({ navigation }) => {
   const [viewTab, setViewTab] = useState("upcoming");
   const [selectedEvent, setSelectedEvent] = useState(null);
   const [showJoinEventForm, setShowJoinEventForm] = useState(false);
@@ -462,79 +477,103 @@ const OrganiserScreen = () => {
     setApiError("");
     setLoading(true);
     try {
-      console.log("🚀 Starting API call to fetch events...");
-      
       const res = await EventService.getEvents();
       
-      console.log("🎯 API Response received!");
-      console.log("Success:", res.success);
-      console.log("Data:", res.data);
+      console.log("=== OrganiserScreen Events API Response ===");
+      console.log("Response:", res);
+      console.log("Response Status:", res.status);
+      console.log("Response Data:", res.data);
+      console.log("Response Code:", res.code);
       
-      // Check if we got real API data
-      if (res.success === true || res.status === true) {
-        let eventsArray = [];
-        
-        // Try different response structures
-        if (res.data?.events) {
-          eventsArray = res.data.events;
-        } else if (res.data?.data) {
-          eventsArray = res.data.data;
-        } else if (Array.isArray(res.data)) {
+      // Check multiple possible response structures
+      let eventsArray = [];
+      
+      if (res.status === "success" && res.data) {
+        if (Array.isArray(res.data)) {
+          // Direct array: {status: "success", data: [...]}
           eventsArray = res.data;
+        } else if (res.data.events && Array.isArray(res.data.events)) {
+          // Nested events: {status: "success", data: {events: [...]}}
+          eventsArray = res.data.events;
         }
-        
-        if (eventsArray.length > 0) {
-          console.log("✅ REAL API DATA FOUND! Events count:", eventsArray.length);
-          const allEvents = eventsArray.map((e) => new EventModel(e));
-          setUpcomingEvents(allEvents.filter((ev) => !ev.isCompleted));
-          setCompletedEvents(allEvents.filter((ev) => ev.isCompleted));
-          return; // Exit early - we have real data
+      } else if (res.code === 200 && res.data) {
+        if (Array.isArray(res.data)) {
+          eventsArray = res.data;
+        } else if (res.data.events && Array.isArray(res.data.events)) {
+          eventsArray = res.data.events;
         }
       }
       
-      // If we reach here, show mock data
-      console.log("❌ NO REAL API DATA - Using mock data");
-      const mockEvents = [
-        {
-          id: 999,
-          event_name: "🔄 MOCK: Sample Marathon",
-          event_venue: "Mock Venue",
-          event_desc: "This is MOCK data - API returned no events",
-          event_start_date: "2024-12-01 08:00:00",
-          event_end_date: "2024-12-01 12:00:00",
-          event_organised_by: "Mock Organizer",
-          created_date: "2024-11-01",
-          is_deleted: "0"
-        }
-      ];
-      
-      const mockEventModels = mockEvents.map(e => new EventModel(e));
-      setUpcomingEvents(mockEventModels);
-      setCompletedEvents([]);
-      setApiError("API returned no data - showing mock events");
+      if (eventsArray.length > 0) {
+        const allEvents = eventsArray.map((e) => new EventModel(e));
+        setUpcomingEvents(allEvents.filter((ev) => !ev.isCompleted));
+        setCompletedEvents(allEvents.filter((ev) => ev.isCompleted));
+      } else {
+        // Show fallback events for testing
+        const fallbackEvents = [
+          {
+            id: "fallback-1",
+            event_name: "Trail Hunt Championship",
+            event_venue: "Indore, Madhya Pradesh", 
+            event_start_date: "2025-09-15",
+            event_end_date: "2025-09-18",
+            event_organised_by: "Mahindra Adventure",
+            event_pic: null,
+          },
+          {
+            id: "fallback-2",
+            event_name: "Quest Trail Adventure",
+            event_venue: "Jaipur, Rajasthan",
+            event_start_date: "2025-09-15", 
+            event_end_date: "2025-09-18",
+            event_organised_by: "Mahindra Adventure",
+            event_pic: null,
+          },
+          {
+            id: "fallback-3",
+            event_name: "Desert Storm Rally",
+            event_venue: "Jodhpur, Rajasthan",
+            event_start_date: "2025-09-20",
+            event_end_date: "2025-09-22", 
+            event_organised_by: "Mahindra Adventure",
+            event_pic: null,
+          },
+        ];
+        
+        const allEvents = fallbackEvents.map((e) => new EventModel(e));
+        setUpcomingEvents(allEvents.filter((ev) => !ev.isCompleted));
+        setCompletedEvents(allEvents.filter((ev) => ev.isCompleted));
+        setApiError("Using demo events - API may be unavailable");
+      }
       
     } catch (err) {
-      console.error("💥 API CALL FAILED!");
-      console.error("Error:", err.message);
+      console.error("API Call Failed:", err.message);
       
-      // Network error - show mock data
-      const errorMockEvents = [
+      // Show fallback events on error
+      const fallbackEvents = [
         {
-          id: 888,
-          event_name: "❌ ERROR: API Failed",
-          event_venue: "Error Venue",
-          event_desc: `API call failed: ${err.message}`,
-          event_start_date: "2024-12-01 08:00:00",
-          event_end_date: "2024-12-01 12:00:00",
-          event_organised_by: "Error Handler",
-          created_date: "2024-11-01",
-          is_deleted: "0"
-        }
+          id: "fallback-1",
+          event_name: "Trail Hunt Championship",
+          event_venue: "Indore, Madhya Pradesh", 
+          event_start_date: "2025-09-15",
+          event_end_date: "2025-09-18",
+          event_organised_by: "Mahindra Adventure",
+          event_pic: null,
+        },
+        {
+          id: "fallback-2", 
+          event_name: "Quest Trail Adventure",
+          event_venue: "Jaipur, Rajasthan",
+          event_start_date: "2025-09-15",
+          event_end_date: "2025-09-18",
+          event_organised_by: "Mahindra Adventure",
+          event_pic: null,
+        },
       ];
       
-      const errorEventModels = errorMockEvents.map(e => new EventModel(e));
-      setUpcomingEvents(errorEventModels);
-      setCompletedEvents([]);
+      const allEvents = fallbackEvents.map((e) => new EventModel(e));
+      setUpcomingEvents(allEvents.filter((ev) => !ev.isCompleted));
+      setCompletedEvents(allEvents.filter((ev) => ev.isCompleted));
       setApiError(`Network error: ${err.message}`);
     } finally {
       setLoading(false);
@@ -553,94 +592,85 @@ const OrganiserScreen = () => {
   };
 
   const renderEventCard = (event, index) => (
-    <TouchableOpacity
-      key={event.id}
-      style={styles.eventCard}
-      onPress={() => setSelectedEvent(event)}
-      activeOpacity={0.9}
-    >
-      <Image 
-        source={getEventImage(index)} 
-        style={styles.eventImage} 
-        resizeMode="cover" 
-      />
-      
-      {/* Status Badge */}
-      <View style={[styles.statusBadge, { 
-        backgroundColor: event.isCompleted ? 'rgba(76, 175, 80, 0.9)' : 'rgba(255, 152, 0, 0.9)' 
-      }]}>
-        <Text style={styles.statusText}>
-          {event.isCompleted ? '✓ Completed' : '🔥 Upcoming'}
-        </Text>
+    <View style={styles.eventCard} key={event.id}>
+      {/* Event Image with Overlay */}
+      <View style={styles.eventImageContainer}>
+        <Image 
+          source={(event.pic || event.headerImg) ? { uri: event.pic || event.headerImg } : { uri: 'https://via.placeholder.com/400x200/333333/ffffff?text=Event+Image' }} 
+          style={styles.eventImage} 
+          resizeMode="cover" 
+        />
+        <LinearGradient
+          colors={['transparent', 'rgba(0,0,0,0.3)', 'rgba(0,0,0,0.8)']}
+          style={styles.eventImageOverlay}
+        />
+        
+        {/* Status Badge */}
+        <View style={[styles.statusBadge, { 
+          backgroundColor: event.isCompleted ? 'rgba(76, 175, 80, 0.9)' : 'rgba(255, 152, 0, 0.9)' 
+        }]}>
+          <Text style={styles.statusText}>
+            {event.isCompleted ? '✓ Done' : '🔥 Live'}
+          </Text>
+        </View>
       </View>
 
       {/* Event Content */}
-      <LinearGradient
-        colors={['transparent', 'rgba(0,0,0,0.5)', 'rgba(0,0,0,0.9)']}
-        style={styles.eventOverlay}
-      >
-        <View style={styles.eventContent}>
-          <Text style={styles.eventTitle} numberOfLines={2}>{event.name}</Text>
+      <View style={styles.eventCardContent}>
+        <Text style={styles.eventTitle} numberOfLines={2}>{event.name}</Text>
+        
+        {/* Event Details */}
+        <View style={styles.eventDetailsContainer}>
+          <View style={styles.eventDetailItem}>
+            <Text style={styles.detailIcon}>📍</Text>
+            <Text style={styles.detailText} numberOfLines={1}>{event.venue}</Text>
+          </View>
           
-          <View style={styles.eventDetailRow}>
-            <View style={styles.detailChip}>
-              <Text style={styles.detailIcon}>📍</Text>
-              <Text style={styles.detailText} numberOfLines={1}>{event.venue}</Text>
-            </View>
+          <View style={styles.eventDetailItem}>
+            <Text style={styles.detailIcon}>📅</Text>
+            <Text style={styles.detailText}>{event.startDate}</Text>
           </View>
-
-          <View style={styles.eventDetailRow}>
-            <View style={styles.detailChip}>
-              <Text style={styles.detailIcon}>📅</Text>
-              <Text style={styles.detailText}>{event.startDate}</Text>
-            </View>
-          </View>
-
-          <View style={styles.eventDetailRow}>
-            <View style={styles.detailChip}>
-              <Text style={styles.detailIcon}>👤</Text>
-              <Text style={styles.detailText} numberOfLines={1}>{event.organisedBy}</Text>
-            </View>
-          </View>
-
-          {/* Action Buttons */}
-          <View style={styles.actionButtonsContainer}>
-            <TouchableOpacity 
-              style={styles.joinButton} 
-              onPress={(e) => {
-                e.stopPropagation();
-                handleJoinEvent(event);
-              }}
-              activeOpacity={0.8}
-            >
-              <LinearGradient
-                colors={['#4CAF50', '#45a049']}
-                style={styles.joinButtonGradient}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 0 }}
-              >
-                <Text style={styles.joinButtonText}>🎯 Join Event</Text>
-              </LinearGradient>
-            </TouchableOpacity>
-
-            <TouchableOpacity 
-              style={styles.viewButton} 
-              onPress={() => setSelectedEvent(event)}
-              activeOpacity={0.8}
-            >
-              <LinearGradient
-                colors={['#feb47b', '#ff7e5f']}
-                style={styles.viewButtonGradient}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 0 }}
-              >
-                <Text style={styles.viewButtonText}>👁️ View Details</Text>
-              </LinearGradient>
-            </TouchableOpacity>
+          
+          <View style={styles.eventDetailItem}>
+            <Text style={styles.detailIcon}>👤</Text>
+            <Text style={styles.detailText} numberOfLines={1}>{event.organisedBy}</Text>
           </View>
         </View>
-      </LinearGradient>
-    </TouchableOpacity>
+
+        {/* Action Buttons */}
+        <View style={styles.eventActionsContainer}>
+          <TouchableOpacity 
+            style={styles.eventActionButton} 
+            onPress={() => handleJoinEvent(event)}
+            activeOpacity={0.8}
+          >
+            <LinearGradient
+              colors={['#4CAF50', '#45a049']}
+              style={styles.eventActionGradient}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 0 }}
+            >
+              <Text style={styles.eventActionText}>Join</Text>
+            </LinearGradient>
+          </TouchableOpacity>
+
+          <TouchableOpacity 
+            style={styles.eventActionButton} 
+            onPress={() => setSelectedEvent(event)}
+            activeOpacity={0.8}
+          >
+            <LinearGradient
+              colors={['#feb47b', '#ff7e5f']}
+              style={styles.eventActionGradient}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 0 }}
+            >
+              <Text style={styles.eventActionText}>View</Text>
+            </LinearGradient>
+          </TouchableOpacity>
+        </View>
+      </View>
+    </View>
   );
 
   return (
@@ -682,32 +712,31 @@ const OrganiserScreen = () => {
               <View style={styles.titleAccent} />
               <Text style={styles.headerTitle}>Event Management</Text>
             </View>
-            <Text style={styles.headerSubtitle}>Manage and track your events</Text>
+            <View style={styles.headerRow}>
+              <View style={styles.headerLeft}>
+                <Text style={styles.headerSubtitle}>Manage and track your events</Text>
+                
+                {/* My Events Button */}
+                <TouchableOpacity 
+                  style={styles.myEventsButton} 
+                  onPress={() => navigation.navigate('My Events')}
+                  activeOpacity={0.8}
+                >
+                  <LinearGradient
+                    colors={['#4CAF50', '#45a049']}
+                    style={styles.myEventsButtonGradient}
+                    start={{ x: 0, y: 0 }}
+                    end={{ x: 1, y: 0 }}
+                  >
+                    <Text style={styles.myEventsButtonIcon}>📋</Text>
+                    <Text style={styles.myEventsButtonText}>My Events</Text>
+                  </LinearGradient>
+                </TouchableOpacity>
+              </View>
+            </View>
           </View>
 
-          {/* Stats Cards */}
-          <View style={styles.statsContainer}>
-            <View style={styles.statCard}>
-              <LinearGradient
-                colors={['rgba(255, 152, 0, 0.2)', 'rgba(255, 152, 0, 0.1)']}
-                style={styles.statGradient}
-              >
-                <Text style={styles.statNumber}>{upcomingEvents.length}</Text>
-                <Text style={styles.statLabel}>Upcoming</Text>
-              </LinearGradient>
-            </View>
-            <View style={styles.statCard}>
-              <LinearGradient
-                colors={['rgba(76, 175, 80, 0.2)', 'rgba(76, 175, 80, 0.1)']}
-                style={styles.statGradient}
-              >
-                <Text style={styles.statNumber}>{completedEvents.length}</Text>
-                <Text style={styles.statLabel}>Completed</Text>
-              </LinearGradient>
-            </View>
-          </View>
-
-          {/* Tab Section */}
+          {/* Tab Section with Counts */}
           <View style={styles.tabContainer}>
             <TouchableOpacity
               style={[styles.tab, viewTab === "upcoming" && styles.activeTab]}
@@ -720,9 +749,16 @@ const OrganiserScreen = () => {
                 start={{ x: 0, y: 0 }}
                 end={{ x: 1, y: 0 }}
               >
-                <Text style={[styles.tabText, viewTab === "upcoming" && styles.activeTabText]}>
-                  🔥 Upcoming Events
-                </Text>
+                <View style={styles.tabContent}>
+                  <Text style={[styles.tabText, viewTab === "upcoming" && styles.activeTabText]}>
+                    🔥 Upcoming Events
+                  </Text>
+                  <View style={[styles.countBadge, viewTab === "upcoming" && styles.activeCountBadge]}>
+                    <Text style={[styles.countText, viewTab === "upcoming" && styles.activeCountText]}>
+                      {upcomingEvents.length}
+                    </Text>
+                  </View>
+                </View>
               </LinearGradient>
             </TouchableOpacity>
             
@@ -737,9 +773,16 @@ const OrganiserScreen = () => {
                 start={{ x: 0, y: 0 }}
                 end={{ x: 1, y: 0 }}
               >
-                <Text style={[styles.tabText, viewTab === "completed" && styles.activeTabText]}>
-                  ✓ Completed Events
-                </Text>
+                <View style={styles.tabContent}>
+                  <Text style={[styles.tabText, viewTab === "completed" && styles.activeTabText]}>
+                    ✓ Completed Events
+                  </Text>
+                  <View style={[styles.countBadge, viewTab === "completed" && styles.activeCountBadge]}>
+                    <Text style={[styles.countText, viewTab === "completed" && styles.activeCountText]}>
+                      {completedEvents.length}
+                    </Text>
+                  </View>
+                </View>
               </LinearGradient>
             </TouchableOpacity>
           </View>
@@ -808,7 +851,7 @@ const OrganiserScreen = () => {
             {/* Event Image */}
             <View style={styles.detailImageContainer}>
               <Image 
-                source={getEventImage(0)} 
+                source={(selectedEvent?.pic || selectedEvent?.headerImg) ? { uri: selectedEvent.pic || selectedEvent.headerImg } : { uri: 'https://via.placeholder.com/400x200/333333/ffffff?text=Event+Image' }} 
                 style={styles.detailImage} 
                 resizeMode="cover" 
               />
@@ -901,7 +944,8 @@ const OrganiserScreen = () => {
 
 const styles = StyleSheet.create({
   gradient: { 
-    flex: 1 
+    flex: 1,
+    backgroundColor: '#0f2027', // Fallback color
   },
   container: { 
     flex: 1,
@@ -911,8 +955,11 @@ const styles = StyleSheet.create({
   // Header Styles
   headerSection: {
     paddingHorizontal: 20,
-    paddingTop: 20,
+    paddingTop: 15,
     paddingBottom: 10,
+    backgroundColor: 'rgba(255, 255, 255, 0.02)',
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(255, 255, 255, 0.08)',
   },
   headerTitleContainer: {
     flexDirection: 'row',
@@ -922,54 +969,69 @@ const styles = StyleSheet.create({
   titleAccent: {
     backgroundColor: '#feb47b',
     width: 4,
-    height: 28,
+    height: 24,
     marginRight: 12,
     borderRadius: 2,
+    shadowColor: '#feb47b',
+    shadowOpacity: 0.4,
+    shadowOffset: { width: 0, height: 1 },
+    shadowRadius: 4,
+    elevation: 2,
   },
   headerTitle: {
-    fontSize: isSmallDevice ? 24 : 28,
+    fontSize: isSmallDevice ? 22 : 26,
     fontWeight: '800',
     color: '#fff',
     letterSpacing: 0.5,
-    textShadowColor: 'rgba(0, 0, 0, 0.5)',
+    textShadowColor: 'rgba(0, 0, 0, 0.4)',
     textShadowOffset: {width: 1, height: 1},
-    textShadowRadius: 5,
+    textShadowRadius: 4,
+    flex: 1,
   },
   headerSubtitle: {
-    fontSize: 16,
-    color: 'rgba(255, 255, 255, 0.9)',
+    fontSize: 15,
+    color: 'rgba(255, 255, 255, 0.85)',
     marginLeft: 16,
-    fontWeight: '700',
+    fontWeight: '600',
+    marginBottom: 10,
+    letterSpacing: 0.2,
   },
-
-  // Stats Cards
-  statsContainer: {
+  headerRow: {
     flexDirection: 'row',
-    paddingHorizontal: 20,
-    paddingVertical: 15,
-    gap: 15,
+    alignItems: 'flex-start',
   },
-  statCard: {
+  headerLeft: {
     flex: 1,
+    marginLeft: 16,
+  },
+  myEventsButton: {
+    alignSelf: 'flex-start',
     borderRadius: 16,
     overflow: 'hidden',
+    shadowColor: '#4CAF50',
+    shadowOpacity: 0.3,
+    shadowOffset: { width: 0, height: 3 },
+    shadowRadius: 6,
+    elevation: 4,
+    marginTop: 8,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.1)',
+    borderColor: 'rgba(76, 175, 80, 0.3)',
   },
-  statGradient: {
-    padding: 20,
+  myEventsButtonGradient: {
+    flexDirection: 'row',
     alignItems: 'center',
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+    gap: 6,
   },
-  statNumber: {
-    fontSize: 28,
-    fontWeight: '800',
-    color: '#fff',
-    marginBottom: 4,
-  },
-  statLabel: {
+  myEventsButtonIcon: {
     fontSize: 14,
+  },
+  myEventsButtonText: {
     color: '#fff',
-    fontWeight: '800',
+    fontSize: 13,
+    fontWeight: '700',
+    letterSpacing: 0.3,
   },
 
   // Tab Styles
@@ -977,30 +1039,72 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     paddingHorizontal: 20,
     paddingVertical: 15,
-    gap: 10,
+    gap: 12,
   },
   tab: {
     flex: 1,
     borderRadius: 12,
     overflow: 'hidden',
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.2)',
+    borderColor: 'rgba(255, 255, 255, 0.15)',
+    backgroundColor: 'rgba(255, 255, 255, 0.04)',
+    shadowColor: '#000',
+    shadowOpacity: 0.08,
+    shadowOffset: { width: 0, height: 1 },
+    shadowRadius: 4,
+    elevation: 2,
   },
   tabGradient: {
     paddingVertical: 14,
     paddingHorizontal: 16,
     alignItems: 'center',
   },
+  tabContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+  },
   activeTab: {
     borderColor: '#feb47b',
+    shadowColor: '#feb47b',
+    shadowOpacity: 0.2,
+    shadowOffset: { width: 0, height: 2 },
+    shadowRadius: 6,
+    elevation: 4,
   },
   tabText: {
-    color: 'rgba(255, 255, 255, 0.9)',
-    fontWeight: '700',
-    fontSize: 14,
+    color: 'rgba(255, 255, 255, 0.8)',
+    fontWeight: '600',
+    fontSize: 13,
     letterSpacing: 0.3,
+    textAlign: 'center',
   },
   activeTabText: {
+    color: '#fff',
+    fontWeight: '700',
+    textShadowColor: 'rgba(0, 0, 0, 0.2)',
+    textShadowOffset: { width: 1, height: 1 },
+    textShadowRadius: 1,
+  },
+  countBadge: {
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    borderRadius: 12,
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    minWidth: 24,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  activeCountBadge: {
+    backgroundColor: 'rgba(255, 255, 255, 0.3)',
+  },
+  countText: {
+    color: 'rgba(255, 255, 255, 0.9)',
+    fontSize: 11,
+    fontWeight: '700',
+  },
+  activeCountText: {
     color: '#fff',
     fontWeight: '800',
   },
@@ -1008,172 +1112,118 @@ const styles = StyleSheet.create({
   // Event Card Styles
   eventsContainer: {
     paddingHorizontal: 20,
-    paddingBottom: 40,
+    paddingBottom: 30,
     paddingTop: 10,
   },
   eventCard: {
     backgroundColor: 'rgba(255, 255, 255, 0.08)',
-    borderRadius: 24,
-    marginBottom: 32,
+    borderRadius: 16,
+    marginBottom: 16,
     overflow: 'hidden',
     shadowColor: '#000',
-    shadowOpacity: 0.4,
-    shadowOffset: { width: 0, height: 12 },
-    shadowRadius: 20,
-    elevation: 15,
-    borderWidth: 1.5,
-    borderColor: 'rgba(254, 180, 123, 0.2)',
-    transform: [{ scale: 1 }],
+    shadowOpacity: 0.15,
+    shadowOffset: { width: 0, height: 4 },
+    shadowRadius: 8,
+    elevation: 6,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.1)',
+  },
+  eventImageContainer: {
+    height: 140,
+    position: 'relative',
   },
   eventImage: {
     width: '100%',
-    height: 220,
-    backgroundColor: 'rgba(0, 0, 0, 0.2)',
+    height: '100%',
+  },
+  eventImageOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
   },
   statusBadge: {
     position: 'absolute',
-    top: 16,
-    right: 16,
-    paddingVertical: 8,
-    paddingHorizontal: 16,
-    borderRadius: 25,
-    borderWidth: 1.5,
-    borderColor: 'rgba(255, 255, 255, 0.4)',
+    top: 10,
+    right: 10,
+    paddingVertical: 4,
+    paddingHorizontal: 8,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.3)',
     zIndex: 3,
-    shadowColor: '#000',
-    shadowOpacity: 0.3,
-    shadowOffset: { width: 0, height: 4 },
-    shadowRadius: 8,
-    elevation: 8,
   },
   statusText: {
     color: '#fff',
-    fontSize: 13,
-    fontWeight: '800',
-    textShadowColor: 'rgba(0, 0, 0, 0.7)',
+    fontSize: 10,
+    fontWeight: '700',
+    textShadowColor: 'rgba(0, 0, 0, 0.6)',
     textShadowOffset: {width: 1, height: 1},
-    textShadowRadius: 3,
-    letterSpacing: 0.3,
+    textShadowRadius: 2,
   },
-  eventOverlay: {
-    position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
-    height: '70%',
-    justifyContent: 'flex-end',
-  },
-  eventContent: {
-    padding: 24,
-    paddingTop: 20,
-    paddingBottom: 28,
+  eventCardContent: {
+    padding: 16,
   },
   eventTitle: {
-    fontSize: 22,
-    fontWeight: '900',
+    fontSize: 16,
+    fontWeight: '700',
     color: '#fff',
+    marginBottom: 12,
+    letterSpacing: 0.3,
+    lineHeight: 20,
+  },
+  eventDetailsContainer: {
     marginBottom: 16,
-    textShadowColor: 'rgba(0, 0, 0, 0.8)',
-    textShadowOffset: {width: 1, height: 2},
-    textShadowRadius: 4,
-    letterSpacing: 0.5,
-    lineHeight: 28,
+    gap: 8,
   },
-  eventDetailRow: {
-    marginBottom: 10,
-  },
-  detailChip: {
+  eventDetailItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'rgba(254, 180, 123, 0.15)',
-    paddingVertical: 8,
-    paddingHorizontal: 14,
-    borderRadius: 25,
-    alignSelf: 'flex-start',
-    borderWidth: 1,
-    borderColor: 'rgba(254, 180, 123, 0.3)',
-    shadowColor: '#feb47b',
+    gap: 8,
+  },
+  detailIcon: {
+    fontSize: 12,
+    width: 16,
+  },
+  detailText: {
+    color: 'rgba(255, 255, 255, 0.8)',
+    fontSize: 12,
+    fontWeight: '500',
+    flex: 1,
+  },
+  eventActionsContainer: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+  eventActionButton: {
+    flex: 1,
+    borderRadius: 12,
+    overflow: 'hidden',
+    shadowColor: '#000',
     shadowOpacity: 0.2,
     shadowOffset: { width: 0, height: 2 },
     shadowRadius: 4,
     elevation: 3,
   },
-  detailIcon: {
-    fontSize: 16,
-    marginRight: 10,
-    textShadowColor: 'rgba(0, 0, 0, 0.3)',
-    textShadowOffset: { width: 1, height: 1 },
-    textShadowRadius: 2,
-  },
-  detailText: {
-    color: '#fff',
-    fontSize: 14,
-    fontWeight: '800',
-    maxWidth: width * 0.6,
-    textShadowColor: 'rgba(0, 0, 0, 0.5)',
-    textShadowOffset: { width: 1, height: 1 },
-    textShadowRadius: 2,
-    letterSpacing: 0.3,
-  },
-  
-  // Action Buttons
-  actionButtonsContainer: {
-    flexDirection: 'row',
-    marginTop: 24,
-    marginBottom: 8,
-    gap: 12,
-  },
-  joinButton: {
-    flex: 1,
-    borderRadius: 16,
-    overflow: 'hidden',
-    shadowColor: '#4CAF50',
-    shadowOpacity: 0.3,
-    shadowOffset: { width: 0, height: 4 },
-    shadowRadius: 8,
-    elevation: 6,
-  },
-  joinButtonGradient: {
-    paddingVertical: 14,
-    paddingHorizontal: 18,
-    alignItems: 'center',
-  },
-  joinButtonText: {
-    color: '#fff',
-    fontSize: 14,
-    fontWeight: '900',
-    letterSpacing: 0.6,
-    textShadowColor: 'rgba(0, 0, 0, 0.3)',
-    textShadowOffset: { width: 1, height: 1 },
-    textShadowRadius: 2,
-  },
-  viewButton: {
-    flex: 1,
-    borderRadius: 16,
-    overflow: 'hidden',
-    shadowColor: '#feb47b',
-    shadowOpacity: 0.3,
-    shadowOffset: { width: 0, height: 4 },
-    shadowRadius: 8,
-    elevation: 6,
-  },
-  viewButtonGradient: {
-    paddingVertical: 12,
+  eventActionGradient: {
+    paddingVertical: 10,
     paddingHorizontal: 16,
     alignItems: 'center',
+    justifyContent: 'center',
   },
-  viewButtonText: {
+  eventActionText: {
     color: '#fff',
-    fontSize: 13,
-    fontWeight: '800',
-    letterSpacing: 0.5,
+    fontSize: 12,
+    fontWeight: '700',
+    letterSpacing: 0.3,
   },
 
   // Error and Empty States
   errorContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'rgba(244, 67, 54, 0.1)',
+    backgroundColor: 'rgba(244, 67, 54, 0.12)',
     paddingVertical: 12,
     paddingHorizontal: 16,
     marginHorizontal: 20,
@@ -1181,39 +1231,51 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     borderWidth: 1,
     borderColor: 'rgba(244, 67, 54, 0.3)',
+    shadowColor: '#f44336',
+    shadowOpacity: 0.15,
+    shadowOffset: { width: 0, height: 2 },
+    shadowRadius: 4,
+    elevation: 2,
   },
   errorIcon: {
-    fontSize: 18,
+    fontSize: 16,
     marginRight: 10,
   },
   errorText: {
     color: '#ffcdd2',
-    fontSize: 14,
-    fontWeight: '700',
+    fontSize: 13,
+    fontWeight: '600',
     flex: 1,
+    lineHeight: 18,
+    letterSpacing: 0.1,
   },
   emptyState: {
     alignItems: 'center',
     paddingVertical: 40,
     paddingHorizontal: 20,
+    marginTop: 10,
   },
   emptyIcon: {
     fontSize: 48,
     marginBottom: 16,
+    opacity: 0.6,
   },
   emptyTitle: {
     fontSize: 18,
-    fontWeight: '800',
+    fontWeight: '700',
     color: '#fff',
     marginBottom: 8,
     textAlign: 'center',
+    letterSpacing: 0.3,
   },
   emptySubtitle: {
     fontSize: 14,
-    color: 'rgba(255, 255, 255, 0.8)',
+    color: 'rgba(255, 255, 255, 0.7)',
     textAlign: 'center',
     lineHeight: 20,
-    fontWeight: '600',
+    fontWeight: '500',
+    letterSpacing: 0.2,
+    maxWidth: width * 0.8,
   },
 
   // Loader
@@ -1225,15 +1287,19 @@ const styles = StyleSheet.create({
     bottom: 0,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: 'rgba(0, 0, 0, 0.7)',
+    backgroundColor: 'rgba(0, 0, 0, 0.8)',
     zIndex: 100,
   },
   loadingText: {
     color: '#feb47b',
-    fontSize: 16,
+    fontSize: 18,
     fontWeight: '800',
-    marginTop: 12,
-    letterSpacing: 0.5,
+    marginTop: 16,
+    letterSpacing: 0.8,
+    textAlign: 'center',
+    textShadowColor: 'rgba(0, 0, 0, 0.5)',
+    textShadowOffset: { width: 1, height: 1 },
+    textShadowRadius: 3,
   },
 
   // Detail View Styles
@@ -1248,28 +1314,38 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     overflow: 'hidden',
     alignSelf: 'flex-start',
+    shadowColor: '#feb47b',
+    shadowOpacity: 0.2,
+    shadowOffset: { width: 0, height: 2 },
+    shadowRadius: 4,
+    elevation: 3,
   },
   backButtonGradient: {
-    paddingVertical: 12,
-    paddingHorizontal: 20,
+    paddingVertical: 10,
+    paddingHorizontal: 16,
     borderWidth: 1,
     borderColor: 'rgba(254, 180, 123, 0.3)',
     borderRadius: 12,
   },
   backText: {
     color: '#feb47b',
-    fontWeight: '800',
-    fontSize: 16,
-    letterSpacing: 0.5,
+    fontWeight: '700',
+    fontSize: 14,
+    letterSpacing: 0.3,
   },
   detailImageContainer: {
-    height: 250,
+    height: 200,
     marginHorizontal: 20,
     marginBottom: 20,
-    borderRadius: 20,
+    borderRadius: 16,
     overflow: 'hidden',
     borderWidth: 1,
     borderColor: 'rgba(255, 255, 255, 0.2)',
+    shadowColor: '#000',
+    shadowOpacity: 0.2,
+    shadowOffset: { width: 0, height: 4 },
+    shadowRadius: 8,
+    elevation: 6,
   },
   detailImage: {
     width: '100%',
@@ -1286,22 +1362,23 @@ const styles = StyleSheet.create({
   },
   detailStatusBadge: {
     position: 'absolute',
-    top: 16,
-    right: 16,
+    top: 12,
+    right: 12,
   },
   detailsContent: {
     paddingHorizontal: 20,
     paddingBottom: 30,
   },
   detailTitle: {
-    fontSize: 28,
+    fontSize: 24,
     fontWeight: '800',
     color: '#fff',
-    marginBottom: 24,
-    textShadowColor: 'rgba(0, 0, 0, 0.5)',
+    marginBottom: 20,
+    textShadowColor: 'rgba(0, 0, 0, 0.4)',
     textShadowOffset: {width: 1, height: 1},
-    textShadowRadius: 5,
-    letterSpacing: 0.5,
+    textShadowRadius: 4,
+    letterSpacing: 0.4,
+    lineHeight: 28,
   },
   detailJoinButton: {
     marginBottom: 24,
@@ -1320,46 +1397,58 @@ const styles = StyleSheet.create({
     letterSpacing: 0.5,
   },
   detailSection: {
-    gap: 16,
+    gap: 12,
   },
   detailItem: {
     flexDirection: 'row',
     alignItems: 'flex-start',
-    backgroundColor: 'rgba(255, 255, 255, 0.08)',
-    padding: 16,
-    borderRadius: 16,
+    backgroundColor: 'rgba(255, 255, 255, 0.06)',
+    padding: 14,
+    borderRadius: 14,
     borderWidth: 1,
     borderColor: 'rgba(255, 255, 255, 0.1)',
+    shadowColor: '#000',
+    shadowOpacity: 0.08,
+    shadowOffset: { width: 0, height: 2 },
+    shadowRadius: 4,
+    elevation: 2,
   },
   detailIconContainer: {
     backgroundColor: 'rgba(254, 180, 123, 0.2)',
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+    width: 36,
+    height: 36,
+    borderRadius: 18,
     justifyContent: 'center',
     alignItems: 'center',
-    marginRight: 16,
+    marginRight: 14,
     borderWidth: 1,
     borderColor: 'rgba(254, 180, 123, 0.3)',
+    shadowColor: '#feb47b',
+    shadowOpacity: 0.2,
+    shadowOffset: { width: 0, height: 1 },
+    shadowRadius: 3,
+    elevation: 2,
   },
   detailItemIcon: {
-    fontSize: 18,
+    fontSize: 16,
   },
   detailItemContent: {
     flex: 1,
   },
   detailItemLabel: {
-    fontSize: 14,
-    color: 'rgba(255, 255, 255, 0.9)',
-    fontWeight: '700',
+    fontSize: 12,
+    color: 'rgba(255, 255, 255, 0.8)',
+    fontWeight: '600',
     marginBottom: 4,
-    letterSpacing: 0.3,
+    letterSpacing: 0.2,
+    textTransform: 'uppercase',
   },
   detailItemValue: {
-    fontSize: 16,
+    fontSize: 14,
     color: '#fff',
-    fontWeight: '700',
-    lineHeight: 22,
+    fontWeight: '600',
+    lineHeight: 18,
+    letterSpacing: 0.2,
   },
 
   // Join Event Form Styles
@@ -1447,11 +1536,26 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 16,
   },
+  sectionTitleContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
   sectionTitle: {
     fontSize: 18,
     fontWeight: '800',
     color: '#fff',
-    marginBottom: 16,
+  },
+  memberCount: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#feb47b',
+    backgroundColor: 'rgba(254, 180, 123, 0.2)',
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: 'rgba(254, 180, 123, 0.3)',
   },
   addButton: {
     backgroundColor: 'rgba(254, 180, 123, 0.2)',
@@ -1521,6 +1625,29 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '700',
   },
+  emptyMembersContainer: {
+    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+    borderRadius: 16,
+    padding: 24,
+    alignItems: 'center',
+    borderWidth: 2,
+    borderColor: 'rgba(255, 255, 255, 0.1)',
+    borderStyle: 'dashed',
+  },
+  emptyMembersText: {
+    color: 'rgba(255, 255, 255, 0.8)',
+    fontSize: 16,
+    fontWeight: '600',
+    marginBottom: 8,
+    textAlign: 'center',
+  },
+  emptyMembersSubtext: {
+    color: 'rgba(255, 255, 255, 0.6)',
+    fontSize: 14,
+    fontWeight: '500',
+    textAlign: 'center',
+    lineHeight: 20,
+  },
   submitButton: {
     marginTop: 16,
     marginHorizontal: 40,
@@ -1552,6 +1679,41 @@ const styles = StyleSheet.create({
     borderColor: 'rgba(255, 255, 255, 0.2)',
     borderRadius: 12,
     overflow: 'hidden',
+  },
+  picker: {
+    color: '#fff',
+    backgroundColor: 'transparent',
+    height: 50,
+  },
+  readOnlyContainer: {
+    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.15)',
+    borderRadius: 12,
+    paddingVertical: 14,
+    paddingHorizontal: 16,
+    minHeight: 50,
+    justifyContent: 'center',
+  },
+  readOnlyText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '600',
+    marginBottom: 2,
+  },
+  readOnlyLabel: {
+    color: 'rgba(255, 255, 255, 0.6)',
+    fontSize: 12,
+    fontWeight: '500',
+    fontStyle: 'italic',
+  },
+  pickerContainer: {
+    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.15)',
+    borderRadius: 12,
+    overflow: 'hidden',
+    minHeight: 50,
   },
   picker: {
     color: '#fff',

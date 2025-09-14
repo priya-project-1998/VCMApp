@@ -15,7 +15,10 @@ const ENDPOINTS = {
   // Join Event Endpoints
   GET_EVENT_CATEGORIES: "/events", // Will be used as: /events/{id}/categories
   GET_CATEGORY_CLASSES: "/events", // Will be used as: /events/{eventId}/categories/{categoryId}/classes
-  JOIN_EVENT: "/join-event"
+  JOIN_EVENT: "/events/join",
+  
+  // My Events Endpoints
+  GET_MY_EVENTS: "/events/myevents"
 };
 
 export default ENDPOINTS;
