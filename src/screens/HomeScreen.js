@@ -49,13 +49,22 @@ export default function Dashboard() {
       const response = await BannerService.getBanners();
       console.log("Banner API Response:", response);
       
-      if (response.success && response.data) {
-        // Map API data and add static images
+      if (response.status && response.data) {
+        // Map API data and add static images when image_url is null
         const bannersWithImages = response.data.map((banner, index) => ({
           ...banner,
-          image: { uri: staticBannerImages[index % staticBannerImages.length] }
+          image: banner.image_url 
+            ? { uri: `https://e-pickup.randomsoftsolution.in/${banner.image_url}` }
+            : { uri: staticBannerImages[index % staticBannerImages.length] },
+          subtitle: `Event ID: ${banner.event_id || 'N/A'}`,
+          date: new Date(banner.created_date).toLocaleDateString('en-GB', { 
+            day: '2-digit', 
+            month: 'short', 
+            year: 'numeric' 
+          })
         }));
         setBanners(bannersWithImages);
+        console.log("Banners processed:", bannersWithImages);
       } else {
         console.error("Failed to fetch banners:", response.message);
         // Fallback to static data if API fails
@@ -121,11 +130,13 @@ export default function Dashboard() {
       const response = await EventService.getEvents();
       console.log("Events API Response:", response);
       
-      if (response.success && response.data && Array.isArray(response.data)) {
-        // Map API data and add static images
+      if (response.status && response.data && Array.isArray(response.data)) {
+        // Map API data and add static images when event_pic is null
         const eventsWithImages = response.data.map((event, index) => ({
           ...event,
-          image: { uri: staticEventImages[index % staticEventImages.length] }
+          image: event.event_pic 
+            ? { uri: `https://e-pickup.randomsoftsolution.in/${event.event_pic}` }
+            : { uri: staticEventImages[index % staticEventImages.length] }
         }));
         setEvents(eventsWithImages);
         console.log("Events set successfully:", eventsWithImages.length, "events");

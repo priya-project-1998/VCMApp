@@ -22,17 +22,21 @@ class EventService {
       console.log("Response Message:", response.message);
       console.log("Response Data:", response.data);
 
-      // Handle different response structures
+      // Handle the API response structure: {status: "success", events: [...]}
       if (response.status === "success" || response.code === 200) {
-        return new ApiResponse(true, response.code || 200, response.message || "Events fetched successfully", response.data);
+        // Extract the events data from response.data.events
+        const events = response.data?.events || [];
+        console.log("Extracted events array:", events);
+        
+        return new ApiResponse(true, response.code || 200, response.message || "Events fetched successfully", events);
       } else {
-        return new ApiResponse(false, response.code || 500, response.message || "Failed to fetch events", response.data);
+        return new ApiResponse(false, response.code || 500, response.message || "Failed to fetch events", []);
       }
     } catch (err) {
       console.error("=== EventService getEvents Error ===");
       console.error("Error:", err);
       console.error("Error Message:", err.message);
-      return new ApiResponse(false, 500, err.message || "Fetching events failed");
+      return new ApiResponse(false, 500, err.message || "Fetching events failed", []);
     }
   }
 

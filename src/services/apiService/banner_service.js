@@ -21,17 +21,21 @@ class BannerService {
       console.log("Response Message:", response.message);
       console.log("Response Data:", response.data);
 
-      // Handle different response structures
+      // Handle the API response structure: {status: "success", message: "...", data: [...]}
       if (response.status === "success" || response.code === 200) {
-        return new ApiResponse(true, response.code || 200, response.message || "Banners fetched successfully", response.data);
+        // Extract the banners data from response.data.data (since API wraps data in data object)
+        const banners = response.data?.data || response.data || [];
+        console.log("Extracted banners array:", banners);
+        
+        return new ApiResponse(true, response.code || 200, response.message || "Banners fetched successfully", banners);
       } else {
-        return new ApiResponse(false, response.code || 500, response.message || "Failed to fetch banners", response.data);
+        return new ApiResponse(false, response.code || 500, response.message || "Failed to fetch banners", []);
       }
     } catch (err) {
       console.error("=== BannerService getBanners Error ===");
       console.error("Error:", err);
       console.error("Error Message:", err.message);
-      return new ApiResponse(false, 500, err.message || "Fetching banners failed");
+      return new ApiResponse(false, 500, err.message || "Fetching banners failed", []);
     }
   }
 }
