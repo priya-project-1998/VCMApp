@@ -9,7 +9,13 @@ const ENDPOINTS = {
   CREATE_NEW_EVENT: "/event",
   GET_EVENT_LIST: "/events",
   GET_USER_PROFILE_DETAIL: "/user-profile",
-  UPDATE_PROFILE:"/update-profile"
+  UPDATE_PROFILE:"/update-profile",
+  GET_BANNERS: "/banners",
+  
+  // Join Event Endpoints
+  GET_EVENT_CATEGORIES: "/events", // Will be used as: /events/{id}/categories
+  GET_CATEGORY_CLASSES: "/events", // Will be used as: /events/{eventId}/categories/{categoryId}/classes
+  JOIN_EVENT: "/join-event"
 };
 
 export default ENDPOINTS;

@@ -1,4 +1,4 @@
-import React, { useState, useRef } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import {
   View,
   Text,
@@ -7,8 +7,11 @@ import {
   Dimensions,
   FlatList,
   TouchableOpacity,
+  ActivityIndicator,
 } from "react-native";
 import LinearGradient from "react-native-linear-gradient";
+import BannerService from "../services/apiService/banner_service";
+import EventService from "../services/apiService/event_service";
 
 const { width, height } = Dimensions.get("window");
 const isSmallDevice = width < 375; // For iPhone SE and similar small devices
@@ -18,17 +21,189 @@ const cardWidth = (width * 0.44); // Slightly less than 50% to account for margi
 
 export default function Dashboard() {
   const [autoPlayTimer, setAutoPlayTimer] = useState(null);
+  const [activeBanner, setActiveBanner] = useState(0);
+  const [banners, setBanners] = useState([]);
+  const [events, setEvents] = useState([]);
+  const [isLoadingBanners, setIsLoadingBanners] = useState(true);
+  const [isLoadingEvents, setIsLoadingEvents] = useState(true);
+  const bannerRef = useRef(null);
+
+  // Static images for banners and events (as requested)
+  const staticBannerImages = [
+    'https://images.unsplash.com/photo-1533473359331-0135ef1b58bf?auto=format&fit=crop&q=80',
+    'https://images.unsplash.com/photo-1536244636800-a3f74db0f3cf?auto=format&fit=crop&q=80',
+    'https://images.unsplash.com/photo-1542282088-fe8426682b8f?auto=format&fit=crop&q=80',
+  ];
+
+  const staticEventImages = [
+    'https://images.unsplash.com/photo-1533240332313-0db49b459ad6?auto=format&fit=crop&q=80',
+    'https://images.unsplash.com/photo-1506015391300-4802dc74de2e?auto=format&fit=crop&q=80',
+    'https://images.unsplash.com/photo-1605987747728-53465288b135?auto=format&fit=crop&q=80',
+    'https://images.unsplash.com/photo-1570125909232-eb263c188f7e?auto=format&fit=crop&q=80',
+  ];
+
+  // Fetch banners from API
+  const fetchBanners = async () => {
+    try {
+      setIsLoadingBanners(true);
+      const response = await BannerService.getBanners();
+      console.log("Banner API Response:", response);
+      
+      if (response.success && response.data) {
+        // Map API data and add static images
+        const bannersWithImages = response.data.map((banner, index) => ({
+          ...banner,
+          image: { uri: staticBannerImages[index % staticBannerImages.length] }
+        }));
+        setBanners(bannersWithImages);
+      } else {
+        console.error("Failed to fetch banners:", response.message);
+        // Fallback to static data if API fails
+        setBanners([
+          {
+            id: "1",
+            title: "Adventure Ride 2025",
+            subtitle: "Experience the thrill of off-roading",
+            image: { uri: staticBannerImages[0] },
+            date: "15-20 Oct 2025"
+          },
+          {
+            id: "2", 
+            title: "Trail Hunt Special",
+            subtitle: "Conquer the wilderness",
+            image: { uri: staticBannerImages[1] },
+            date: "1-5 Nov 2025"
+          },
+          {
+            id: "3",
+            title: "Quest Trail Jaipur", 
+            subtitle: "Desert adventure awaits",
+            image: { uri: staticBannerImages[2] },
+            date: "10-15 Dec 2025"
+          },
+        ]);
+      }
+    } catch (error) {
+      console.error("Error fetching banners:", error);
+      // Fallback to static data
+      setBanners([
+        {
+          id: "1",
+          title: "Adventure Ride 2025",
+          subtitle: "Experience the thrill of off-roading",
+          image: { uri: staticBannerImages[0] },
+          date: "15-20 Oct 2025"
+        },
+        {
+          id: "2",
+          title: "Trail Hunt Special",
+          subtitle: "Conquer the wilderness", 
+          image: { uri: staticBannerImages[1] },
+          date: "1-5 Nov 2025"
+        },
+        {
+          id: "3",
+          title: "Quest Trail Jaipur",
+          subtitle: "Desert adventure awaits",
+          image: { uri: staticBannerImages[2] },
+          date: "10-15 Dec 2025"
+        },
+      ]);
+    } finally {
+      setIsLoadingBanners(false);
+    }
+  };
+
+  // Fetch events from API
+  const fetchEvents = async () => {
+    try {
+      setIsLoadingEvents(true);
+      const response = await EventService.getEvents();
+      console.log("Events API Response:", response);
+      
+      if (response.success && response.data && Array.isArray(response.data)) {
+        // Map API data and add static images
+        const eventsWithImages = response.data.map((event, index) => ({
+          ...event,
+          image: { uri: staticEventImages[index % staticEventImages.length] }
+        }));
+        setEvents(eventsWithImages);
+        console.log("Events set successfully:", eventsWithImages.length, "events");
+      } else {
+        console.error("Failed to fetch events or invalid data structure:", response.message);
+        console.log("Falling back to static data");
+        // Fallback to static data if API fails
+        setEvents([
+          {
+            id: "1",
+            event_name: "Trail Hunt",
+            event_venue: "Indore",
+            event_start_date: "2025-09-15",
+            event_end_date: "2025-09-18",
+            event_organised_by: "Mahindra",
+            image: { uri: staticEventImages[0] },
+          },
+          {
+            id: "2",
+            event_name: "Quest Trail",
+            event_venue: "Jaipur",
+            event_start_date: "2025-09-15",
+            event_end_date: "2025-09-18",
+            event_organised_by: "Mahindra",
+            image: { uri: staticEventImages[1] },
+          },
+        ]);
+      }
+    } catch (error) {
+      console.error("Error fetching events:", error);
+      console.log("Falling back to static data due to error");
+      // Fallback to static data - reduced to 2 events to match API
+      setEvents([
+        {
+          id: "1",
+          event_name: "Trail Hunt",
+          event_venue: "Indore",
+          event_start_date: "2025-09-15",
+          event_end_date: "2025-09-18",
+          event_organised_by: "Mahindra",
+          image: { uri: staticEventImages[0] },
+        },
+        {
+          id: "2",
+          event_name: "Quest Trail",
+          event_venue: "Jaipur",
+          event_start_date: "2025-09-15",
+          event_end_date: "2025-09-18",
+          event_organised_by: "Mahindra",
+          image: { uri: staticEventImages[1] },
+        },
+      ]);
+    } finally {
+      setIsLoadingEvents(false);
+    }
+  };
 
   React.useEffect(() => {
-    startAutoPlay();
+    fetchBanners();
+    fetchEvents();
     return () => {
       if (autoPlayTimer) clearInterval(autoPlayTimer);
     };
   }, []);
 
+  // Start autoplay when banners are loaded
+  React.useEffect(() => {
+    if (banners.length > 0) {
+      startAutoPlay();
+    }
+    return () => {
+      if (autoPlayTimer) clearInterval(autoPlayTimer);
+    };
+  }, [banners]);
+
   const startAutoPlay = () => {
     const timer = setInterval(() => {
-      if (bannerRef.current) {
+      if (bannerRef.current && banners.length > 0) {
         const nextIndex = (activeBanner + 1) % banners.length;
         bannerRef.current.scrollToIndex({
           index: nextIndex,
@@ -40,76 +215,9 @@ export default function Dashboard() {
     setAutoPlayTimer(timer);
   };
 
-  // For temporary testing, using network images
-  const banners = [
-    {
-      id: "1",
-      title: "Adventure Ride 2025",
-      subtitle: "Experience the thrill of off-roading",
-      image: { uri: 'https://images.unsplash.com/photo-1533473359331-0135ef1b58bf?auto=format&fit=crop&q=80' },
-      date: "15-20 Oct 2025"
-    },
-    {
-      id: "2",
-      title: "Trail Hunt Special",
-      subtitle: "Conquer the wilderness",
-      image: { uri: 'https://images.unsplash.com/photo-1536244636800-a3f74db0f3cf?auto=format&fit=crop&q=80' },
-      date: "1-5 Nov 2025"
-    },
-    {
-      id: "3",
-      title: "Quest Trail Jaipur",
-      subtitle: "Desert adventure awaits",
-      image: { uri: 'https://images.unsplash.com/photo-1542282088-fe8426682b8f?auto=format&fit=crop&q=80' },
-      date: "10-15 Dec 2025"
-    },
-  ];
-
-  const events = [
-    {
-      id: "1",
-      event_name: "Trail Hunt",
-      event_venue: "Indore",
-      event_start_date: "2025-09-15",
-      event_end_date: "2025-09-18",
-      event_organised_by: "Mahindra",
-      image: { uri: 'https://images.unsplash.com/photo-1533240332313-0db49b459ad6?auto=format&fit=crop&q=80' },
-    },
-    {
-      id: "2",
-      event_name: "Quest Trail",
-      event_venue: "Jaipur",
-      event_start_date: "2025-09-15",
-      event_end_date: "2025-09-18",
-      event_organised_by: "Mahindra",
-      image: { uri: 'https://images.unsplash.com/photo-1506015391300-4802dc74de2e?auto=format&fit=crop&q=80' },
-    },
-    {
-      id: "3",
-      event_name: "Offroad Mania",
-      event_venue: "Goa",
-      event_start_date: "2025-10-01",
-      event_end_date: "2025-10-05",
-      event_organised_by: "Mahindra",
-      image: { uri: 'https://images.unsplash.com/photo-1605987747728-53465288b135?auto=format&fit=crop&q=80' },
-    },
-    {
-      id: "4",
-      event_name: "Mountain Ride",
-      event_venue: "Manali",
-      event_start_date: "2025-11-10",
-      event_end_date: "2025-11-15",
-      event_organised_by: "Mahindra",
-      image: { uri: 'https://images.unsplash.com/photo-1570125909232-eb263c188f7e?auto=format&fit=crop&q=80' },
-    },
-  ];
-
-  const [activeBanner, setActiveBanner] = useState(0);
-  const bannerRef = useRef(null);
-
   // 🔹 On scroll event to set active dot
   const onViewRef = useRef(({ viewableItems }) => {
-    if (viewableItems.length > 0) {
+    if (viewableItems.length > 0 && banners.length > 0) {
       setActiveBanner(viewableItems[0].index);
     }
   });
@@ -153,11 +261,13 @@ export default function Dashboard() {
                 <TouchableOpacity
                   key={index}
                   onPress={() => {
-                    bannerRef.current.scrollToIndex({
-                      index: index,
-                      animated: true
-                    });
-                    setActiveBanner(index);
+                    if (bannerRef.current && banners.length > 0) {
+                      bannerRef.current.scrollToIndex({
+                        index: index,
+                        animated: true
+                      });
+                      setActiveBanner(index);
+                    }
                   }}
                 >
                   <View

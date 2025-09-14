@@ -21,10 +21,10 @@ import TermsConditionScreen from '../screens/TermsConditionScreen';
 import SplashScreen from '../screens/SplashScreen';
 import CustomDrawer from "../screens/CustomDrawer"; 
 import SettingsScreen from '../screens/SettingsScreen';
-import NotificationsScreen from '../screens/Notifications';
 import AboutAppScreen from '../screens/AboutAppScreen';
-import JoinEventScreen from '../screens/JoinEvent';
 import ForgetPasswordScreen from '../screens/ForgetPasswordScreen';
+import NotificationsScreen from '../screens/Notifications';
+import NotificationBell from '../components/NotificationBell';
 
 const Stack = createNativeStackNavigator();
 const Drawer = createDrawerNavigator();
@@ -45,6 +45,7 @@ const defaultScreenOptions = {
     letterSpacing: 0.5,
   },
   headerShadowVisible: false,
+  headerRight: () => <NotificationBell notificationCount={3} />, // Add notification bell to all screens
 };
 
 function DrawerNavigator() {
@@ -78,7 +79,7 @@ function DrawerNavigator() {
         drawerItemStyle: {
           borderRadius: 12,
           marginHorizontal: 12,
-          marginVertical: 4,
+          marginVertical: 3,
           overflow: 'hidden',
           borderWidth: 1,
           borderColor: 'transparent',
@@ -151,11 +152,10 @@ function DrawerNavigator() {
           headerTitleAlign: 'center',
         }} />
       <Drawer.Screen name="Profile" component={ProfileScreen} />
-      <Drawer.Screen name="Notifications" component={NotificationsScreen} />
-      <Drawer.Screen name="Search" component={SearchScreen} />
-      <Drawer.Screen name="Results" component={ResultsScreen} />
       <Drawer.Screen name="Event" component={OrganiserScreen} />
-      <Drawer.Screen name="Apply or Join Event" component={JoinEventScreen} />
+      <Drawer.Screen name="Results" component={ResultsScreen} />
+      <Drawer.Screen name="Search" component={SearchScreen} />
+      <Drawer.Screen name="Notifications" component={NotificationsScreen} />
       <Drawer.Screen name="Feedback" component={FeedbackScreen} />
       <Drawer.Screen name="Invite User" component={InviteUserScreen} />
       <Drawer.Screen name="Rate Us" component={RateUsScreen} />

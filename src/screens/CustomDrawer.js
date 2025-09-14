@@ -44,7 +44,16 @@ export default function CustomDrawer(props) {
 
   return (
     <View style={{ flex: 1 }}>
-      <DrawerContentScrollView {...props} contentContainerStyle={{ marginTop: 10, flexGrow: 1 }}>
+      <DrawerContentScrollView 
+        {...props} 
+        contentContainerStyle={{ 
+          marginTop: 10, 
+          flexGrow: 1,
+          paddingBottom: 10 
+        }}
+        showsVerticalScrollIndicator={false}
+        scrollEventThrottle={16}
+      >
         {/* Profile Section */}
         <View style={styles.profileContainer}>
           <Image
@@ -62,7 +71,9 @@ export default function CustomDrawer(props) {
         </View>
 
         {/* Menu Items */}
-        <DrawerItemList {...props} />
+        <View style={styles.menuItemsContainer}>
+          <DrawerItemList {...props} />
+        </View>
 
         {/* Separator Above Logout */}
         <View style={styles.separator} />
@@ -121,6 +132,10 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: "rgba(255,255,255,0.7)",
     letterSpacing: 0.2,
+  },
+  menuItemsContainer: {
+    flex: 1,
+    paddingVertical: 8,
   },
   separator: {
     height: 1,
