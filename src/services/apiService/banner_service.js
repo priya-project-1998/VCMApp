@@ -11,7 +11,7 @@ class BannerService {
       
       const response = await getRequest(
         ENDPOINTS.GET_BANNERS,
-        HEADER_TYPES.DEFAULT // No auth required for banners
+        HEADER_TYPES.AUTH // Bearer token required for banners
       );
 
       console.log("=== BannerService Response Debug ===");

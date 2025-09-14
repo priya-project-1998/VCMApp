@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from "react";
+import React, { useState, useRef } from "react";
 import {
   View,
   Text,
@@ -8,8 +8,10 @@ import {
   FlatList,
   TouchableOpacity,
   ActivityIndicator,
+  Alert,
 } from "react-native";
 import LinearGradient from "react-native-linear-gradient";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import BannerService from "../services/apiService/banner_service";
 import EventService from "../services/apiService/event_service";
 import { formatEventStartEndDateTime } from "../utils/helpers";
@@ -20,13 +22,16 @@ const responsiveWidth = width * 0.9; // 90% of screen width
 const bannerHeight = height * 0.28; // Approximately 28% of screen height
 const cardWidth = (width * 0.44); // Slightly less than 50% to account for margins
 
-export default function Dashboard() {
+export default function Dashboard({ navigation }) {
   const [autoPlayTimer, setAutoPlayTimer] = useState(null);
   const [activeBanner, setActiveBanner] = useState(0);
   const [banners, setBanners] = useState([]);
   const [events, setEvents] = useState([]);
   const [isLoadingBanners, setIsLoadingBanners] = useState(true);
   const [isLoadingEvents, setIsLoadingEvents] = useState(true);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [showAuthPrompt, setShowAuthPrompt] = useState(false);
   const bannerRef = useRef(null);
 
   // Static images for banners and events (as requested)
@@ -43,10 +48,55 @@ export default function Dashboard() {
     'https://images.unsplash.com/photo-1570125909232-eb263c188f7e?auto=format&fit=crop&q=80',
   ];
 
+  // Check authentication status
+  const checkAuthentication = async () => {
+    try {
+      const token = await AsyncStorage.getItem("authToken");
+      setIsAuthenticated(!!token);
+      return !!token;
+    } catch (error) {
+      console.error("Error checking authentication:", error);
+      setIsAuthenticated(false);
+      return false;
+    }
+  };
+
   // Fetch banners from API
   const fetchBanners = async () => {
     try {
       setIsLoadingBanners(true);
+      const hasAuth = await checkAuthentication();
+      
+      if (!hasAuth) {
+        console.warn("No authentication token found, showing fallback banners");
+        setShowAuthPrompt(true);
+        // Use fallback banners
+        setBanners([
+          {
+            id: "1",
+            title: "Adventure Ride 2025",
+            subtitle: "Experience the thrill of off-roading",
+            image: { uri: staticBannerImages[0] },
+            date: "15-20 Oct 2025"
+          },
+          {
+            id: "2", 
+            title: "Trail Hunt Special",
+            subtitle: "Conquer the wilderness",
+            image: { uri: staticBannerImages[1] },
+            date: "1-5 Nov 2025"
+          },
+          {
+            id: "3",
+            title: "Quest Trail Jaipur", 
+            subtitle: "Desert adventure awaits",
+            image: { uri: staticBannerImages[2] },
+            date: "10-15 Dec 2025"
+          },
+        ]);
+        return;
+      }
+
       const response = await BannerService.getBanners();
       console.log("Banner API Response:", response);
       
@@ -128,6 +178,35 @@ export default function Dashboard() {
   const fetchEvents = async () => {
     try {
       setIsLoadingEvents(true);
+      const hasAuth = await checkAuthentication();
+      
+      if (!hasAuth) {
+        console.warn("No authentication token found, showing fallback events");
+        setShowAuthPrompt(true);
+        // Use fallback events
+        setEvents([
+          {
+            id: "1",
+            event_name: "Trail Hunt",
+            event_venue: "Indore",
+            event_start_date: "2025-09-15",
+            event_end_date: "2025-09-18",
+            event_organised_by: "Mahindra",
+            image: { uri: staticEventImages[0] },
+          },
+          {
+            id: "2",
+            event_name: "Quest Trail",
+            event_venue: "Jaipur",
+            event_start_date: "2025-09-15",
+            event_end_date: "2025-09-18",
+            event_organised_by: "Mahindra",
+            image: { uri: staticEventImages[1] },
+          },
+        ]);
+        return;
+      }
+
       const response = await EventService.getEvents();
       console.log("Events API Response:", response);
       
@@ -203,6 +282,11 @@ export default function Dashboard() {
     };
   }, []);
 
+  // Update global loading state when individual loading states change
+  React.useEffect(() => {
+    setIsLoading(isLoadingBanners || isLoadingEvents);
+  }, [isLoadingBanners, isLoadingEvents]);
+
   // Start autoplay when banners are loaded
   React.useEffect(() => {
     if (banners.length > 0) {
@@ -237,6 +321,47 @@ export default function Dashboard() {
 
   return (
     <LinearGradient colors={["#0f2027", "#203a43", "#2c5364"]} style={styles.gradient}>
+      {/* Loading Overlay */}
+      {isLoading && (
+        <View style={styles.loadingOverlay}>
+          <View style={styles.loadingContainer}>
+            <ActivityIndicator size="large" color="#feb47b" />
+            <Text style={styles.loadingText}>Please wait...</Text>
+            <Text style={styles.loadingSubText}>Please wait while we fetch the latest content</Text>
+          </View>
+        </View>
+      )}
+
+      {/* Authentication Prompt */}
+      {showAuthPrompt && !isLoading && (
+        <View style={styles.authPromptOverlay}>
+          <View style={styles.authPromptContainer}>
+            <Text style={styles.authPromptTitle}>🔐 Login Required</Text>
+            <Text style={styles.authPromptText}>
+              To access the latest events and banners, please log in to your account.
+            </Text>
+            <TouchableOpacity 
+              style={styles.loginButton}
+              onPress={() => {
+                if (navigation) {
+                  navigation.navigate('LoginScreen');
+                } else {
+                  Alert.alert("Login Required", "Please navigate to login screen to access full content.");
+                }
+              }}
+            >
+              <Text style={styles.loginButtonText}>Go to Login</Text>
+            </TouchableOpacity>
+            <TouchableOpacity 
+              style={styles.continueButton}
+              onPress={() => setShowAuthPrompt(false)}
+            >
+              <Text style={styles.continueButtonText}>Continue with limited content</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      )}
+      
       <FlatList
         ListHeaderComponent={
           <>
@@ -330,7 +455,7 @@ export default function Dashboard() {
         numColumns={2}
         columnWrapperStyle={{ justifyContent: "space-between", paddingHorizontal: width * 0.02 }}
         renderItem={({ item }) => {
-          const { startTime, startDate, endTime, endDate } = formatEventStartEndDateTime(
+          const { startDate, endDate } = formatEventStartEndDateTime(
             item.event_start_date, 
             item.event_end_date
           );
@@ -391,24 +516,6 @@ export default function Dashboard() {
                   gap: 6,
                   flexWrap: 'wrap',
                 }}>
-                  {/* Start Time */}
-                  {startTime && (
-                    <View style={{
-                      flexDirection: 'row',
-                      alignItems: 'center',
-                      backgroundColor: 'rgba(254, 180, 123, 0.2)',
-                      paddingVertical: 3,
-                      paddingHorizontal: 6,
-                      borderRadius: 6,
-                      borderWidth: 1,
-                      borderColor: 'rgba(254, 180, 123, 0.4)',
-                    }}>
-                      <Text style={[styles.eventTime, { fontSize: 11, marginBottom: 0 }]}>
-                        <Text style={{ fontSize: 11, opacity: 0.9 }}>🕐</Text> {startTime}
-                      </Text>
-                    </View>
-                  )}
-                  
                   {/* Start Date */}
                   <View style={{
                     flexDirection: 'row',
@@ -422,24 +529,6 @@ export default function Dashboard() {
                       <Text style={{ fontSize: 11, opacity: 0.9 }}>📅</Text> {startDate}
                     </Text>
                   </View>
-                  
-                  {/* End Time */}
-                  {endTime && (
-                    <View style={{
-                      flexDirection: 'row',
-                      alignItems: 'center',
-                      backgroundColor: 'rgba(254, 180, 123, 0.15)',
-                      paddingVertical: 3,
-                      paddingHorizontal: 6,
-                      borderRadius: 6,
-                      borderWidth: 1,
-                      borderColor: 'rgba(254, 180, 123, 0.3)',
-                    }}>
-                      <Text style={[styles.eventTime, { fontSize: 11, marginBottom: 0 }]}>
-                        <Text style={{ fontSize: 11, opacity: 0.9 }}>⏰</Text> {endTime}
-                      </Text>
-                    </View>
-                  )}
                   
                   {/* End Date */}
                   {endDate && startDate !== endDate && (
@@ -471,6 +560,106 @@ export default function Dashboard() {
 
 const styles = StyleSheet.create({
   gradient: { flex: 1 },
+
+  // Loading overlay styles
+  loadingOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(0, 0, 0, 0.8)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    zIndex: 1000,
+  },
+  loadingContainer: {
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    padding: 30,
+    borderRadius: 20,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: 'rgba(254, 180, 123, 0.3)',
+  },
+  loadingText: {
+    color: '#feb47b',
+    fontSize: 18,
+    fontWeight: '600',
+    marginTop: 15,
+    textAlign: 'center',
+  },
+  loadingSubText: {
+    color: '#e0e0e0',
+    fontSize: 14,
+    marginTop: 8,
+    textAlign: 'center',
+    opacity: 0.8,
+  },
+
+  // Authentication prompt styles
+  authPromptOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(0, 0, 0, 0.9)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    zIndex: 999,
+  },
+  authPromptContainer: {
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    margin: 20,
+    padding: 30,
+    borderRadius: 20,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: 'rgba(254, 180, 123, 0.3)',
+  },
+  authPromptTitle: {
+    color: '#feb47b',
+    fontSize: 22,
+    fontWeight: '700',
+    marginBottom: 15,
+    textAlign: 'center',
+  },
+  authPromptText: {
+    color: '#e0e0e0',
+    fontSize: 16,
+    marginBottom: 25,
+    textAlign: 'center',
+    lineHeight: 22,
+  },
+  loginButton: {
+    backgroundColor: '#feb47b',
+    paddingHorizontal: 30,
+    paddingVertical: 12,
+    borderRadius: 25,
+    marginBottom: 15,
+    width: '80%',
+  },
+  loginButtonText: {
+    color: '#000',
+    fontSize: 16,
+    fontWeight: '600',
+    textAlign: 'center',
+  },
+  continueButton: {
+    backgroundColor: 'transparent',
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.3)',
+    width: '80%',
+  },
+  continueButtonText: {
+    color: '#fff',
+    fontSize: 14,
+    textAlign: 'center',
+    opacity: 0.8,
+  },
 
   bannerContainer: {
     margin: 15,
