@@ -36,20 +36,6 @@ export default function Dashboard({ navigation }) {
   const [isRefreshing, setIsRefreshing] = useState(false);
   const bannerRef = useRef(null);
 
-  // Static images for banners and events (as requested)
-  const staticBannerImages = [
-    'https://images.unsplash.com/photo-1533473359331-0135ef1b58bf?auto=format&fit=crop&q=80',
-    'https://images.unsplash.com/photo-1536244636800-a3f74db0f3cf?auto=format&fit=crop&q=80',
-    'https://images.unsplash.com/photo-1542282088-fe8426682b8f?auto=format&fit=crop&q=80',
-  ];
-
-  const staticEventImages = [
-    'https://images.unsplash.com/photo-1533240332313-0db49b459ad6?auto=format&fit=crop&q=80',
-    'https://images.unsplash.com/photo-1506015391300-4802dc74de2e?auto=format&fit=crop&q=80',
-    'https://images.unsplash.com/photo-1605987747728-53465288b135?auto=format&fit=crop&q=80',
-    'https://images.unsplash.com/photo-1570125909232-eb263c188f7e?auto=format&fit=crop&q=80',
-  ];
-
   // Check authentication status
   const checkAuthentication = async () => {
     try {
@@ -57,7 +43,6 @@ export default function Dashboard({ navigation }) {
       setIsAuthenticated(!!token);
       return !!token;
     } catch (error) {
-      console.error("Error checking authentication:", error);
       setIsAuthenticated(false);
       return false;
     }
@@ -66,15 +51,12 @@ export default function Dashboard({ navigation }) {
   // Refresh function for pull-to-refresh
   const onRefresh = async () => {
     setIsRefreshing(true);
-    
     try {
-      // Fetch both banners and events in parallel
       await Promise.all([
         fetchBanners(),
         fetchEvents()
       ]);
     } catch (error) {
-      console.error("❌ Refresh failed:", error);
     } finally {
       setIsRefreshing(false);
     }
@@ -85,107 +67,29 @@ export default function Dashboard({ navigation }) {
     try {
       setIsLoadingBanners(true);
       const hasAuth = await checkAuthentication();
-      
       if (!hasAuth) {
-        console.warn("No authentication token found, showing fallback banners");
         setShowAuthPrompt(true);
-        // Use fallback banners
-        setBanners([
-          {
-            id: "1",
-            title: "Adventure Ride 2025",
-            subtitle: "Experience the thrill of off-roading",
-            image: { uri: staticBannerImages[0] },
-            date: "15-20 Oct 2025"
-          },
-          {
-            id: "2", 
-            title: "Trail Hunt Special",
-            subtitle: "Conquer the wilderness",
-            image: { uri: staticBannerImages[1] },
-            date: "1-5 Nov 2025"
-          },
-          {
-            id: "3",
-            title: "Quest Trail Jaipur", 
-            subtitle: "Desert adventure awaits",
-            image: { uri: staticBannerImages[2] },
-            date: "10-15 Dec 2025"
-          },
-        ]);
+        setBanners([]); // No fallback banners
         return;
       }
-
       const response = await BannerService.getBanners();
-      
       if (response.status && response.data) {
-        // Map API data and add static images when image_url is null
-        const bannersWithImages = response.data.map((banner, index) => ({
+        const bannersWithImages = response.data.map((banner) => ({
           ...banner,
           image: banner.image_url 
             ? { uri: `https://e-pickup.randomsoftsolution.in/${banner.image_url}` }
-            : { uri: staticBannerImages[index % staticBannerImages.length] },
+            : null,
           subtitle: `Event ID: ${banner.event_id || 'N/A'}`,
-          date: new Date(banner.created_date).toLocaleDateString('en-GB', { 
-            day: '2-digit', 
-            month: 'short', 
-            year: 'numeric' 
-          })
-        }));
+          date: banner.created_date
+            ? new Date(banner.created_date).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })
+            : '',
+        })).filter(b => b.image); // Only banners with images
         setBanners(bannersWithImages);
       } else {
-        console.error("Failed to fetch banners:", response.message);
-        // Fallback to static data if API fails
-        setBanners([
-          {
-            id: "1",
-            title: "Adventure Ride 2025",
-            subtitle: "Experience the thrill of off-roading",
-            image: { uri: staticBannerImages[0] },
-            date: "15-20 Oct 2025"
-          },
-          {
-            id: "2", 
-            title: "Trail Hunt Special",
-            subtitle: "Conquer the wilderness",
-            image: { uri: staticBannerImages[1] },
-            date: "1-5 Nov 2025"
-          },
-          {
-            id: "3",
-            title: "Quest Trail Jaipur", 
-            subtitle: "Desert adventure awaits",
-            image: { uri: staticBannerImages[2] },
-            date: "10-15 Dec 2025"
-          },
-        ]);
+        setBanners([]); // No fallback
       }
     } catch (error) {
-      console.error("Error fetching banners:", error);
-      // Fallback to static data
-      setBanners([
-        {
-          id: "1",
-          title: "Adventure Ride 2025",
-          subtitle: "Experience the thrill of off-roading",
-          image: { uri: staticBannerImages[0] },
-          date: "15-20 Oct 2025"
-        },
-        {
-          id: "2",
-          title: "Trail Hunt Special",
-          subtitle: "Conquer the wilderness", 
-          image: { uri: staticBannerImages[1] },
-          date: "1-5 Nov 2025"
-        },
-        {
-          id: "3",
-          title: "Quest Trail Jaipur",
-          subtitle: "Desert adventure awaits",
-          image: { uri: staticBannerImages[2] },
-          date: "10-15 Dec 2025"
-        },
-      ]);
+      setBanners([]); // No fallback
     } finally {
       setIsLoadingBanners(false);
     }
@@ -196,172 +100,51 @@ export default function Dashboard({ navigation }) {
     try {
       setIsLoadingEvents(true);
       const hasAuth = await checkAuthentication();
-      
       if (!hasAuth) {
-        console.warn("No authentication token found, showing fallback events");
         setShowAuthPrompt(true);
-        // Use fallback events
-        setEvents([
-          {
-            id: "1",
-            event_name: "Trail Hunt",
-            event_venue: "Indore",
-            event_start_date: "2025-09-15",
-            event_end_date: "2025-09-18",
-            event_organised_by: "Mahindra",
-            image: { uri: staticEventImages[0] },
-          },
-          {
-            id: "2",
-            event_name: "Quest Trail",
-            event_venue: "Jaipur",
-            event_start_date: "2025-09-15",
-            event_end_date: "2025-09-18",
-            event_organised_by: "Mahindra",
-            image: { uri: staticEventImages[1] },
-          },
-        ]);
+        setEvents([]); // No fallback events
         return;
       }
-
       const response = await EventService.getEvents();
-      
-      console.log("=== HomeScreen Events API Response ===");
-      console.log("Response:", response);
-      console.log("Response Status:", response.status);
-      console.log("Response Data:", response.data);
-      console.log("Response Code:", response.code);
-      console.log("Response Message:", response.message);
-      
       if (response.status === "success" && response.data && Array.isArray(response.data)) {
-        // Map API data and add static images when event_pic is null
-        const eventsWithImages = response.data.map((event, index) => ({
+        const eventsWithImages = response.data.map((event) => ({
           ...event,
           image: event.event_pic 
             ? { uri: `https://e-pickup.randomsoftsolution.in/${event.event_pic}` }
-            : { uri: staticEventImages[index % staticEventImages.length] }
-        }));
+            : null,
+        })).filter(e => e.image); // Only events with images
         setEvents(eventsWithImages);
       } else if (response.status === "success" && response.data && response.data.events && Array.isArray(response.data.events)) {
-        // Handle nested events structure: {status: "success", data: {events: [...]}}
-        const eventsWithImages = response.data.events.map((event, index) => ({
+        const eventsWithImages = response.data.events.map((event) => ({
           ...event,
           image: event.event_pic 
             ? { uri: `https://e-pickup.randomsoftsolution.in/${event.event_pic}` }
-            : { uri: staticEventImages[index % staticEventImages.length] }
-        }));
+            : null,
+        })).filter(e => e.image);
         setEvents(eventsWithImages);
       } else if (response.code === 200 && response.data) {
-        // Handle other successful response formats
         let eventsArray = [];
         if (Array.isArray(response.data)) {
           eventsArray = response.data;
         } else if (response.data.events && Array.isArray(response.data.events)) {
           eventsArray = response.data.events;
         }
-        
         if (eventsArray.length > 0) {
-          const eventsWithImages = eventsArray.map((event, index) => ({
+          const eventsWithImages = eventsArray.map((event) => ({
             ...event,
             image: event.event_pic 
               ? { uri: `https://e-pickup.randomsoftsolution.in/${event.event_pic}` }
-              : { uri: staticEventImages[index % staticEventImages.length] }
-          }));
+              : null,
+          })).filter(e => e.image);
           setEvents(eventsWithImages);
         } else {
-          // Show fallback events
-          setEvents([
-            {
-              id: "fallback-1",
-              event_name: "Trail Hunt Championship",
-              event_venue: "Indore, Madhya Pradesh",
-              event_start_date: "2025-09-15",
-              event_end_date: "2025-09-18",
-              event_organised_by: "Mahindra Adventure",
-              image: { uri: staticEventImages[0] },
-            },
-            {
-              id: "fallback-2",
-              event_name: "Quest Trail Adventure",
-              event_venue: "Jaipur, Rajasthan",
-              event_start_date: "2025-09-15",
-              event_end_date: "2025-09-18",
-              event_organised_by: "Mahindra Adventure",
-              image: { uri: staticEventImages[1] },
-            },
-            {
-              id: "fallback-3",
-              event_name: "Desert Storm Rally",
-              event_venue: "Jodhpur, Rajasthan",
-              event_start_date: "2025-09-20",
-              event_end_date: "2025-09-22",
-              event_organised_by: "Mahindra Adventure",
-              image: { uri: staticEventImages[2] },
-            },
-          ]);
+          setEvents([]); // No fallback
         }
       } else {
-        console.error("=== HomeScreen Events API Failed ===");
-        console.error("Failed to fetch events or invalid data structure:");
-        console.error("Response status:", response.status);
-        console.error("Response message:", response.message);
-        console.error("Response code:", response.code);
-        console.error("Response data:", response.data);
-        
-        // Always show fallback events so the page is not empty
-        setEvents([
-          {
-            id: "fallback-1",
-            event_name: "Trail Hunt Championship",
-            event_venue: "Indore, Madhya Pradesh",
-            event_start_date: "2025-09-15",
-            event_end_date: "2025-09-18",
-            event_organised_by: "Mahindra Adventure",
-            image: { uri: staticEventImages[0] },
-          },
-          {
-            id: "fallback-2",
-            event_name: "Quest Trail Adventure",
-            event_venue: "Jaipur, Rajasthan",
-            event_start_date: "2025-09-15",
-            event_end_date: "2025-09-18",
-            event_organised_by: "Mahindra Adventure",
-            image: { uri: staticEventImages[1] },
-          },
-          {
-            id: "fallback-3",
-            event_name: "Desert Storm Rally",
-            event_venue: "Jodhpur, Rajasthan",
-            event_start_date: "2025-09-20",
-            event_end_date: "2025-09-22",
-            event_organised_by: "Mahindra Adventure",
-            image: { uri: staticEventImages[2] },
-          },
-        ]);
+        setEvents([]); // No fallback
       }
     } catch (error) {
-      console.error("Error fetching events:", error);
-      // Fallback to static data - reduced to 2 events to match API
-      setEvents([
-        {
-          id: "1",
-          event_name: "Trail Hunt",
-          event_venue: "Indore",
-          event_start_date: "2025-09-15",
-          event_end_date: "2025-09-18",
-          event_organised_by: "Mahindra",
-          image: { uri: staticEventImages[0] },
-        },
-        {
-          id: "2",
-          event_name: "Quest Trail",
-          event_venue: "Jaipur",
-          event_start_date: "2025-09-15",
-          event_end_date: "2025-09-18",
-          event_organised_by: "Mahindra",
-          image: { uri: staticEventImages[1] },
-        },
-      ]);
+      setEvents([]); // No fallback
     } finally {
       setIsLoadingEvents(false);
     }
@@ -475,7 +258,6 @@ export default function Dashboard({ navigation }) {
                       style={styles.bannerOverlay}
                     >
                       <Text style={styles.bannerTitle}>{item.title}</Text>
-                      <Text style={styles.bannerSubtitle}>{item.subtitle}</Text>
                       <Text style={styles.bannerDate}>🗓 {item.date}</Text>
                     </LinearGradient>
                   </View>
@@ -564,95 +346,116 @@ export default function Dashboard({ navigation }) {
           );
           
           return (
-            <View style={styles.eventCard}>
-              <Image source={item.image} style={styles.eventImage} resizeMode="cover" />
-              <View style={{
-                position: 'absolute',
-                top: 8,
-                right: 8,
-                backgroundColor: 'rgba(0, 0, 0, 0.75)',
-                paddingVertical: 4,
-                paddingHorizontal: 8,
-                borderRadius: 8,
-                borderWidth: 1,
-                borderColor: '#feb47b',
-              }}>
-                <Text style={[styles.eventOrg, { 
-                  fontSize: 11,
-                  color: '#feb47b',
-                  textShadowColor: 'rgba(0, 0, 0, 0.75)',
-                  textShadowOffset: {width: 0, height: 1},
-                  textShadowRadius: 3,
-                }]} numberOfLines={1}>{item.event_organised_by}</Text>
-              </View>
-              <LinearGradient
-                colors={['transparent', 'rgba(0,0,0,0.75)', 'rgba(0,0,0,0.9)']}
-                style={{
+            <TouchableOpacity
+              activeOpacity={0.85}
+              onPress={() => {
+                // Map event data to OrganiserScreen expected format
+                const eventObj = {
+                  id: item.id,
+                  name: item.event_name,
+                  venue: item.event_venue,
+                  startDate: item.event_start_date,
+                  endDate: item.event_end_date,
+                  organisedBy: item.event_organised_by,
+                  pic: item.image?.uri,
+                  headerImg: item.image?.uri,
+                  desc: item.event_desc || '',
+                  isCompleted: item.isCompleted || false,
+                  // Add other fields as needed
+                };
+                navigation.navigate('Event', { event: eventObj });
+              }}
+            >
+              <View style={styles.eventCard}>
+                <Image source={item.image} style={styles.eventImage} resizeMode="cover" />
+                <View style={{
                   position: 'absolute',
-                  left: 0,
-                  right: 0,
-                  top: 0,
-                  height: 130,
-                  opacity: 0.95,
-                }}
-              />
-              <View style={styles.eventContent}>
-                <Text style={styles.eventName}>{item.event_name}</Text>
-                <View style={{flexDirection: 'row', alignItems: 'center'}}>
+                  top: 8,
+                  right: 8,
+                  backgroundColor: 'rgba(0, 0, 0, 0.75)',
+                  paddingVertical: 4,
+                  paddingHorizontal: 8,
+                  borderRadius: 8,
+                  borderWidth: 1,
+                  borderColor: '#feb47b',
+                }}>
+                  <Text style={[styles.eventOrg, { 
+                    fontSize: 11,
+                    color: '#feb47b',
+                    textShadowColor: 'rgba(0, 0, 0, 0.75)',
+                    textShadowOffset: {width: 0, height: 1},
+                    textShadowRadius: 3,
+                  }]} numberOfLines={1}>{item.event_organised_by}</Text>
+                </View>
+                <LinearGradient
+                  colors={['transparent', 'rgba(0,0,0,0.75)', 'rgba(0,0,0,0.9)']}
+                  style={{
+                    position: 'absolute',
+                    left: 0,
+                    right: 0,
+                    top: 0,
+                    height: 130,
+                    opacity: 0.95,
+                  }}
+                />
+                <View style={styles.eventContent}>
+                  <Text style={styles.eventName}>{item.event_name}</Text>
+                  <View style={{flexDirection: 'row', alignItems: 'center'}}>
+                    <View style={{ 
+                      flexDirection: 'row', 
+                      alignItems: 'center',
+                      backgroundColor: 'rgba(255,255,255,0.08)',
+                      paddingVertical: 4,
+                      paddingHorizontal: 8,
+                      borderRadius: 8,
+                      marginBottom: 6,
+                    }}>
+                      <Text style={[styles.eventVenue, { marginBottom: 0 }]}>
+                        <Text style={{ fontSize: 14, opacity: 0.9 }}>📍</Text> {item.event_venue}
+                      </Text>
+                    </View>
+                  </View>
                   <View style={{ 
                     flexDirection: 'row', 
                     alignItems: 'center',
-                    backgroundColor: 'rgba(255,255,255,0.08)',
-                    paddingVertical: 4,
-                    paddingHorizontal: 8,
-                    borderRadius: 8,
-                    marginBottom: 6,
+                    gap: 6,
+                    flexWrap: 'wrap',
                   }}>
-                    <Text style={[styles.eventVenue, { marginBottom: 0 }]}>
-                      <Text style={{ fontSize: 14, opacity: 0.9 }}>📍</Text> {item.event_venue}
-                    </Text>
-                  </View>
-                </View>
-                <View style={{ 
-                  flexDirection: 'row', 
-                  alignItems: 'center',
-                  gap: 6,
-                  flexWrap: 'wrap',
-                }}>
-                  {/* Start Date */}
-                  <View style={{
-                    flexDirection: 'row',
-                    alignItems: 'center',
-                    backgroundColor: 'rgba(255,255,255,0.08)',
-                    paddingVertical: 3,
-                    paddingHorizontal: 6,
-                    borderRadius: 6,
-                  }}>
-                    <Text style={[styles.eventDate, { fontSize: 11, marginBottom: 0 }]}>
-                      <Text style={{ fontSize: 11, opacity: 0.9 }}>📅</Text> {startDate}
-                    </Text>
-                  </View>
-                  
-                  {/* End Date */}
-                  {endDate && startDate !== endDate && (
+                    {/* Start Date */}
                     <View style={{
                       flexDirection: 'row',
                       alignItems: 'center',
-                      backgroundColor: 'rgba(255,255,255,0.06)',
+                      backgroundColor: 'rgba(255,255,255,0.08)',
                       paddingVertical: 3,
                       paddingHorizontal: 6,
                       borderRadius: 6,
-                      borderWidth: 1,
-                      borderColor: 'rgba(255,255,255,0.15)',
                     }}>
                       <Text style={[styles.eventDate, { fontSize: 11, marginBottom: 0 }]}>
-                        <Text style={{ fontSize: 11, opacity: 0.9 }}>🏁</Text> {endDate}
+                        <Text style={{ fontSize: 11, opacity: 0.9 }}>📅</Text> {startDate}
                       </Text>
                     </View>
-                  )}
+                    
+                    {/* End Date */}
+                    {endDate && startDate !== endDate && (
+                      <View style={{
+                        flexDirection: 'row',
+                        alignItems: 'center',
+                        backgroundColor: 'rgba(255,255,255,0.06)',
+                        paddingVertical: 3,
+                        paddingHorizontal: 6,
+                        borderRadius: 6,
+                        borderWidth: 1,
+                        borderColor: 'rgba(255,255,255,0.15)',
+                      }}>
+                        <Text style={[styles.eventDate, { fontSize: 11, marginBottom: 0 }]}>
+                          <Text style={{ fontSize: 11, opacity: 0.9 }}>🏁</Text> {endDate}
+                        </Text>
+                      </View>
+                    )}
+                  </View>
                 </View>
               </View>
-            </View>
+            </TouchableOpacity>
           );
         }}
         contentContainerStyle={{ paddingBottom: 20 }}

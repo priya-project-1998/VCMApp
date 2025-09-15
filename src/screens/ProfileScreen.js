@@ -34,6 +34,7 @@ export default function ProfileScreen() {
   // Local-only avatar state (UI only, no API change)
   const [avatarUri, setAvatarUri] = useState(null);
   const [selectedImage, setSelectedImage] = useState(null);
+  const [selectedImageFilename, setSelectedImageFilename] = useState(null);
 
   // 🔹 Fetch profile every time screen is focused
   useFocusEffect(
@@ -71,6 +72,10 @@ export default function ProfileScreen() {
       if (img) {
         setAvatarUri(img.uri);
         setSelectedImage(img); // kept for future use if backend supports upload
+        // Extract filename from URI
+        const uriParts = img.uri.split('/');
+        const filename = uriParts[uriParts.length - 1];
+        setSelectedImageFilename(filename);
       }
     } catch (e) {
       Alert.alert("Image Picker", e?.toString() || "Unable to pick image");
@@ -93,15 +98,38 @@ export default function ProfileScreen() {
       city,
       state: stateVal,
       pincode,
-      // NOTE: Image is not being sent as per request (no API logic change)
+      // Send profile_pic if image is selected
+      ...(selectedImageFilename ? { profile_pic: selectedImageFilename } : {})
     };
 
     const res = await ProfileService.updateUserProfile(updateData);
-    console.log('profile res check',res);
     setLoading(false);
 
     if (res.status) {
       Alert.alert("Success", res.message || "Profile updated successfully");
+      // Fetch and set latest profile after update
+      const latest = await ProfileService.getUserProfile();
+      if (latest && latest.data) {
+        const user = latest.data;
+        setName(user.name);
+        setUsername(user.username);
+        setMobile(user.contact);
+        setEmail(user.email);
+        setAddress(user.address);
+        setCity(user.city);
+        setStateVal(user.state);
+        setPincode(user.pincode);
+        if (user.profilePicPath) {
+          setAvatarUri(user.profilePicPath);
+        } else if (user.profile_pic_url) {
+          setAvatarUri(user.profile_pic_url);
+        } else if (user.profile_pic) {
+          setAvatarUri(`https://e-pickup.randomsoftsolution.in/assets/app/profile/${user.profile_pic}`);
+        }
+        // Clear local image selection after update
+        setSelectedImage(null);
+        setSelectedImageFilename(null);
+      }
     } else {
       Alert.alert("Error", res.message || "Profile update failed");
     }

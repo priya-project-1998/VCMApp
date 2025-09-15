@@ -285,7 +285,16 @@ export default function MyEventsScreen({ navigation }) {
   return (
     <LinearGradient colors={["#0f2027", "#203a43", "#2c5364"]} style={styles.gradient}>
       <View style={styles.headerBar}>
-        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.headerBackBtn}>
+        <TouchableOpacity 
+          onPress={() => {
+            if (navigation.canGoBack()) {
+              navigation.goBack();
+            } else {
+              navigation.navigate('Dashboard');
+            }
+          }} 
+          style={styles.headerBackBtn}
+        >
           <Text style={styles.headerBackIcon}>←</Text>
         </TouchableOpacity>
         <Text style={styles.headerTitle}>My Events</Text>

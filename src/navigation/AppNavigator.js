@@ -148,7 +148,6 @@ function DrawerNavigator() {
             fontSize: 20,
             letterSpacing: 0.8,
             textAlign: 'center',
-            flex: 1,
           },
           headerTitleAlign: 'center',
         }} />

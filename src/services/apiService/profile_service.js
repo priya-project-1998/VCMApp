@@ -19,13 +19,11 @@ class ProfileService {
 
       if (res.status === "success" && userObj) {
         const userProfile = new UserProfileModel(userObj);
-        console.log("📌 getUserProfile - userProfile response:", userProfile);
         return new ApiResponse(true, 200, "Profile fetched successfully", userProfile);
       } else {
         return new ApiResponse(false, res.code || 500, res.message || "Failed to fetch profile", null);
       }
     } catch (err) {
-      console.error("❌ getUserProfile - error:", err);
       return new ApiResponse(false, 500, err.message || "Fetching profile failed", null);
     }
   }
@@ -35,9 +33,8 @@ async updateUserProfile(updateData) {
   try {
     const requestBody = new UserProfileUpdateRequestModel(updateData).toJson();
 
-    console.log("📤 API Request URL:", ENDPOINTS.UPDATE_PROFILE);
-    console.log("📤 API Request Body:", requestBody);
-    console.log("📤 API Headers:", HEADER_TYPES.AUTH);
+    // Add console log to check image filename in request body
+    console.log("[UpdateProfile] Request Body:", requestBody);
 
     const res = await postRequest(
       ENDPOINTS.UPDATE_PROFILE,
@@ -45,10 +42,10 @@ async updateUserProfile(updateData) {
       HEADER_TYPES.AUTH
     );
 
-    console.log("📥 API Raw Response:", JSON.stringify(res, null, 2));
+    // Log the full API response for success/failure debugging
+    console.log("[UpdateProfile] API Response:", res);
 
     const userObj = res?.data?.user || null;
-    console.log("📥 userObj Raw Response:", userObj);
 
     // try matching what backend actually sends
     if ((res.status === "success" || res.success === true) && userObj) {
@@ -58,7 +55,6 @@ async updateUserProfile(updateData) {
       return new ApiResponse(false, res.code || 500, res.message || "Profile update failed", null);
     }
   } catch (err) {
-    console.error("❌ updateUserProfile - error:", err);
     return new ApiResponse(false, 500, err.message || "Profile update failed", null);
   }
 }

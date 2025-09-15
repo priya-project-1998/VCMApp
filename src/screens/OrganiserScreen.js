@@ -17,9 +17,11 @@ import { Picker } from '@react-native-picker/picker';
 import LinearGradient from "react-native-linear-gradient";
 import { useFocusEffect } from "@react-navigation/native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { StackActions } from '@react-navigation/native';
 
 import EventService from "../services/apiService/event_service";
 import EventModel from "../model/EventModel";
+import EventDetailsView from '../components/EventDetailsView';
 
 const { width, height } = Dimensions.get("window");
 const isSmallDevice = width < 375;
@@ -461,7 +463,7 @@ const JoinEventForm = ({ event, onClose }) => {
   );
 };
 
-const OrganiserScreen = ({ navigation }) => {
+const OrganiserScreen = ({ navigation, route }) => {
   const [viewTab, setViewTab] = useState("upcoming");
   const [selectedEvent, setSelectedEvent] = useState(null);
   const [showJoinEventForm, setShowJoinEventForm] = useState(false);
@@ -471,6 +473,13 @@ const OrganiserScreen = ({ navigation }) => {
   const [completedEvents, setCompletedEvents] = useState([]);
   const [loading, setLoading] = useState(false);
   const [apiError, setApiError] = useState("");
+
+  // Automatically open event details if event param is present
+  useEffect(() => {
+    if (route?.params?.event) {
+      setSelectedEvent(route.params.event);
+    }
+  }, [route?.params?.event]);
 
   // API call
   const fetchEvents = useCallback(async () => {
@@ -503,77 +512,19 @@ const OrganiserScreen = ({ navigation }) => {
           eventsArray = res.data.events;
         }
       }
-      
       if (eventsArray.length > 0) {
         const allEvents = eventsArray.map((e) => new EventModel(e));
         setUpcomingEvents(allEvents.filter((ev) => !ev.isCompleted));
         setCompletedEvents(allEvents.filter((ev) => ev.isCompleted));
       } else {
-        // Show fallback events for testing
-        const fallbackEvents = [
-          {
-            id: "fallback-1",
-            event_name: "Trail Hunt Championship",
-            event_venue: "Indore, Madhya Pradesh", 
-            event_start_date: "2025-09-15",
-            event_end_date: "2025-09-18",
-            event_organised_by: "Mahindra Adventure",
-            event_pic: null,
-          },
-          {
-            id: "fallback-2",
-            event_name: "Quest Trail Adventure",
-            event_venue: "Jaipur, Rajasthan",
-            event_start_date: "2025-09-15", 
-            event_end_date: "2025-09-18",
-            event_organised_by: "Mahindra Adventure",
-            event_pic: null,
-          },
-          {
-            id: "fallback-3",
-            event_name: "Desert Storm Rally",
-            event_venue: "Jodhpur, Rajasthan",
-            event_start_date: "2025-09-20",
-            event_end_date: "2025-09-22", 
-            event_organised_by: "Mahindra Adventure",
-            event_pic: null,
-          },
-        ];
-        
-        const allEvents = fallbackEvents.map((e) => new EventModel(e));
-        setUpcomingEvents(allEvents.filter((ev) => !ev.isCompleted));
-        setCompletedEvents(allEvents.filter((ev) => ev.isCompleted));
-        setApiError("Using demo events - API may be unavailable");
+        setUpcomingEvents([]);
+        setCompletedEvents([]);
+        setApiError("No events found from API");
       }
-      
     } catch (err) {
       console.error("API Call Failed:", err.message);
-      
-      // Show fallback events on error
-      const fallbackEvents = [
-        {
-          id: "fallback-1",
-          event_name: "Trail Hunt Championship",
-          event_venue: "Indore, Madhya Pradesh", 
-          event_start_date: "2025-09-15",
-          event_end_date: "2025-09-18",
-          event_organised_by: "Mahindra Adventure",
-          event_pic: null,
-        },
-        {
-          id: "fallback-2", 
-          event_name: "Quest Trail Adventure",
-          event_venue: "Jaipur, Rajasthan",
-          event_start_date: "2025-09-15",
-          event_end_date: "2025-09-18",
-          event_organised_by: "Mahindra Adventure",
-          event_pic: null,
-        },
-      ];
-      
-      const allEvents = fallbackEvents.map((e) => new EventModel(e));
-      setUpcomingEvents(allEvents.filter((ev) => !ev.isCompleted));
-      setCompletedEvents(allEvents.filter((ev) => ev.isCompleted));
+      setUpcomingEvents([]);
+      setCompletedEvents([]);
       setApiError(`Network error: ${err.message}`);
     } finally {
       setLoading(false);
@@ -719,7 +670,7 @@ const OrganiserScreen = ({ navigation }) => {
                 {/* My Events Button */}
                 <TouchableOpacity 
                   style={styles.myEventsButton} 
-                  onPress={() => navigation.navigate('My Events')}
+                  onPress={() => navigation.dispatch(StackActions.push('My Events'))}
                   activeOpacity={0.8}
                 >
                   <LinearGradient
@@ -775,7 +726,7 @@ const OrganiserScreen = ({ navigation }) => {
               >
                 <View style={styles.tabContent}>
                   <Text style={[styles.tabText, viewTab === "completed" && styles.activeTabText]}>
-                    ✓ Completed Events
+                    ✓ Past Events
                   </Text>
                   <View style={[styles.countBadge, viewTab === "completed" && styles.activeCountBadge]}>
                     <Text style={[styles.countText, viewTab === "completed" && styles.activeCountText]}>
@@ -832,111 +783,10 @@ const OrganiserScreen = ({ navigation }) => {
         </ScrollView>
       ) : (
         // Event Details View
-        <ScrollView style={styles.detailsScrollView}>
-          <View style={styles.detailsContainer}>
-            {/* Back Button */}
-            <TouchableOpacity 
-              style={styles.backButton} 
-              onPress={() => setSelectedEvent(null)}
-              activeOpacity={0.8}
-            >
-              <LinearGradient
-                colors={['rgba(254, 180, 123, 0.2)', 'rgba(255, 126, 95, 0.2)']}
-                style={styles.backButtonGradient}
-              >
-                <Text style={styles.backText}>← Back to Events</Text>
-              </LinearGradient>
-            </TouchableOpacity>
-
-            {/* Event Image */}
-            <View style={styles.detailImageContainer}>
-              <Image 
-                source={(selectedEvent?.pic || selectedEvent?.headerImg) ? { uri: selectedEvent.pic || selectedEvent.headerImg } : { uri: 'https://via.placeholder.com/400x200/333333/ffffff?text=Event+Image' }} 
-                style={styles.detailImage} 
-                resizeMode="cover" 
-              />
-              <LinearGradient
-                colors={['transparent', 'rgba(0,0,0,0.7)']}
-                style={styles.detailImageOverlay}
-              >
-                <View style={[styles.statusBadge, styles.detailStatusBadge, { 
-                  backgroundColor: selectedEvent.isCompleted ? 'rgba(76, 175, 80, 0.9)' : 'rgba(255, 152, 0, 0.9)' 
-                }]}>
-                  <Text style={styles.statusText}>
-                    {selectedEvent.isCompleted ? '✓ Completed' : '🔥 Live Event'}
-                  </Text>
-                </View>
-              </LinearGradient>
-            </View>
-
-            {/* Event Details */}
-            <View style={styles.detailsContent}>
-              <Text style={styles.detailTitle}>{selectedEvent.name}</Text>
-              
-              <View style={styles.detailSection}>
-                <View style={styles.detailItem}>
-                  <View style={styles.detailIconContainer}>
-                    <Text style={styles.detailItemIcon}>🆔</Text>
-                  </View>
-                  <View style={styles.detailItemContent}>
-                    <Text style={styles.detailItemLabel}>Event ID</Text>
-                    <Text style={styles.detailItemValue}>{selectedEvent.id}</Text>
-                  </View>
-                </View>
-
-                <View style={styles.detailItem}>
-                  <View style={styles.detailIconContainer}>
-                    <Text style={styles.detailItemIcon}>📍</Text>
-                  </View>
-                  <View style={styles.detailItemContent}>
-                    <Text style={styles.detailItemLabel}>Venue</Text>
-                    <Text style={styles.detailItemValue}>{selectedEvent.venue}</Text>
-                  </View>
-                </View>
-
-                <View style={styles.detailItem}>
-                  <View style={styles.detailIconContainer}>
-                    <Text style={styles.detailItemIcon}>📝</Text>
-                  </View>
-                  <View style={styles.detailItemContent}>
-                    <Text style={styles.detailItemLabel}>Description</Text>
-                    <Text style={styles.detailItemValue}>{selectedEvent.desc || 'No description available'}</Text>
-                  </View>
-                </View>
-
-                <View style={styles.detailItem}>
-                  <View style={styles.detailIconContainer}>
-                    <Text style={styles.detailItemIcon}>📅</Text>
-                  </View>
-                  <View style={styles.detailItemContent}>
-                    <Text style={styles.detailItemLabel}>Start Date</Text>
-                    <Text style={styles.detailItemValue}>{selectedEvent.startDate}</Text>
-                  </View>
-                </View>
-
-                <View style={styles.detailItem}>
-                  <View style={styles.detailIconContainer}>
-                    <Text style={styles.detailItemIcon}>🏁</Text>
-                  </View>
-                  <View style={styles.detailItemContent}>
-                    <Text style={styles.detailItemLabel}>End Date</Text>
-                    <Text style={styles.detailItemValue}>{selectedEvent.endDate}</Text>
-                  </View>
-                </View>
-
-                <View style={styles.detailItem}>
-                  <View style={styles.detailIconContainer}>
-                    <Text style={styles.detailItemIcon}>👤</Text>
-                  </View>
-                  <View style={styles.detailItemContent}>
-                    <Text style={styles.detailItemLabel}>Organised By</Text>
-                    <Text style={styles.detailItemValue}>{selectedEvent.organisedBy}</Text>
-                  </View>
-                </View>
-              </View>
-            </View>
-          </View>
-        </ScrollView>
+        <EventDetailsView 
+          event={selectedEvent} 
+          onBack={() => setSelectedEvent(null)} 
+        />
       )}
     </LinearGradient>
   );
