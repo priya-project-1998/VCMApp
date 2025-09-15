@@ -114,32 +114,37 @@ export default function ProfileScreen() {
       });
     }
 
-    const res = await ProfileService.updateUserProfile(formData, true); // Pass true for multipart
-    setLoading(false);
+    try {
+      const res = await ProfileService.updateUserProfile(formData, true); // Pass true for multipart
+      setLoading(false);
 
-    if (res.status && res.data) {
-      Alert.alert("Success", res.message || "Profile updated successfully");
-      // Use updated user object from response to update UI
-      const user = res.data;
-      setName(user.name);
-      setUsername(user.username);
-      setMobile(user.contact);
-      setEmail(user.email);
-      setAddress(user.address);
-      setCity(user.city);
-      setStateVal(user.state);
-      setPincode(user.pincode);
-      if (user.profilePicPath) {
-        setAvatarUri(user.profilePicPath);
-      } else if (user.profile_pic_url) {
-        setAvatarUri(user.profile_pic_url);
-      } else if (user.profile_pic) {
-        setAvatarUri(`https://e-pickup.randomsoftsolution.in/assets/app/profile/${user.profile_pic}`);
+      if (res.status && res.data) {
+        Alert.alert("Success", res.message || "Profile updated successfully");
+        // Use updated user object from response to update UI
+        const user = res.data;
+        setName(user.name);
+        setUsername(user.username);
+        setMobile(user.contact);
+        setEmail(user.email);
+        setAddress(user.address);
+        setCity(user.city);
+        setStateVal(user.state);
+        setPincode(user.pincode);
+        if (user.profilePicPath) {
+          setAvatarUri(user.profilePicPath);
+        } else if (user.profile_pic_url) {
+          setAvatarUri(user.profile_pic_url);
+        } else if (user.profile_pic) {
+          setAvatarUri(`https://e-pickup.randomsoftsolution.in/assets/app/profile/${user.profile_pic}`);
+        }
+        setSelectedImage(null);
+        setSelectedImageFilename(null);
+      } else {
+        Alert.alert("Error", res.message || "Profile update failed");
       }
-      setSelectedImage(null);
-      setSelectedImageFilename(null);
-    } else {
-      Alert.alert("Error", res.message || "Profile update failed");
+    } catch (err) {
+      setLoading(false);
+      Alert.alert("Network Error", err?.message || "Network request failed");
     }
   };
 
