@@ -57,6 +57,10 @@ export default function ProfileScreen() {
           // Try to show profile pic if provided by API (no logic change)
           if (user.profilePicPath) {
             setAvatarUri(user.profilePicPath);
+          } else if (user.profile_pic_url) {
+            setAvatarUri(user.profile_pic_url);
+          } else if (user.profile_pic) {
+            setAvatarUri(`https://e-pickup.randomsoftsolution.in/assets/app/profile/${user.profile_pic}`);
           }
         }
       };
@@ -76,6 +80,9 @@ export default function ProfileScreen() {
         const uriParts = img.uri.split('/');
         const filename = uriParts[uriParts.length - 1];
         setSelectedImageFilename(filename);
+        // Only log image selection for debug
+        console.log("[ProfileScreen] Picked image URI:", img.uri);
+        console.log("[ProfileScreen] Picked image filename:", filename);
       }
     } catch (e) {
       Alert.alert("Image Picker", e?.toString() || "Unable to pick image");
@@ -91,45 +98,46 @@ export default function ProfileScreen() {
 
     setLoading(true);
 
-    const updateData = {
-      name,
-      contact: mobile,
-      address,
-      city,
-      state: stateVal,
-      pincode,
-      // Send profile_pic if image is selected
-      ...(selectedImageFilename ? { profile_pic: selectedImageFilename } : {})
-    };
+    // Use FormData for image upload
+    const formData = new FormData();
+    formData.append('name', String(name));
+    formData.append('contact', String(mobile));
+    formData.append('address', String(address));
+    formData.append('city', String(city));
+    formData.append('state', String(stateVal));
+    formData.append('pincode', String(pincode));
+    if (selectedImage && selectedImage.uri) {
+      formData.append('profile_pic', {
+        uri: selectedImage.uri,
+        type: 'image/jpeg', // You can use selectedImage.type if available
+        name: selectedImageFilename,
+      });
+    }
 
-    const res = await ProfileService.updateUserProfile(updateData);
+    const res = await ProfileService.updateUserProfile(formData, true); // Pass true for multipart
     setLoading(false);
 
-    if (res.status) {
+    if (res.status && res.data) {
       Alert.alert("Success", res.message || "Profile updated successfully");
-      // Fetch and set latest profile after update
-      const latest = await ProfileService.getUserProfile();
-      if (latest && latest.data) {
-        const user = latest.data;
-        setName(user.name);
-        setUsername(user.username);
-        setMobile(user.contact);
-        setEmail(user.email);
-        setAddress(user.address);
-        setCity(user.city);
-        setStateVal(user.state);
-        setPincode(user.pincode);
-        if (user.profilePicPath) {
-          setAvatarUri(user.profilePicPath);
-        } else if (user.profile_pic_url) {
-          setAvatarUri(user.profile_pic_url);
-        } else if (user.profile_pic) {
-          setAvatarUri(`https://e-pickup.randomsoftsolution.in/assets/app/profile/${user.profile_pic}`);
-        }
-        // Clear local image selection after update
-        setSelectedImage(null);
-        setSelectedImageFilename(null);
+      // Use updated user object from response to update UI
+      const user = res.data;
+      setName(user.name);
+      setUsername(user.username);
+      setMobile(user.contact);
+      setEmail(user.email);
+      setAddress(user.address);
+      setCity(user.city);
+      setStateVal(user.state);
+      setPincode(user.pincode);
+      if (user.profilePicPath) {
+        setAvatarUri(user.profilePicPath);
+      } else if (user.profile_pic_url) {
+        setAvatarUri(user.profile_pic_url);
+      } else if (user.profile_pic) {
+        setAvatarUri(`https://e-pickup.randomsoftsolution.in/assets/app/profile/${user.profile_pic}`);
       }
+      setSelectedImage(null);
+      setSelectedImageFilename(null);
     } else {
       Alert.alert("Error", res.message || "Profile update failed");
     }
@@ -143,9 +151,9 @@ export default function ProfileScreen() {
       <LinearGradient colors={["#0f2027", "#203a43", "#2c5364"]} style={styles.header}>
 
         {/* Header Title */}
-        <View style={styles.headerTitle}>
-          <Text style={styles.headerTitleText}>Profile Settings</Text>
-        </View>
+        {/* <View style={styles.headerTitle}>
+          <Icon name="settings" size={24} color="#fff" />
+        </View> */}
 
         {/* Background Pattern */}
         <View style={styles.backgroundPattern}>
@@ -176,12 +184,12 @@ export default function ProfileScreen() {
           <Text style={styles.profileEmail}>{email}</Text>
           <View style={styles.profileStats}>
             <View style={styles.statItem}>
+              <Text style={styles.statEmoji}>🗓</Text>
+              <Text style={styles.statText}>{city || 'Add City'}</Text>
+            </View>
+            <View style={[styles.statItem, {marginLeft: 8}]}> 
               <Text style={styles.statEmoji}>📧</Text>
               <Text style={styles.statText}>{email ? 'Verified' : 'Not verified'}</Text>
-            </View>
-            <View style={[styles.statItem, {marginLeft: 8}]}>
-              <Text style={styles.statEmoji}>📍</Text>
-              <Text style={styles.statText}>{city || 'Add City'}</Text>
             </View>
           </View>
         </View>
