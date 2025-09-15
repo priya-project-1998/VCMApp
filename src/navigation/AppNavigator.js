@@ -25,6 +25,7 @@ import AboutAppScreen from '../screens/AboutAppScreen';
 import ForgetPasswordScreen from '../screens/ForgetPasswordScreen';
 import NotificationBell from '../components/NotificationBell';
 import MyEventsScreen from '../screens/MyEventsScreen';
+import NotificationsScreen from '../screens/Notifications';
 
 const Stack = createNativeStackNavigator();
 const Drawer = createDrawerNavigator();
@@ -152,6 +153,7 @@ function DrawerNavigator() {
           headerTitleAlign: 'center',
         }} />
       <Drawer.Screen name="Profile" component={ProfileScreen} />
+      <Drawer.Screen name="Notifications" component={NotificationsScreen} options={{drawerItemStyle: { display: 'none' }}}/>
       <Drawer.Screen name="Event" component={OrganiserScreen} />
       <Drawer.Screen name="Results" component={ResultsScreen} />
       <Drawer.Screen name="Search" component={SearchScreen} />
