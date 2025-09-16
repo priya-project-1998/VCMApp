@@ -18,6 +18,7 @@ class UserProfileUpdateRequestModel {
       city: this.city,
       state: this.state,
       pincode: this.pincode,
+      profile_pic: this.profile_pic,
     };
   }
 

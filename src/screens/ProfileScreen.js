@@ -18,6 +18,7 @@ import LinearGradient from "react-native-linear-gradient";
 import Icon from "react-native-vector-icons/MaterialIcons";
 import { useFocusEffect, useNavigation } from "@react-navigation/native";
 import ProfileService from "../services/apiService/profile_service";
+import ProfileStorage from "../utils/ProfileStorage";
 import { pickImage } from "../utils/ImagePicker";
 
 export default function ProfileScreen() {
@@ -34,6 +35,7 @@ export default function ProfileScreen() {
   // Local-only avatar state (UI only, no API change)
   const [avatarUri, setAvatarUri] = useState(null);
   const [selectedImage, setSelectedImage] = useState(null);
+  const [selectedImageFilename, setSelectedImageFilename] = useState(null);
 
   // 🔹 Fetch profile every time screen is focused
   useFocusEffect(
@@ -56,6 +58,10 @@ export default function ProfileScreen() {
           // Try to show profile pic if provided by API (no logic change)
           if (user.profilePicPath) {
             setAvatarUri(user.profilePicPath);
+          } else if (user.profile_pic_url) {
+            setAvatarUri(user.profile_pic_url);
+          } else if (user.profile_pic) {
+            setAvatarUri(`https://e-pickup.randomsoftsolution.in/assets/app/profile/${user.profile_pic}`);
           }
         }
       };
@@ -70,7 +76,14 @@ export default function ProfileScreen() {
       const img = await pickImage();
       if (img) {
         setAvatarUri(img.uri);
-        setSelectedImage(img); // Store for upload
+        setSelectedImage(img);
+        // Extract filename from URI
+        const uriParts = img.uri.split('/');
+        const filename = uriParts[uriParts.length - 1];
+        setSelectedImageFilename(filename);
+        // Debug log for image selection
+        console.log('[DEBUG] Picked image URI:', img.uri);
+        console.log('[DEBUG] Picked image filename:', filename);
       }
     } catch (e) {
       // 🔹 Beautiful Image Picker Error Alert
@@ -106,56 +119,79 @@ export default function ProfileScreen() {
 
     setLoading(true);
 
-    const updateData = {
-      name,
-      contact: mobile,
-      address,
-      city,
-      state: stateVal,
-      pincode,
-    };
-
-    // 🔹 Add profile pic if selected
-    if (selectedImage) {
-      updateData.profile_pic = selectedImage;
+    // Use FormData for image upload
+    const formData = new FormData();
+    formData.append('name', String(name));
+    formData.append('contact', String(mobile));
+    formData.append('address', String(address));
+    formData.append('city', String(city));
+    formData.append('state', String(stateVal));
+    formData.append('pincode', String(pincode));
+    if (selectedImage && selectedImage.uri) {
+      formData.append('profile_pic', {
+        uri: selectedImage.uri,
+        type: selectedImage.type || 'image/jpeg',
+        name: selectedImageFilename,
+      });
     }
 
-    const res = await ProfileService.updateUserProfile(updateData);
-    console.log('profile res check',res);
-    setLoading(false);
+    try {
+      const res = await ProfileService.updateUserProfile(formData, true);
+      setLoading(false);
 
-    if (res.status) {
-      // 🔹 Beautiful Success Alert
-      Alert.alert(
-        "✅ Success!", 
-        `${res.message || "Profile updated successfully"}\n\n🎉 Your changes have been saved!`,
-        [
-          {
-            text: "🏠 Go to Dashboard",
-            style: "default",
-            onPress: () => {
-              navigation.navigate('Dashboard');
-              // Clear selected image after success
-              setSelectedImage(null);
-            }
-          }
-        ],
-        { 
-          cancelable: false,
+      if (res.status && res.data) {
+        Alert.alert("Success", res.message || "Profile updated successfully");
+        const user = res.data;
+        setName(user.name);
+        setUsername(user.username);
+        setMobile(user.contact);
+        setEmail(user.email);
+        setAddress(user.address);
+        setCity(user.city);
+        setStateVal(user.state);
+        setPincode(user.pincode);
+        if (user.profilePicPath) {
+          setAvatarUri(user.profilePicPath);
+        } else if (user.profile_pic_url) {
+          setAvatarUri(user.profile_pic_url);
+        } else if (user.profile_pic) {
+          setAvatarUri(`https://e-pickup.randomsoftsolution.in/assets/app/profile/${user.profile_pic}`);
         }
-      );
-    } else {
-      // 🔹 Beautiful Error Alert  
-      Alert.alert(
-        "❌ Update Failed", 
-        `${res.message || "Profile update failed"}\n\n😔 Please try again later.`,
-        [
-          {
-            text: "🔄 Try Again",
-            style: "default"
+        setSelectedImage(null);
+        setSelectedImageFilename(null);
+        // Fetch latest profile from API and store for drawer
+        const latestProfileRes = await ProfileService.getUserProfile();
+        if (latestProfileRes && latestProfileRes.data) {
+          ProfileStorage.storeUserProfile(latestProfileRes.data);
+          // Debug log for latest profile image
+          console.log('[DEBUG] Latest profile image:', latestProfileRes.data.profilePicPath, latestProfileRes.data.profile_pic_url, latestProfileRes.data.profile_pic);
+          // Update screen state from latest profile
+          const latestUser = latestProfileRes.data;
+          setName(latestUser.name);
+          setUsername(latestUser.username);
+          setMobile(latestUser.contact);
+          setEmail(latestUser.email);
+          setAddress(latestUser.address);
+          setCity(latestUser.city);
+          setStateVal(latestUser.state);
+          setPincode(latestUser.pincode);
+          if (latestUser.profilePicPath) {
+            setAvatarUri(latestUser.profilePicPath);
+          } else if (latestUser.profile_pic_url) {
+            setAvatarUri(latestUser.profile_pic_url);
+          } else if (latestUser.profile_pic) {
+            setAvatarUri(`https://e-pickup.randomsoftsolution.in/assets/app/profile/${latestUser.profile_pic}`);
           }
-        ]
-      );
+          // Remove forced drawer open/close logic
+        }
+      } else {
+        console.log('[DEBUG] API Error Response:', res);
+        Alert.alert("Error", res.message || "Profile update failed");
+      }
+    } catch (err) {
+      setLoading(false);
+      console.log('[DEBUG] Network Error:', err);
+      Alert.alert("Network Error", err?.message || "Network request failed");
     }
   };
 
@@ -167,9 +203,9 @@ export default function ProfileScreen() {
       <LinearGradient colors={["#0f2027", "#203a43", "#2c5364"]} style={styles.header}>
 
         {/* Header Title */}
-        <View style={styles.headerTitle}>
-          <Text style={styles.headerTitleText}>Profile Settings</Text>
-        </View>
+        {/* <View style={styles.headerTitle}>
+          <Icon name="settings" size={24} color="#fff" />
+        </View> */}
 
         {/* Background Pattern */}
         <View style={styles.backgroundPattern}>
@@ -200,12 +236,12 @@ export default function ProfileScreen() {
           <Text style={styles.profileEmail}>{email}</Text>
           <View style={styles.profileStats}>
             <View style={styles.statItem}>
+              <Text style={styles.statEmoji}>🗓</Text>
+              <Text style={styles.statText}>{city || 'Add City'}</Text>
+            </View>
+            <View style={[styles.statItem, {marginLeft: 8}]}> 
               <Text style={styles.statEmoji}>📧</Text>
               <Text style={styles.statText}>{email ? 'Verified' : 'Not verified'}</Text>
-            </View>
-            <View style={[styles.statItem, {marginLeft: 8}]}>
-              <Text style={styles.statEmoji}>📍</Text>
-              <Text style={styles.statText}>{city || 'Add City'}</Text>
             </View>
           </View>
         </View>
@@ -360,7 +396,7 @@ const styles = StyleSheet.create({
   },
   header: {
     paddingTop: Platform.OS === 'ios' ? 50 : 30,
-    paddingBottom: 40,
+    paddingBottom: 25, // Reduced from 40
     alignItems: 'center',
     borderBottomLeftRadius: 30,
     borderBottomRightRadius: 30,
@@ -431,14 +467,14 @@ const styles = StyleSheet.create({
   },
   imageWrapper: {
     position: 'relative',
-    marginBottom: 15,
+    marginBottom: 10, // Reduced from 15
   },
   profileImageBorder: {
-    width: 130,
-    height: 130,
-    borderRadius: 65,
+    width: 110, // Reduced from 130
+    height: 110, // Reduced from 130
+    borderRadius: 55, // Reduced from 65
     backgroundColor: 'rgba(255,255,255,0.2)',
-    padding: 5,
+    padding: 4, // Reduced from 5
     shadowColor: '#000',
     shadowOffset: {
       width: 0,
@@ -449,15 +485,15 @@ const styles = StyleSheet.create({
     elevation: 15,
   },
   profileImage: {
-    width: 120,
-    height: 120,
-    borderRadius: 60,
+    width: 102, // Reduced from 120
+    height: 102, // Reduced from 120
+    borderRadius: 51, // Reduced from 60
   },
   editIconContainer: {
     position: 'absolute',
-    bottom: 5,
-    right: 5,
-    borderRadius: 18,
+    bottom: 3, // Reduced from 5
+    right: 3, // Reduced from 5
+    borderRadius: 16, // Reduced from 18
     overflow: 'hidden',
     shadowColor: '#000',
     shadowOffset: {
@@ -469,25 +505,25 @@ const styles = StyleSheet.create({
     elevation: 8,
   },
   editIconGradient: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
+    width: 32, // Reduced from 36
+    height: 32, // Reduced from 36
+    borderRadius: 16, // Reduced from 18
     alignItems: 'center',
     justifyContent: 'center',
   },
   profileName: {
-    fontSize: 26,
+    fontSize: 22, // Reduced from 26
     fontWeight: 'bold',
     color: '#fff',
-    marginBottom: 5,
+    marginBottom: 4, // Reduced from 5
     textShadowColor: 'rgba(0, 0, 0, 0.3)',
     textShadowOffset: { width: 0, height: 2 },
     textShadowRadius: 4,
   },
   profileEmail: {
-    fontSize: 16,
+    fontSize: 14, // Reduced from 16
     color: 'rgba(255, 255, 255, 0.9)',
-    marginBottom: 10,
+    marginBottom: 8, // Reduced from 10
   },
   profileStats: {
     flexDirection: 'row',
@@ -497,18 +533,18 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: 'rgba(255, 255, 255, 0.2)',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 15,
+    paddingHorizontal: 10, // Reduced from 12
+    paddingVertical: 4, // Reduced from 6
+    borderRadius: 12, // Reduced from 15
   },
   statText: {
     color: 'rgba(255, 255, 255, 0.9)',
-    fontSize: 12,
+    fontSize: 11, // Reduced from 12
     fontWeight: '500',
     marginLeft: 4,
   },
   statEmoji: {
-    fontSize: 12,
+    fontSize: 11, // Reduced from 12
     marginRight: 2,
   },
   formContainer: {

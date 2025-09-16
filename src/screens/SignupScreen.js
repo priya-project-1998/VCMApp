@@ -186,15 +186,15 @@ export default function SignupScreen({ navigation }) {
         </ScrollView>
 
         {step === "register" ? (
-          <TouchableOpacity activeOpacity={0.85} onPress={handleSignup}>
+          <TouchableOpacity activeOpacity={0.8} onPress={handleSignup} disabled={loading}>
             <LinearGradient colors={["#36D1DC", "#5B86E5"]} style={styles.button}>
-              <Text style={styles.buttonText}>Sign Up</Text>
+              <Text style={styles.buttonText}>{loading ? "Signing Up..." : "Sign Up"}</Text>
             </LinearGradient>
           </TouchableOpacity>
         ) : (
-          <TouchableOpacity activeOpacity={0.8} onPress={handleOtpVerify}>
+          <TouchableOpacity activeOpacity={0.8} onPress={handleOtpVerify} disabled={loading}>
             <LinearGradient colors={["#36D1DC", "#5B86E5"]} style={styles.button}>
-              <Text style={styles.buttonText}>Verify OTP</Text>
+              <Text style={styles.buttonText}>{loading ? "Verifying..." : "Verify OTP"}</Text>
             </LinearGradient>
           </TouchableOpacity>
         )}
@@ -247,14 +247,19 @@ const styles = StyleSheet.create({
   button: {
     paddingVertical: 14,
     borderRadius: 12,
-    marginTop: 20,
+    marginTop: 15,
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 6 },
     shadowOpacity: 0.3,
     shadowRadius: 6,
     elevation: 4,
   },
-  buttonText: { color: "#fff", fontWeight: "bold", fontSize: 18, textAlign: "center" },
+  buttonText: { 
+    color: "#fff", 
+    fontWeight: "bold", 
+    fontSize: 18, 
+    textAlign: "center" 
+  },
   link: { color: "#36D1DC", textAlign: "center", marginTop: 20, fontSize: 15 },
   loadingOverlay: {
     position: "absolute",

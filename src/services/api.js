@@ -8,6 +8,7 @@ export const HEADER_TYPES = {
   DEFAULT: "default",   // Content-Type + Accept
   ACCEPT: "acceptOnly", // Accept only
   AUTH: "auth", 
+  AUTH_RAW: "auth_raw", // Auth with raw body
   FORMDATA: "formData",  // multipart/form-data (no Content-Type here)
   AUTH_FORMDATA: "authFormData"  // multipart/form-data with auth
 };
@@ -30,9 +31,20 @@ async function buildHeaders(type, extraHeaders = {}) {
       const token = await AsyncStorage.getItem("authToken");
       if (token) {
         headers["Content-Type"] = "application/json";
+        headers["Accept"] = "application/json";
         headers["Authorization"] = `Bearer ${token}`;
       } else {
-        console.warn("Auth token not found in AsyncStorage");
+        console.warn("❌ Auth token not found in AsyncStorage");
+      }
+      break;
+    
+    case HEADER_TYPES.AUTH_RAW:
+      const rawToken = await AsyncStorage.getItem("authToken");
+      if (rawToken) {
+        headers["Accept"] = "application/json";
+        headers["Authorization"] = `Bearer ${rawToken}`;
+      } else {
+        console.warn("❌ Auth token not found in AsyncStorage");
       }
       break;
     
@@ -73,6 +85,8 @@ async function request(
     if (body) {
       if (headerType === HEADER_TYPES.FORMDATA || headerType === HEADER_TYPES.AUTH_FORMDATA) {
         requestBody = body; // direct FormData
+      } else if (headerType === HEADER_TYPES.AUTH_RAW) {
+        requestBody = JSON.stringify(body); // Raw JSON string for AUTH_RAW
       } else {
         requestBody = JSON.stringify(body);
       }
@@ -92,8 +106,6 @@ async function request(
     } catch {
       responseData = responseText;
     }
-
-    console.log("📥 API Response:", response.status, responseData);
 
     // 🔹 If HTTP error
     if (!response.ok) {
@@ -125,12 +137,6 @@ async function request(
 
 // ✅ Easy methods
 export async function getRequest(endpoint, headerType = HEADER_TYPES.DEFAULT, extraHeaders = {}) {
-    console.log("🔎 getRequest called with:", {
-    endpoint,
-    headerType,
-    extraHeaders
-  });
-  console.log("Calling URL:", `${BASE_URL}${endpoint}`);
   return request(endpoint, "GET", null, headerType, extraHeaders);
 }
 
