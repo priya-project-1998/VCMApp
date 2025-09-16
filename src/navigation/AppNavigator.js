@@ -1,10 +1,8 @@
-import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet } from 'react-native';
+import React from 'react';
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { createDrawerNavigator } from '@react-navigation/drawer';
 import LinearGradient from 'react-native-linear-gradient';
-import NetworkUtils from '../utils/NetworkUtils';
 
 import HomeScreen from '../screens/HomeScreen';
 import LoginScreen from '../screens/LoginScreen';
@@ -31,24 +29,6 @@ import ForgetPasswordScreen from '../screens/ForgetPasswordScreen';
 const Stack = createNativeStackNavigator();
 const Drawer = createDrawerNavigator();
 
-// Header Network Status Component
-const HeaderNetworkStatus = ({ isOnline }) => (
-  <View style={styles.networkStatusContainer}>
-    <View style={[
-      styles.networkStatus,
-      { backgroundColor: isOnline ? 'rgba(46, 204, 113, 0.15)' : 'rgba(255, 107, 107, 0.15)' },
-      { borderColor: isOnline ? 'rgba(46, 204, 113, 0.3)' : 'rgba(255, 107, 107, 0.3)' }
-    ]}>
-      <Text style={[
-        styles.networkStatusText,
-        { color: isOnline ? '#2ecc71' : '#ff6b6b' }
-      ]}>
-        {isOnline ? '🟢 Online' : '🔴 Offline'}
-      </Text>
-    </View>
-  </View>
-);
-
 const defaultScreenOptions = {
   headerBackground: () => (
     <LinearGradient
@@ -68,28 +48,6 @@ const defaultScreenOptions = {
 };
 
 function DrawerNavigator() {
-  const [isOnline, setIsOnline] = useState(true);
-
-  useEffect(() => {
-    // Initialize network monitoring
-    NetworkUtils.initialize();
-    
-    // Add network status listener
-    const unsubscribe = NetworkUtils.addNetworkListener((connectionStatus) => {
-      setIsOnline(connectionStatus);
-    });
-
-    // Cleanup
-    return () => {
-      unsubscribe();
-    };
-  }, []);
-
-  // Network Status Component for Header
-  const renderHeaderNetworkStatus = () => (
-    <HeaderNetworkStatus isOnline={isOnline} />
-  );
-
   return (
     <Drawer.Navigator 
       drawerContent={(props) => <CustomDrawer {...props} />}
@@ -107,7 +65,6 @@ function DrawerNavigator() {
         headerRightContainerStyle: {
           paddingRight: 10,
         },
-        headerRight: renderHeaderNetworkStatus,
         headerTitleAlign: 'center',
         drawerStyle: {
           backgroundColor: '#203a43',
@@ -182,7 +139,7 @@ function DrawerNavigator() {
         name="Dashboard" 
         component={HomeScreen}
         options={{
-          headerTitle: "",
+          headerTitle: "NaviQuest",
           headerTitleStyle: {
             color: '#feb47b',
             fontWeight: '700',
@@ -224,27 +181,3 @@ export default function AppNavigator() {
     </NavigationContainer>
   );
 }
-
-const styles = StyleSheet.create({
-  networkStatusContainer: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginRight: 5,
-  },
-  networkStatus: {
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 12,
-    borderWidth: 1,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.2,
-    shadowRadius: 2,
-    elevation: 2,
-  },
-  networkStatusText: {
-    fontSize: 10,
-    fontWeight: '600',
-    letterSpacing: 0.3,
-  },
-});
