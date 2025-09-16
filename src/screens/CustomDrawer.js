@@ -5,25 +5,43 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useFocusEffect } from "@react-navigation/native";
 import LinearGradient from "react-native-linear-gradient";
 import ProfileStorage from "../utils/ProfileStorage";
+import ProfileService from "../services/apiService/profile_service";
 
 const { width } = Dimensions.get("window");
 
 export default function CustomDrawer(props) {
   const [user, setUser] = useState(null);
 
-  // Fetch user data whenever the drawer comes into focus
+  // Fetch user data whenever the drawer comes into focus or opens
   useFocusEffect(
     useCallback(() => {
+      let isActive = true;
       const fetchUser = async () => {
+        // Always fetch latest profile from local storage first
         const storedUserProfile = await ProfileStorage.getUserProfile();
-        if (storedUserProfile) {
-          setUser(storedUserProfile);
-        } else {
-          setUser(null);
+        if (isActive) setUser(storedUserProfile || null);
+        // Then fetch from API and update if newer
+        try {
+          const apiRes = await ProfileService.getUserProfile();
+          if (apiRes && apiRes.data) {
+            if (isActive) {
+              setUser(apiRes.data);
+              ProfileStorage.storeUserProfile(apiRes.data); // keep local storage in sync
+            }
+          }
+        } catch (e) {
+          // If API fails, keep local data
         }
       };
+      // Listen for navigation state change to always fetch latest profile
+      const unsubscribeState = props.navigation.addListener('state', () => fetchUser());
+      // Initial fetch
       fetchUser();
-    }, [])
+      return () => {
+        isActive = false;
+        unsubscribeState();
+      };
+    }, [props.navigation])
   );
 
   const handleLogout = () => {
@@ -44,13 +62,26 @@ export default function CustomDrawer(props) {
 
   return (
     <View style={{ flex: 1 }}>
-      <DrawerContentScrollView {...props} contentContainerStyle={{ marginTop: 10, flexGrow: 1 }}>
+      <DrawerContentScrollView 
+        {...props} 
+        contentContainerStyle={{ 
+          marginTop: 10, 
+          flexGrow: 1,
+          paddingBottom: 10 
+        }}
+        showsVerticalScrollIndicator={false}
+        scrollEventThrottle={16}
+      >
         {/* Profile Section */}
         <View style={styles.profileContainer}>
           <Image
             source={
-              user?.profilePic
-                ? { uri: user.profilePic }
+              user?.profilePicPath
+                ? { uri: user.profilePicPath }
+                : user?.profile_pic_url
+                ? { uri: user.profile_pic_url }
+                : user?.profile_pic
+                ? { uri: `https://e-pickup.randomsoftsolution.in/assets/app/profile/${user.profile_pic}` }
                 : require("../assets/images/profile-placeholder.png")
             }
             style={styles.profileImage}
@@ -62,7 +93,9 @@ export default function CustomDrawer(props) {
         </View>
 
         {/* Menu Items */}
-        <DrawerItemList {...props} />
+        <View style={styles.menuItemsContainer}>
+          <DrawerItemList {...props} />
+        </View>
 
         {/* Separator Above Logout */}
         <View style={styles.separator} />
@@ -121,6 +154,10 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: "rgba(255,255,255,0.7)",
     letterSpacing: 0.2,
+  },
+  menuItemsContainer: {
+    flex: 1,
+    paddingVertical: 8,
   },
   separator: {
     height: 1,

@@ -13,7 +13,7 @@ class MainActivity : ReactActivity() {
         super.onCreate(null) // important for proper navigation gesture handling
     }
 
-    override fun getMainComponentName(): String = "VCMApp"
+    override fun getMainComponentName(): String = "NaviQuest"
 
     override fun createReactActivityDelegate(): ReactActivityDelegate =
         DefaultReactActivityDelegate(this, mainComponentName, fabricEnabled)

@@ -4,6 +4,7 @@ import ApiResponse from "../ApiResponse";
 import { HEADER_TYPES } from "../api";
 import UserProfileModel from "../../model/UserProfileModel";
 import UserProfileUpdateRequestModel from "../../model/UpdateProfileModel/UserProfileUpdateRequestModel";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
 class ProfileService {
   // 🔹 Get User Profile (unchanged)
@@ -19,51 +20,59 @@ class ProfileService {
 
       if (res.status === "success" && userObj) {
         const userProfile = new UserProfileModel(userObj);
-        console.log("📌 getUserProfile - userProfile response:", userProfile);
         return new ApiResponse(true, 200, "Profile fetched successfully", userProfile);
       } else {
         return new ApiResponse(false, res.code || 500, res.message || "Failed to fetch profile", null);
       }
     } catch (err) {
-      console.error("❌ getUserProfile - error:", err);
       return new ApiResponse(false, 500, err.message || "Fetching profile failed", null);
     }
   }
 
-    // 🔹 Update User Profile (fixed)
-async updateUserProfile(updateData) {
-  try {
-    const requestBody = new UserProfileUpdateRequestModel(updateData).toJson();
+  // 🔹 Update User Profile (with profile pic support)
+  async updateUserProfile(updateData, isMultipart = false) {
+    try {
+      let requestBody;
+      let headerType;
+      
+      if (isMultipart) {
+        // Use FormData for file upload
+        requestBody = updateData; // Assume it's already FormData
+        headerType = HEADER_TYPES.AUTH_FORMDATA;
+        console.log("📤 Using FormData for file upload");
+      } else {
+        // Use JSON for regular update
+        const requestModel = new UserProfileUpdateRequestModel(updateData);
+        requestBody = requestModel.toJson();
+        headerType = HEADER_TYPES.AUTH;
+        console.log("📤 Using JSON for regular update");
+      }
 
-    console.log("📤 API Request URL:", ENDPOINTS.UPDATE_PROFILE);
-    console.log("📤 API Request Body:", requestBody);
-    console.log("📤 API Headers:", HEADER_TYPES.AUTH);
+      console.log("📤 API Request URL:", ENDPOINTS.UPDATE_PROFILE);
+      console.log("📤 API Headers Type:", headerType);
 
-    const res = await postRequest(
-      ENDPOINTS.UPDATE_PROFILE,
-      requestBody,
-      HEADER_TYPES.AUTH
-    );
+      const res = await postRequest(
+        ENDPOINTS.UPDATE_PROFILE,
+        requestBody,
+        headerType
+      );
 
-    console.log("📥 API Raw Response:", JSON.stringify(res, null, 2));
+      console.log("📥 API Raw Response:", JSON.stringify(res, null, 2));
 
-    const userObj = res?.data?.user || null;
-    console.log("📥 userObj Raw Response:", userObj);
+      const userObj = res?.data?.user || null;
+      console.log("📥 userObj Raw Response:", userObj);
 
-    // try matching what backend actually sends
-    if ((res.status === "success" || res.success === true) && userObj) {
-      const updatedProfile = new UserProfileModel(userObj);
-      return new ApiResponse(true, 200, res.message || "Profile updated successfully", updatedProfile);
-    } else {
-      return new ApiResponse(false, res.code || 500, res.message || "Profile update failed", null);
+      // Check response status
+      if ((res.status === "success" || res.success === true) && userObj) {
+        const updatedProfile = new UserProfileModel(userObj);
+        return new ApiResponse(true, 200, res.message || "Profile updated successfully", updatedProfile);
+      } else {
+        return new ApiResponse(false, res.code || 500, res.message || "Profile update failed", null);
+      }
+    } catch (err) {
+      return new ApiResponse(false, 500, err.message || "Profile update failed", null);
     }
-  } catch (err) {
-    console.error("❌ updateUserProfile - error:", err);
-    return new ApiResponse(false, 500, err.message || "Profile update failed", null);
   }
-}
-
-
 }
 
 export default new ProfileService();

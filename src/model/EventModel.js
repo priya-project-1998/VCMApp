@@ -7,15 +7,39 @@ export default class EventModel {
     this.startDate = data?.event_start_date ?? "";
     this.endDate = data?.event_end_date ?? "";
     this.organisedBy = data?.event_organised_by ?? "-";
-    this.pic = data?.event_pic ?? null;
-    this.headerImg = data?.event_header_img ?? null;
-    this.footerImg = data?.event_footer_img ?? null;
+    
+    // Process image URLs - prepend base URL if needed
+    this.pic = this.processImageUrl(data?.event_pic);
+    this.headerImg = this.processImageUrl(data?.event_header_img);
+    this.footerImg = this.processImageUrl(data?.event_footer_img);
+    
     this.createdDate = data?.created_date ?? "";
     this.modifyDate = data?.modify_date ?? "";
     this.isDeleted = data?.is_deleted === "1";
 
     // Derived property
     this.isCompleted = this.checkIfCompleted();
+  }
+
+  processImageUrl(imagePath) {
+    if (!imagePath) return null;
+    
+    // If the path already starts with http:// or https://, return as is
+    if (imagePath.startsWith('http://') || imagePath.startsWith('https://')) {
+      console.log("=== IMAGE URL DEBUG ===");
+      console.log("Image path already has protocol:", imagePath);
+      return imagePath;
+    }
+    
+    // If it's a relative path, prepend the base URL
+    const BASE_URL = "https://e-pickup.randomsoftsolution.in";
+    const fullUrl = `${BASE_URL}/${imagePath}`;
+    
+    console.log("=== IMAGE URL DEBUG ===");
+    console.log("Original path:", imagePath);
+    console.log("Full URL:", fullUrl);
+    
+    return fullUrl;
   }
 
   checkIfCompleted() {
