@@ -70,14 +70,7 @@ export default function ProfileScreen() {
       const img = await pickImage();
       if (img) {
         setAvatarUri(img.uri);
-        setSelectedImage(img);
-        // Extract filename from URI
-        const uriParts = img.uri.split('/');
-        const filename = uriParts[uriParts.length - 1];
-        setSelectedImageFilename(filename);
-        // Debug log for image selection
-        console.log('[DEBUG] Picked image URI:', img.uri);
-        console.log('[DEBUG] Picked image filename:', filename);
+        setSelectedImage(img); // Store for upload
       }
     } catch (e) {
       // 🔹 Beautiful Image Picker Error Alert
@@ -113,79 +106,56 @@ export default function ProfileScreen() {
 
     setLoading(true);
 
-      // Use FormData for image upload
-    const formData = new FormData();
-    formData.append('name', String(name));
-    formData.append('contact', String(mobile));
-    formData.append('address', String(address));
-    formData.append('city', String(city));
-    formData.append('state', String(stateVal));
-    formData.append('pincode', String(pincode));
-    if (selectedImage && selectedImage.uri) {
-      formData.append('profile_pic', {
-        uri: selectedImage.uri,
-        type: selectedImage.type || 'image/jpeg',
-        name: selectedImageFilename,
-      });
+    const updateData = {
+      name,
+      contact: mobile,
+      address,
+      city,
+      state: stateVal,
+      pincode,
+    };
+
+    // 🔹 Add profile pic if selected
+    if (selectedImage) {
+      updateData.profile_pic = selectedImage;
     }
 
-    try {
-      const res = await ProfileService.updateUserProfile(formData, true);
-      setLoading(false);
+    const res = await ProfileService.updateUserProfile(updateData);
+    console.log('profile res check',res);
+    setLoading(false);
 
-      if (res.status && res.data) {
-        Alert.alert("Success", res.message || "Profile updated successfully");
-        const user = res.data;
-        setName(user.name);
-        setUsername(user.username);
-        setMobile(user.contact);
-        setEmail(user.email);
-        setAddress(user.address);
-        setCity(user.city);
-        setStateVal(user.state);
-        setPincode(user.pincode);
-        if (user.profilePicPath) {
-          setAvatarUri(user.profilePicPath);
-        } else if (user.profile_pic_url) {
-          setAvatarUri(user.profile_pic_url);
-        } else if (user.profile_pic) {
-          setAvatarUri(`https://e-pickup.randomsoftsolution.in/assets/app/profile/${user.profile_pic}`);
-        }
-        setSelectedImage(null);
-        setSelectedImageFilename(null);
-        // Fetch latest profile from API and store for drawer
-        const latestProfileRes = await ProfileService.getUserProfile();
-        if (latestProfileRes && latestProfileRes.data) {
-          ProfileStorage.storeUserProfile(latestProfileRes.data);
-          // Debug log for latest profile image
-          console.log('[DEBUG] Latest profile image:', latestProfileRes.data.profilePicPath, latestProfileRes.data.profile_pic_url, latestProfileRes.data.profile_pic);
-          // Update screen state from latest profile
-          const latestUser = latestProfileRes.data;
-          setName(latestUser.name);
-          setUsername(latestUser.username);
-          setMobile(latestUser.contact);
-          setEmail(latestUser.email);
-          setAddress(latestUser.address);
-          setCity(latestUser.city);
-          setStateVal(latestUser.state);
-          setPincode(latestUser.pincode);
-          if (latestUser.profilePicPath) {
-            setAvatarUri(latestUser.profilePicPath);
-          } else if (latestUser.profile_pic_url) {
-            setAvatarUri(latestUser.profile_pic_url);
-          } else if (latestUser.profile_pic) {
-            setAvatarUri(`https://e-pickup.randomsoftsolution.in/assets/app/profile/${latestUser.profile_pic}`);
+    if (res.status) {
+      // 🔹 Beautiful Success Alert
+      Alert.alert(
+        "✅ Success!", 
+        `${res.message || "Profile updated successfully"}\n\n🎉 Your changes have been saved!`,
+        [
+          {
+            text: "🏠 Go to Dashboard",
+            style: "default",
+            onPress: () => {
+              navigation.navigate('Dashboard');
+              // Clear selected image after success
+              setSelectedImage(null);
+            }
           }
-          // Remove forced drawer open/close logic
+        ],
+        { 
+          cancelable: false,
         }
-      } else {
-        console.log('[DEBUG] API Error Response:', res);
-        Alert.alert("Error", res.message || "Profile update failed");
-      }
-    } catch (err) {
-      setLoading(false);
-      console.log('[DEBUG] Network Error:', err);
-      Alert.alert("Network Error", err?.message || "Network request failed");
+      );
+    } else {
+      // 🔹 Beautiful Error Alert  
+      Alert.alert(
+        "❌ Update Failed", 
+        `${res.message || "Profile update failed"}\n\n😔 Please try again later.`,
+        [
+          {
+            text: "🔄 Try Again",
+            style: "default"
+          }
+        ]
+      );
     }
   };
 

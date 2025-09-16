@@ -7,7 +7,7 @@ class UserProfileUpdateRequestModel {
     this.city = city || "";
     this.state = state || "";
     this.pincode = pincode || "";
-    this.profile_pic = profile_pic || "";
+    this.profile_pic = profile_pic || null;
   }
 
   toJson() {

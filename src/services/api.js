@@ -7,9 +7,9 @@ const BASE_URL = "https://e-pickup.randomsoftsolution.in/api";
 export const HEADER_TYPES = {
   DEFAULT: "default",   // Content-Type + Accept
   ACCEPT: "acceptOnly", // Accept only
-  AUTH: "auth",
-  AUTH_RAW: "auth_raw", // Auth with raw body
-  FORMDATA: "formData"  // multipart/form-data (no Content-Type here) 
+  AUTH: "auth", 
+  FORMDATA: "formData",  // multipart/form-data (no Content-Type here)
+  AUTH_FORMDATA: "authFormData"  // multipart/form-data with auth
 };
 
 // 🔹 Build headers dynamically
