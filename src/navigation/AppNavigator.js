@@ -26,6 +26,7 @@ import ForgetPasswordScreen from '../screens/ForgetPasswordScreen';
 import NotificationBell from '../components/NotificationBell';
 import MyEventsScreen from '../screens/MyEventsScreen';
 import NotificationsScreen from '../screens/Notifications';
+import EventStartScreen from '../screens/EventStartScreen';
 
 const Stack = createNativeStackNavigator();
 const Drawer = createDrawerNavigator();
@@ -178,6 +179,7 @@ export default function AppNavigator() {
         <Stack.Screen name="Drawer" component={DrawerNavigator} />
         <Stack.Screen name="ForgetPassword" component={ForgetPasswordScreen} />
         <Stack.Screen name="My Events" component={MyEventsScreen} />
+        <Stack.Screen name="EventStartScreen" component={EventStartScreen} />
       </Stack.Navigator>
     </NavigationContainer>
   );
