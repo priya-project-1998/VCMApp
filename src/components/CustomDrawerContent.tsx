@@ -9,19 +9,20 @@ const menuItems = [
   { icon: 'account', label: 'Profile', screen: 'Profile' },
   { icon: 'magnify', label: 'Search', screen: 'Search' },
   { icon: 'trophy-outline', label: 'Results', screen: 'Results' },
-  { icon: 'account-star-outline', label: 'Event', screen: 'Organiser' },
+  { icon: 'account-star-outline', label: 'Event', screen: 'Event' },
+  { icon: 'map', label: 'Map', screen: 'Map' },
   { icon: 'translate', label: 'Language', screen: 'Language' },
   { icon: 'message-outline', label: 'Feedback', screen: 'Feedback' },
-  { icon: 'account-multiple-plus-outline', label: 'Invite Friends', screen: 'Invite' },
-  { icon: 'star-outline', label: 'Rate us', screen: 'Rate' },
-  { icon: 'shield-outline', label: 'Privacy Policy', screen: 'PrivacyPolicy' },
-  { icon: 'map-marker-radius-outline', label: 'Location Permission Policy', screen: 'LocationPolicy' },
+  { icon: 'account-multiple-plus-outline', label: 'Invite Friends', screen: 'Invite User' },
+  { icon: 'star-outline', label: 'Rate us', screen: 'Rate Us' },
+  { icon: 'shield-outline', label: 'Privacy Policy', screen: 'Privacy Policy' },
+  { icon: 'map-marker-radius-outline', label: 'Location Permission Policy', screen: 'Location Permission Policy' },
   { icon: 'delete-outline', label: 'Delete Account', screen: 'DeleteAccount' },
-  { icon: 'file-document-outline', label: 'Terms & Conditions', screen: 'Terms' },
+  { icon: 'file-document-outline', label: 'Terms & Conditions', screen: 'Terms & Condition' },
   { icon: 'power', label: 'Logout', screen: 'Logout' },
 ];
 
-export default function CustomDrawerContent({ }) {
+export default function CustomDrawerContent({ navigation }: any) {
   const user = useSelector((state: RootState) => state.user);
 
   return (

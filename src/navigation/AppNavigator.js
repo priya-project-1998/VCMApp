@@ -27,6 +27,7 @@ import NotificationBell from '../components/NotificationBell';
 import MyEventsScreen from '../screens/MyEventsScreen';
 import NotificationsScreen from '../screens/Notifications';
 import EventStartScreen from '../screens/EventStartScreen';
+import MapScreen from '../screens/MapScreen';
 
 const Stack = createNativeStackNavigator();
 const Drawer = createDrawerNavigator();
@@ -153,6 +154,7 @@ function DrawerNavigator() {
           headerTitleAlign: 'center',
         }} />
       <Drawer.Screen name="Profile" component={ProfileScreen} />
+      <Drawer.Screen name="Map" component={MapScreen} />
       <Drawer.Screen name="Notifications" component={NotificationsScreen} options={{drawerItemStyle: { display: 'none' }}}/>
       <Drawer.Screen name="Event" component={OrganiserScreen} />
       <Drawer.Screen name="Results" component={ResultsScreen} />
