@@ -27,7 +27,8 @@ import NotificationBell from '../components/NotificationBell';
 import MyEventsScreen from '../screens/MyEventsScreen';
 import NotificationsScreen from '../screens/Notifications';
 import EventStartScreen from '../screens/EventStartScreen';
-
+import EventDetailsScreen from '../screens/EventDetailsScreen';
+import MapScreen from '../screens/MapScreen'
 const Stack = createNativeStackNavigator();
 const Drawer = createDrawerNavigator();
 
