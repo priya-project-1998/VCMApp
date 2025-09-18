@@ -15,6 +15,7 @@ import {
 import { useFocusEffect } from "@react-navigation/native";
 import LinearGradient from "react-native-linear-gradient";
 import EventService from "../services/apiService/event_service";
+import NotificationBell from '../components/NotificationBell';
 
 console.log('MyEventsScreen loaded');
 
@@ -272,6 +273,7 @@ export default function MyEventsScreen({ navigation }) {
           <Text style={styles.headerBackIcon}>←</Text>
         </TouchableOpacity>
         <Text style={styles.headerTitle}>My Events</Text>
+        <NotificationBell style={{ marginLeft: 'auto' }} />
       </View>
 
       {myEvents.length > 0 && (

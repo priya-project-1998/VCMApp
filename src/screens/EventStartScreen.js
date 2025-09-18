@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { View, Text, StyleSheet, TouchableOpacity, Dimensions, ScrollView, Share, Alert, Modal } from "react-native";
 import LinearGradient from "react-native-linear-gradient";
+import NotificationBell from '../components/NotificationBell';
 
 const { width } = Dimensions.get("window");
 
@@ -70,6 +71,7 @@ export default function EventStartScreen({ navigation, route }) {
             <Text style={styles.headerBackIcon}>←</Text>
           </TouchableOpacity>
           <Text style={styles.headerTitle}>Event Start</Text>
+          <NotificationBell style={{ marginLeft: 'auto' }} />
         </View>
 
         {/* Banner/Icon */}

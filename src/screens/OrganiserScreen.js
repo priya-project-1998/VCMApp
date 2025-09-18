@@ -22,6 +22,7 @@ import { StackActions } from '@react-navigation/native';
 import EventService from "../services/apiService/event_service";
 import EventModel from "../model/EventModel";
 import EventDetailsView from '../components/EventDetailsView';
+import NotificationBell from '../components/NotificationBell';
 
 const { width, height } = Dimensions.get("window");
 const isSmallDevice = width < 375;
@@ -590,21 +591,22 @@ const OrganiserScreen = ({ navigation, route }) => {
 
         {/* Action Buttons */}
         <View style={styles.eventActionsContainer}>
-          <TouchableOpacity 
-            style={styles.eventActionButton} 
-            onPress={() => handleJoinEvent(event)}
-            activeOpacity={0.8}
-          >
-            <LinearGradient
-              colors={['#4CAF50', '#45a049']}
-              style={styles.eventActionGradient}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 0 }}
+          {!event.isCompleted && (
+            <TouchableOpacity 
+              style={styles.eventActionButton} 
+              onPress={() => handleJoinEvent(event)}
+              activeOpacity={0.8}
             >
-              <Text style={styles.eventActionText}>Join</Text>
-            </LinearGradient>
-          </TouchableOpacity>
-
+              <LinearGradient
+                colors={['#4CAF50', '#45a049']}
+                style={styles.eventActionGradient}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 0 }}
+              >
+                <Text style={styles.eventActionText}>Join</Text>
+              </LinearGradient>
+            </TouchableOpacity>
+          )}
           <TouchableOpacity 
             style={styles.eventActionButton} 
             onPress={() => setSelectedEvent(event)}
@@ -662,6 +664,7 @@ const OrganiserScreen = ({ navigation, route }) => {
             <View style={styles.headerTitleContainer}>
               <View style={styles.titleAccent} />
               <Text style={styles.headerTitle}>Event Management</Text>
+              <NotificationBell onPress={() => navigation.navigate('Notifications')} style={{ marginLeft: 12 }} />
             </View>
             <View style={styles.headerRow}>
               <View style={styles.headerLeft}>
