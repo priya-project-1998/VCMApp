@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { View, Text, StyleSheet, TouchableOpacity, Dimensions, ScrollView, Share } from "react-native";
+import { View, Text, StyleSheet, TouchableOpacity, Dimensions, ScrollView, Share, Alert, Modal } from "react-native";
 import LinearGradient from "react-native-linear-gradient";
 
 const { width } = Dimensions.get("window");
@@ -28,6 +28,9 @@ export default function EventStartScreen({ navigation, route }) {
   // Timer logic
   const [timeLeft, setTimeLeft] = useState(0);
   const [timerActive, setTimerActive] = useState(true);
+  const [startPressed, setStartPressed] = useState(false);
+  const [startMessage, setStartMessage] = useState("");
+  const [showStartModal, setShowStartModal] = useState(false);
 
   useEffect(() => {
     const eventDateTime = new Date(event.date); // Only use event.date
@@ -123,17 +126,23 @@ export default function EventStartScreen({ navigation, route }) {
             <View style={[styles.statusBox, status.approved && styles.statusBoxActive]}>
               <Text style={styles.statusIcon}>✔️</Text>
               <Text style={styles.statusText}>Approved</Text>
-              {!status.approved && <Text style={styles.statusPending}>Pending</Text>}
+              {!(status.approved) && (
+                <Text style={styles.statusPending}>{(!timerActive) ? 'Done' : 'Pending'}</Text>
+              )}
             </View>
             <View style={[styles.statusBox, status.location && styles.statusBoxActive]}>
               <Text style={styles.statusIcon}>📍</Text>
               <Text style={styles.statusText}>Location</Text>
-              {!status.location && <Text style={styles.statusPending}>Pending</Text>}
+              {!(status.location) && (
+                <Text style={styles.statusPending}>{(!timerActive) ? 'Done' : 'Pending'}</Text>
+              )}
             </View>
             <View style={[styles.statusBox, status.time && styles.statusBoxActive]}>
               <Text style={styles.statusIcon}>⏰</Text>
               <Text style={styles.statusText}>Time</Text>
-              {!status.time && <Text style={styles.statusPending}>Pending</Text>}
+              {!(status.time) && (
+                <Text style={styles.statusPending}>{(!timerActive) ? 'Done' : 'Pending'}</Text>
+              )}
             </View>
           </View>
 
@@ -147,15 +156,49 @@ export default function EventStartScreen({ navigation, route }) {
           {/* Start Button */}
           <TouchableOpacity
             style={[styles.startBtnIntegrated, (!timerActive || !(status.approved && status.location && status.time)) && styles.startBtnDisabled]}
-            disabled={timerActive || !(status.approved && status.location && status.time)}
+            disabled={!timerActive || timeLeft === 0}
+            onPress={() => {
+              setShowStartModal(true);
+              setStartPressed(true);
+              setStartMessage(`Event will be start in ${formatTime(timeLeft)}`);
+            }}
           >
             <LinearGradient colors={["#43cea2", "#185a9d"]} style={styles.startBtnGradientIntegrated}>
               <Text style={styles.startBtnTextIntegrated}>START</Text>
             </LinearGradient>
           </TouchableOpacity>
+          <Modal
+            visible={showStartModal}
+            transparent
+            animationType="fade"
+            onRequestClose={() => setShowStartModal(false)}
+          >
+            <View style={{flex:1,justifyContent:'center',alignItems:'center',backgroundColor:'rgba(0,0,0,0.4)'}}>
+              <View style={{backgroundColor:'#fff',borderRadius:22,padding:0,alignItems:'center',width:'80%',borderWidth:2,borderColor:'#43cea2',overflow:'hidden',shadowColor:'#185a9d',shadowOpacity:0.18,shadowOffset:{width:0,height:6},shadowRadius:12,elevation:8}}>
+                <LinearGradient colors={["#e0f7fa", "#fff"]} style={{width:'100%',padding:28,borderRadius:22,alignItems:'center'}}>
+                  <Text style={{fontSize:22,fontWeight:'800',color:'#43cea2',marginBottom:10,letterSpacing:0.5}}>Event Info</Text>
+                  <View style={{width:'100%',borderBottomWidth:1,borderColor:'#e0e0e0',paddingBottom:10,marginBottom:10,flexDirection:'row',alignItems:'center',justifyContent:'center'}}>
+                    <Text style={{fontSize:20,color:'#185a9d',fontWeight:'bold',marginRight:6}}>⏰</Text>
+                    <Text style={{fontSize:17,color:'#203a43',fontWeight:'700'}}>{`Event Will be Start In `}</Text>
+                    <Text style={{fontSize:17,color:'#43cea2',fontWeight:'800'}}>{formatTime(timeLeft)}</Text>
+                  </View>
+                  <View style={{width:'100%',borderBottomWidth:1,borderColor:'#e0e0e0',paddingBottom:10,marginBottom:10,flexDirection:'row',alignItems:'center',justifyContent:'center'}}>
+                    <Text style={{fontSize:18,color:'#185a9d',marginRight:6}}>📢</Text>
+                    <Text style={{fontSize:15,color:'#185a9d',textAlign:'center',fontWeight:'600'}}>
+                      Get ready! Be at the starting point and prepared. Good luck!
+                    </Text>
+                  </View>
+                  <TouchableOpacity onPress={()=>setShowStartModal(false)} style={{backgroundColor:'#43cea2',borderRadius:12,paddingVertical:10,paddingHorizontal:32,marginTop:8,shadowColor:'#185a9d',shadowOpacity:0.12,shadowOffset:{width:0,height:2},shadowRadius:6,elevation:4}}>
+                    <Text style={{color:'#fff',fontWeight:'800',fontSize:17,letterSpacing:0.5}}>OK</Text>
+                  </TouchableOpacity>
+                </LinearGradient>
+              </View>
+            </View>
+          </Modal>
           {(timerActive || !(status.approved && status.location && status.time)) && (
             <Text style={styles.startHint}>Complete all status steps and wait for timer to enable Start</Text>
           )}
+         
         </View>
 
         {/* Location Info */}
@@ -166,7 +209,6 @@ export default function EventStartScreen({ navigation, route }) {
         </View>
 
         {/* Motivation */}
-        <Text style={styles.motivationQuote}>"Success is not the destination, it's the journey."</Text>
         <Text style={styles.startInfo}>Click Only When Asked To Take Start</Text>
       </ScrollView>
     </LinearGradient>

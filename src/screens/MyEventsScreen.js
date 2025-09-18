@@ -10,6 +10,7 @@ import {
   RefreshControl,
   ActivityIndicator,
   Share,
+  ScrollView,
 } from "react-native";
 import { useFocusEffect } from "@react-navigation/native";
 import LinearGradient from "react-native-linear-gradient";
@@ -25,6 +26,7 @@ export default function MyEventsScreen({ navigation }) {
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [myEvents, setMyEvents] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [activeTab, setActiveTab] = useState('current');
 
   const staticEventImages = [
     'https://images.unsplash.com/photo-1533240332313-0db49b459ad6?auto=format&fit=crop&q=80',
@@ -85,13 +87,17 @@ export default function MyEventsScreen({ navigation }) {
   };
 
   const formatDate = (dateString) => {
+    if (!dateString) return '';
     const date = new Date(dateString);
-    return date.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
+    const dayMonthYear = date.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
+    const time = date.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
+    return `${dayMonthYear}, ${time}`;
   };
 
   const getStatusColor = () => '#185a9d';
 
-  const getStatusIcon = (status) => {
+  const getStatusIcon = (status, isPastEvent) => {
+    if (isPastEvent) return '🏁';
     const normalizedStatus = status ? status.toString().toLowerCase().trim() : '';
     switch (normalizedStatus) {
       case 'upcoming':
@@ -119,9 +125,11 @@ export default function MyEventsScreen({ navigation }) {
     const eventImage = item.image || { uri: staticEventImages[0] };
     const eventName = item.event_name || 'Unknown Event';
     const eventDate = item.event_start_date || 'Date TBD';
+    const eventEndDate = item.event_end_date ? formatDate(item.event_end_date) : 'End date TBD';
     const eventVenue = item.event_venue || 'Venue TBD';
     const eventStatus = item.status || 'upcoming';
     const crewMembers = (item.crew_members || []).slice(0, 4);
+    const isPastEvent = item.event_end_date && new Date(item.event_end_date) < new Date();
 
     const onShare = async () => {
       try {
@@ -161,6 +169,14 @@ export default function MyEventsScreen({ navigation }) {
       }
     };
 
+    const handleViewResult = () => {
+      if (navigation && typeof navigation.navigate === 'function') {
+        navigation.navigate('ResultsScreen', { event: item });
+      } else {
+        alert('Navigation error: Unable to open Results Screen.');
+      }
+    };
+
     const renderChip = (children, backgroundColor) => (
       <View style={[styles.chip, backgroundColor ? { backgroundColor } : null]}>{children}</View>
     );
@@ -173,13 +189,16 @@ export default function MyEventsScreen({ navigation }) {
             <View style={styles.imageWrapper}>
               <Image source={eventImage} style={styles.eventImage} resizeMode="cover" />
               <View style={[styles.statusBadge, { backgroundColor: getStatusColor(eventStatus) }]}> 
-                <Text style={styles.statusText}>{getStatusIcon(eventStatus)} {eventStatus}</Text>
+                <Text style={styles.statusText}>
+                  {getStatusIcon(eventStatus, isPastEvent)} {isPastEvent ? 'Event Finished' : eventStatus}
+                </Text>
               </View>
             </View>
-            <View style={styles.chipRow}>
-              {renderChip(<><Text style={styles.chipIcon}>📅</Text><Text style={styles.chipText}>{eventDate}</Text></>, undefined)}
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.chipRow}>
+              {renderChip(<><Text style={styles.chipIcon}>📅</Text><Text style={styles.chipText}>{item.event_start_date ? formatDate(item.event_start_date) : 'Date TBD'}</Text></>, undefined)}
+              {renderChip(<><Text style={styles.chipIcon}>📅</Text><Text style={styles.chipText}>{item.event_end_date ? formatDate(item.event_end_date) : 'End date TBD'}</Text></>, undefined)}
               {renderChip(<><Text style={styles.chipIcon}>📍</Text><Text style={styles.chipText}>{eventVenue}</Text></>, undefined)}
-            </View>
+            </ScrollView>
           </View>
           <View style={styles.eventContent}>
             <Text style={styles.eventName} numberOfLines={2}>{eventName}</Text>
@@ -191,9 +210,15 @@ export default function MyEventsScreen({ navigation }) {
               <TouchableOpacity style={styles.featureBtn} onPress={onShare}>
                 <Text style={styles.featureBtnText}>Share Event</Text>
               </TouchableOpacity>
-              <TouchableOpacity style={styles.featureBtn} onPress={handleStartEvent}>
-                <Text style={styles.featureBtnText}>Start Event</Text>
-              </TouchableOpacity>
+              {isPastEvent ? (
+                <TouchableOpacity style={styles.featureBtn} onPress={handleViewResult}>
+                  <Text style={styles.featureBtnText}>View Result</Text>
+                </TouchableOpacity>
+              ) : (
+                <TouchableOpacity style={styles.featureBtn} onPress={handleStartEvent}>
+                  <Text style={styles.featureBtnText}>Start Event</Text>
+                </TouchableOpacity>
+              )}
             </View>
             <View style={styles.crewSection}>
               <View style={styles.crewHeader}>
@@ -278,11 +303,41 @@ export default function MyEventsScreen({ navigation }) {
           <View style={styles.statIconWrapper}><Text style={styles.statIcon}>✅</Text></View>
           <View style={styles.statInfo}>
             <Text style={styles.statNumber}>
-              {myEvents.filter(event => event.status?.toLowerCase() === 'completed').length}
+              {myEvents.filter(event => {
+                if (!event.event_end_date) return false;
+                const endDate = new Date(event.event_end_date);
+                return endDate < new Date();
+              }).length}
             </Text>
             <Text style={styles.statLabel}>Done</Text>
           </View>
         </View>
+      </View>
+
+      <View style={{flexDirection: 'row', justifyContent: 'center', alignItems: 'center', marginTop: 18, marginBottom: 10}}>
+        <TouchableOpacity
+          style={{
+            backgroundColor: activeTab === 'current' ? '#43cea2' : 'rgba(67,206,162,0.12)',
+            paddingHorizontal: 24,
+            paddingVertical: 10,
+            borderRadius: 16,
+            marginRight: 10,
+          }}
+          onPress={() => setActiveTab('current')}
+        >
+          <Text style={{color: activeTab === 'current' ? '#fff' : '#43cea2', fontWeight: '700', fontSize: 15}}>Current Events</Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={{
+            backgroundColor: activeTab === 'past' ? '#43cea2' : 'rgba(67,206,162,0.12)',
+            paddingHorizontal: 24,
+            paddingVertical: 10,
+            borderRadius: 16,
+          }}
+          onPress={() => setActiveTab('past')}
+        >
+          <Text style={{color: activeTab === 'past' ? '#fff' : '#43cea2', fontWeight: '700', fontSize: 15}}>Past Events</Text>
+        </TouchableOpacity>
       </View>
 
       {isLoading ? (
@@ -291,31 +346,57 @@ export default function MyEventsScreen({ navigation }) {
           <Text style={styles.loadingText}>Loading your events...</Text>
         </View>
       ) : (
-        <FlatList
-          data={myEvents}
-          keyExtractor={(item) => item.event_id?.toString() || item.id?.toString()}
-          refreshControl={
-            <RefreshControl
-              refreshing={isRefreshing}
-              onRefresh={onRefresh}
-              colors={['#feb47b']}
-              tintColor={'#feb47b'}
-              title="Pull to refresh..."
-              titleColor={'#feb47b'}
-            />
-          }
-          renderItem={renderEventCard}
-          contentContainerStyle={styles.listContainer}
-          showsVerticalScrollIndicator={false}
-          ListEmptyComponent={
-            <View style={styles.emptyContainer}>
-              <Text style={styles.emptyTitle}>No Events Found</Text>
-              <Text style={styles.emptySubtitle}>
-                You haven't participated in any events yet. Join exciting events to see them here!
-              </Text>
-            </View>
-          }
-        />
+        activeTab === 'current' ? (
+          <FlatList
+            data={myEvents.filter(event => {
+              if (!event.event_end_date) return true;
+              const endDate = new Date(event.event_end_date);
+              return endDate >= new Date();
+            })}
+            keyExtractor={(item) => item.event_id?.toString() || item.id?.toString()}
+            refreshControl={
+              <RefreshControl
+                refreshing={isRefreshing}
+                onRefresh={onRefresh}
+                colors={['#feb47b']}
+                tintColor={'#feb47b'}
+                title="Pull to refresh..."
+                titleColor={'#feb47b'}
+              />
+            }
+            renderItem={renderEventCard}
+            contentContainerStyle={styles.listContainer}
+            showsVerticalScrollIndicator={false}
+            ListEmptyComponent={
+              <View style={styles.emptyContainer}>
+                <Text style={styles.emptyTitle}>No Events Found</Text>
+                <Text style={styles.emptySubtitle}>
+                  You haven't participated in any events yet. Join exciting events to see them here!
+                </Text>
+              </View>
+            }
+          />
+        ) : (
+          <FlatList
+            data={myEvents.filter(event => {
+              if (!event.event_end_date) return false;
+              const endDate = new Date(event.event_end_date);
+              return endDate < new Date();
+            })}
+            keyExtractor={(item) => item.event_id?.toString() || item.id?.toString()}
+            renderItem={renderEventCard}
+            contentContainerStyle={styles.listContainer}
+            showsVerticalScrollIndicator={false}
+            ListEmptyComponent={
+              <View style={styles.emptyContainer}>
+                <Text style={styles.emptyTitle}>No Past Events Found</Text>
+                <Text style={styles.emptySubtitle}>
+                  You haven't participated in any past events yet.
+                </Text>
+              </View>
+            }
+          />
+        )
       )}
     </LinearGradient>
   );
