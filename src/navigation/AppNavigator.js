@@ -183,6 +183,7 @@ export default function AppNavigator() {
         <Stack.Screen name="My Events" component={MyEventsScreen} />
         <Stack.Screen name="EventStartScreen" component={EventStartScreen} />
         <Stack.Screen name="EventDetails" component={EventDetailsScreen} />
+        <Stack.Screen name="MapScreen" component={MapScreen} />
         <Stack.Screen name="ResultsScreen" component={ResultsScreen} />
       </Stack.Navigator>
     </NavigationContainer>

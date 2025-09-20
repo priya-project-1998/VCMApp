@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import { View, Text, StyleSheet, TouchableOpacity, Dimensions, ScrollView, Share, Alert, Modal } from "react-native";
 import LinearGradient from "react-native-linear-gradient";
 import NotificationBell from '../components/NotificationBell';
+import EventService from "../services/apiService/event_service";
 
 const { width } = Dimensions.get("window");
 
@@ -20,11 +21,20 @@ export default function EventStartScreen({ navigation, route }) {
       message: "All Good To Start."
     }
   };
+  // console.log('EventStartScreen received event:', event); // Removed for clean console
   if (event.eventId) delete event.eventId;
   if (event.participantId) delete event.participantId;
 
   const status = event?.status || { approved: false, location: false, time: false, message: "Status Unknown" };
   const flagOff = event?.flagOff ?? "";
+
+  // Extract fields from event object
+  const eventName = event.event_name || event.name || 'Event Name N/A';
+  const eventStartDate = event.event_start_date || event.date || 'Start Date N/A';
+  const eventEndDate = event.event_end_date || 'End Date N/A';
+  const eventVenue = event.event_venue || event.venue || 'Venue N/A';
+  const eventId = event.event_id || 'Event ID N/A';
+  const eventDateCombined = `${eventStartDate} - ${eventEndDate}`;
 
   // Timer logic
   const [timeLeft, setTimeLeft] = useState(0);
@@ -34,7 +44,7 @@ export default function EventStartScreen({ navigation, route }) {
   const [showStartModal, setShowStartModal] = useState(false);
 
   useEffect(() => {
-    const eventDateTime = new Date(event.date); // Only use event.date
+    const eventDateTime = eventStartDate !== 'Start Date N/A' ? new Date(eventStartDate) : new Date();
     const updateTimer = () => {
       const now = new Date();
       const diff = eventDateTime - now;
@@ -44,7 +54,7 @@ export default function EventStartScreen({ navigation, route }) {
     updateTimer();
     const interval = setInterval(updateTimer, 1000);
     return () => clearInterval(interval);
-  }, [event.date]);
+  }, [eventStartDate]);
 
   const formatTime = (ms) => {
     if (ms <= 0) return "00:00:00";
@@ -53,6 +63,22 @@ export default function EventStartScreen({ navigation, route }) {
     const minutes = String(Math.floor((totalSeconds % 3600) / 60)).padStart(2, "0");
     const seconds = String(totalSeconds % 60).padStart(2, "0");
     return `${hours}:${minutes}:${seconds}`;
+  };
+
+  const handleStartEvent = async () => {
+    setStartPressed(true);
+    setStartMessage(`Event will be start in ${formatTime(timeLeft)}`);
+    // Fetch checkpoints and kml_path for this event
+    const res = await EventService.getCheckpointsPerEvent(eventId);
+    if (res.status === 'success' && res.data) {
+      navigation.navigate('MapScreen', {
+        event_id: eventId,
+        checkpoints: res.data.checkpoints,
+        kml_path: res.data.kml_path,
+      });
+    } else {
+      Alert.alert('Error', 'Failed to fetch checkpoints. Please try again.');
+    }
   };
 
   return (
@@ -86,18 +112,18 @@ export default function EventStartScreen({ navigation, route }) {
         <Text style={styles.greetingText}>Welcome, Explorer! Ready for your next adventure?</Text>
 
         {/* Chips */}
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginVertical: 4 }} contentContainerStyle={styles.chipRow}>
-          <View style={styles.chip}><Text style={styles.chipIcon}>📅</Text><Text style={styles.chipText}>{event.date}</Text></View>
-          <View style={styles.chip}><Text style={styles.chipIcon}>📍</Text><Text style={styles.chipText}>{event.venue || "Venue TBD"}</Text></View>
+        <ScrollView horizontal={true} showsHorizontalScrollIndicator={true} style={{ marginVertical: 4, maxWidth: '100%' }} contentContainerStyle={styles.chipRow}>
+          <View style={styles.chip}><Text style={styles.chipIcon}>📅</Text><Text style={styles.chipText}>{eventDateCombined}</Text></View>
+          <View style={styles.chip}><Text style={styles.chipIcon}>📍</Text><Text style={styles.chipText}>{eventVenue}</Text></View>
         </ScrollView>
 
         {/* Event Info Card */}
         <View style={styles.glassCard}>
-          <Text style={styles.eventTitle}>{event.name}</Text>
+          <Text style={styles.eventTitle}>{eventName}</Text>
           <View style={styles.divider} />
-          <View style={styles.infoRow}><Text style={styles.detailIcon}>⏰</Text><Text style={styles.label}>Flag Off</Text><Text style={styles.value}>{event.flagOff}</Text></View>
-          <View style={styles.infoRow}><Text style={styles.detailIcon}>⏳</Text><Text style={styles.label}>Duration</Text><Text style={[styles.value, styles.danger]}>{event.duration}</Text></View>
-          <View style={styles.infoRow}><Text style={styles.detailIcon}>📍</Text><Text style={styles.label}>GPS Accuracy</Text><Text style={[styles.value, styles.success]}>{event.gpsAccuracy}</Text></View>
+          <View style={styles.infoRow}><Text style={styles.detailIcon}>⏰</Text><Text style={styles.label}>Flag Off</Text><Text style={styles.value}>{event.flagOff || 'N/A'}</Text></View>
+          <View style={styles.infoRow}><Text style={styles.detailIcon}>⏳</Text><Text style={styles.label}>Duration</Text><Text style={[styles.value, styles.danger]}>{event.duration || 'N/A'}</Text></View>
+          <View style={styles.infoRow}><Text style={styles.detailIcon}>📍</Text><Text style={styles.label}>GPS Accuracy</Text><Text style={[styles.value, styles.success]}>{event.gpsAccuracy || 'N/A'}</Text></View>
           {/* Buttons */}
           <View style={styles.featureBtnRow}>
             <TouchableOpacity style={styles.featureBtn} onPress={() => {
@@ -158,11 +184,13 @@ export default function EventStartScreen({ navigation, route }) {
           {/* Start Button */}
           <TouchableOpacity
             style={[styles.startBtnIntegrated, (!timerActive || !(status.approved && status.location && status.time)) && styles.startBtnDisabled]}
-            disabled={!timerActive || timeLeft === 0}
             onPress={() => {
-              setShowStartModal(true);
-              setStartPressed(true);
-              setStartMessage(`Event will be start in ${formatTime(timeLeft)}`);
+              handleStartEvent();
+             // if (!timerActive || !status.approved || !status.location || !status.time) {
+               // setShowStartModal(true); // Show modal if not ready
+             // } else {
+               // handleStartEvent(); // Call API only if all status and timer are ready
+             // }
             }}
           >
             <LinearGradient colors={["#43cea2", "#185a9d"]} style={styles.startBtnGradientIntegrated}>

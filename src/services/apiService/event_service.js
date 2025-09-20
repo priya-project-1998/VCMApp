@@ -174,6 +174,26 @@ class EventService {
       return new ApiResponse("error", 500, err.message || "Fetching my events failed", []);
     }
   }
+
+   // 🔹 Get checkpoints for a specific event (requires auth token)
+  async getCheckpointsPerEvent(eventId) {
+    try {
+      const response = await getRequest(
+        `${ENDPOINTS.GET_CHECKPOINTS_PER_EVENT}/${eventId}`,
+        HEADER_TYPES.AUTH // Bearer token header
+      );
+
+      if ((response.status === "success" || response.code === 200) && response.data) {
+        const kmlPath = response.data.kml_path || null;
+        const checkpoints = Array.isArray(response.data.checkpoints) ? response.data.checkpoints : [];
+        return new ApiResponse("success", response.code || 200, response.message || "Checkpoints fetched successfully", { kml_path: kmlPath, checkpoints });
+      } else {
+        return new ApiResponse("error", response.code || 500, response.message || "Failed to fetch checkpoints", { kml_path: null, checkpoints: [] });
+      }
+    } catch (err) {
+      return new ApiResponse("error", 500, err.message || "Fetching checkpoints failed", { kml_path: null, checkpoints: [] });
+    }
+  }
 }
 
 export default new EventService();

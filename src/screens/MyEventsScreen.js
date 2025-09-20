@@ -17,8 +17,6 @@ import LinearGradient from "react-native-linear-gradient";
 import EventService from "../services/apiService/event_service";
 import NotificationBell from '../components/NotificationBell';
 
-console.log('MyEventsScreen loaded');
-
 const { width } = Dimensions.get("window");
 const isSmallDevice = width < 375;
 const cardWidth = width - 30;
@@ -149,19 +147,7 @@ export default function MyEventsScreen({ navigation }) {
     const handleStartEvent = () => {
       try {
         if (navigation && typeof navigation.navigate === 'function') {
-          const mappedEvent = {
-            name: item.event_name || 'Unknown Event',
-            date: item.event_start_date || 'Date TBD',
-            venue: item.event_venue || 'Venue TBD',
-            flagOff: item.flagOff || '',
-            speedLimit: item.speedLimit || '',
-            duration: item.duration || '',
-            gpsAccuracy: item.gpsAccuracy || '',
-            status: item.status || {},
-            crew_members: item.crew_members || [],
-            event_pic: item.event_pic || '',
-          };
-          navigation.navigate('EventStartScreen', { event: mappedEvent });
+          navigation.navigate('EventStartScreen', { event: item });
         } else {
           alert('Navigation error: Unable to open Event Start Screen.');
         }

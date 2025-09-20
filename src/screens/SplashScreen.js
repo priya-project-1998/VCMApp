@@ -21,7 +21,6 @@ export default function SplashScreen({ navigation }) {
           }
         }, 1500); // Reduced splash delay to 1.5 seconds for better UX
       } catch (err) {
-        console.log("Authentication check error", err);
         navigation.replace("LoginScreen");
       }
     };

@@ -18,7 +18,8 @@ const ENDPOINTS = {
   JOIN_EVENT: "/events/join",
   
   // My Events Endpoints
-  GET_MY_EVENTS: "/events/myevents"
+  GET_MY_EVENTS: "/events/myevents",
+  GET_CHECKPOINTS_PER_EVENT: "/events/checkpoints/"
 };
 
 export default ENDPOINTS;

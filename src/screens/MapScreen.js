@@ -28,209 +28,15 @@ const MapScreen = ({ route }) => {
   const [lastUserLocation, setLastUserLocation] = useState(null);
   const [userCoords, setUserCoords] = useState(null);
 
-  // ✅ API se aane wala checkpoints data (route se pass karo)
-  const { checkpoints: paramCheckpoints } = route.params || {};
+  // Get checkpoints from route.params (API response)
+  const { checkpoints: paramCheckpoints, event_id, kml_path } = route.params || {};
+  // Use paramCheckpoints only (no static fallback)
+  const checkpoints = Array.isArray(paramCheckpoints) ? paramCheckpoints : [];
 
-  const sampleCheckpoints = [
-    {
-      checkpoint_id: "1",
-      event_id: "1",
-      category_id: "1",
-      checkpoint_name: "Random Soft Solution",
-      checkpoint_point: "0.00000000",
-      latitude: "22.68107300",
-      longitude: "75.85340200",
-      sequence_number: "1",
-      description: "",
-    },
-    {
-      checkpoint_id: "151",
-      event_id: "1",
-      category_id: "0",
-      checkpoint_name: "Random Soft Solution",
-      checkpoint_point: "0.00000000",
-      latitude: "22.68107300",
-      longitude: "75.85340200",
-      sequence_number: "1",
-      description: "",
-    },
-    {
-      checkpoint_id: "2",
-      event_id: "1",
-      category_id: "1",
-      checkpoint_name: "Check Point 2",
-      checkpoint_point: "0.00000000",
-      latitude: "22.68004350",
-      longitude: "75.85217730",
-      sequence_number: "2",
-      description: "2000",
-    },
-    {
-      checkpoint_id: "152",
-      event_id: "1",
-      category_id: "0",
-      checkpoint_name: "Check Point 2",
-      checkpoint_point: "0.00000000",
-      latitude: "22.68004350",
-      longitude: "75.85217730",
-      sequence_number: "2",
-      description: "2000",
-    },
-    {
-      checkpoint_id: "3",
-      event_id: "1",
-      category_id: "1",
-      checkpoint_name: "Check Point 2",
-      checkpoint_point: "0.00000000",
-      latitude: "22.67711630",
-      longitude: "75.84901230",
-      sequence_number: "3",
-      description: "100",
-    },
-    {
-      checkpoint_id: "153",
-      event_id: "1",
-      category_id: "0",
-      checkpoint_name: "Check Point 2",
-      checkpoint_point: "0.00000000",
-      latitude: "22.67711630",
-      longitude: "75.84901230",
-      sequence_number: "3",
-      description: "100",
-    },
-    {
-      checkpoint_id: "4",
-      event_id: "1",
-      category_id: "1",
-      checkpoint_name: "Check Point 3",
-      checkpoint_point: "0.00000000",
-      latitude: "22.67535720",
-      longitude: "75.84499920",
-      sequence_number: "4",
-      description: "1200",
-    },
-    {
-      checkpoint_id: "154",
-      event_id: "1",
-      category_id: "0",
-      checkpoint_name: "Check Point 3",
-      checkpoint_point: "0.00000000",
-      latitude: "22.67535720",
-      longitude: "75.84499920",
-      sequence_number: "4",
-      description: "1200",
-    },
-    {
-      checkpoint_id: "5",
-      event_id: "1",
-      category_id: "1",
-      checkpoint_name: "Check Point 4",
-      checkpoint_point: "0.00000000",
-      latitude: "22.67251080",
-      longitude: "75.83768150",
-      sequence_number: "5",
-      description: "300",
-    },
-    {
-      checkpoint_id: "155",
-      event_id: "1",
-      category_id: "0",
-      checkpoint_name: "Check Point 4",
-      checkpoint_point: "0.00000000",
-      latitude: "22.67251080",
-      longitude: "75.83768150",
-      sequence_number: "5",
-      description: "300",
-    },
-    {
-      checkpoint_id: "6",
-      event_id: "1",
-      category_id: "1",
-      checkpoint_name: "Check Point 4",
-      checkpoint_point: "0.00000000",
-      latitude: "22.67074590",
-      longitude: "75.83421080",
-      sequence_number: "6",
-      description: "800",
-    },
-    {
-      checkpoint_id: "156",
-      event_id: "1",
-      category_id: "0",
-      checkpoint_name: "Check Point 4",
-      checkpoint_point: "0.00000000",
-      latitude: "22.67074590",
-      longitude: "75.83421080",
-      sequence_number: "6",
-      description: "800",
-    },
-    {
-      checkpoint_id: "7",
-      event_id: "1",
-      category_id: "1",
-      checkpoint_name: "Check Point 5",
-      checkpoint_point: "0.00000000",
-      latitude: "22.66803250",
-      longitude: "75.83320220",
-      sequence_number: "7",
-      description: "200",
-    },
-    {
-      checkpoint_id: "157",
-      event_id: "1",
-      category_id: "0",
-      checkpoint_name: "Check Point 5",
-      checkpoint_point: "0.00000000",
-      latitude: "22.66803250",
-      longitude: "75.83320220",
-      sequence_number: "7",
-      description: "200",
-    },
-    {
-      checkpoint_id: "8",
-      event_id: "1",
-      category_id: "1",
-      checkpoint_name: "Check Point 6",
-      checkpoint_point: "0.00000000",
-      latitude: "22.66464480",
-      longitude: "75.83377240",
-      sequence_number: "8",
-      description: "500",
-    },
-    {
-      checkpoint_id: "158",
-      event_id: "1",
-      category_id: "0",
-      checkpoint_name: "Check Point 6",
-      checkpoint_point: "0.00000000",
-      latitude: "22.66464480",
-      longitude: "75.83377240",
-      sequence_number: "8",
-      description: "500",
-    },
-    {
-      checkpoint_id: "9",
-      event_id: "1",
-      category_id: "1",
-      checkpoint_name: "Finish",
-      checkpoint_point: "0.00000000",
-      latitude: "22.66181750",
-      longitude: "75.83376160",
-      sequence_number: "9",
-      description: "1000",
-    },
-    {
-      checkpoint_id: "159",
-      event_id: "1",
-      category_id: "0",
-      checkpoint_name: "Finish",
-      checkpoint_point: "0.00000000",
-      latitude: "22.66181750",
-      longitude: "75.83376160",
-      sequence_number: "9",
-      description: "1000",
-    },
-  ];
+  // Debug logs for all received data
+  // console.log('MapScreen event_id:', event_id);
+  // console.log('MapScreen kml_path:', kml_path);
+  // console.log('MapScreen checkpoints:', checkpoints);
 
   // ✅ Table create
   useEffect(() => {
@@ -264,7 +70,7 @@ const MapScreen = ({ route }) => {
               } catch (jsonErr) {
                 console.log("JSON parse error", jsonErr);
               }
-              console.log("Sync response:", data);
+              // console.log("Sync response:", data);
 
               if (data && data.status === "success") {
                 markSynced(item.id);
@@ -376,7 +182,33 @@ const MapScreen = ({ route }) => {
     return d;
   };
 
-  const checkpoints = paramCheckpoints || sampleCheckpoints;
+  // Utility to get bounding region for all checkpoints
+  const getBoundingRegion = (points) => {
+    if (!points.length) return {
+      latitude: 0,
+      longitude: 0,
+      latitudeDelta: 0.05,
+      longitudeDelta: 0.05,
+    };
+    let minLat = parseFloat(points[0].latitude);
+    let maxLat = parseFloat(points[0].latitude);
+    let minLng = parseFloat(points[0].longitude);
+    let maxLng = parseFloat(points[0].longitude);
+    points.forEach((cp) => {
+      const lat = parseFloat(cp.latitude);
+      const lng = parseFloat(cp.longitude);
+      if (lat < minLat) minLat = lat;
+      if (lat > maxLat) maxLat = lat;
+      if (lng < minLng) minLng = lng;
+      if (lng > maxLng) maxLng = lng;
+    });
+    return {
+      latitude: (minLat + maxLat) / 2,
+      longitude: (minLng + maxLng) / 2,
+      latitudeDelta: Math.max(0.01, (maxLat - minLat) * 1.5),
+      longitudeDelta: Math.max(0.01, (maxLng - minLng) * 1.5),
+    };
+  };
 
   return (
     <View style={styles.container}>
@@ -384,18 +216,7 @@ const MapScreen = ({ route }) => {
         ref={mapRef}
         provider={PROVIDER_GOOGLE}
         style={styles.map}
-        initialRegion={{
-          latitude:
-            checkpoints.length > 0
-              ? parseFloat(checkpoints[0].latitude)
-              : 0,
-          longitude:
-            checkpoints.length > 0
-              ? parseFloat(checkpoints[0].longitude)
-              : 0,
-          latitudeDelta: 0.05,
-          longitudeDelta: 0.05,
-        }}
+        initialRegion={getBoundingRegion(checkpoints)}
         showsUserLocation={true}
         showsMyLocationButton={true}
         showsCompass={true}
@@ -414,7 +235,7 @@ const MapScreen = ({ route }) => {
           }
         }}
       >
-        {checkpoints.map((cp) => (
+        {checkpoints.map((cp, idx) => (
           <Marker
             key={cp.checkpoint_id}
             coordinate={{

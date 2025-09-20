@@ -78,7 +78,6 @@ export default function SignupScreen({ navigation }) {
       setLoading(true);
       const payload = { name, username, email, password, contact: mobile, address, city, state, pincode };
       const response = await SignupService.registerUser(payload);
-      console.log('show me resonse',response);
       setLoading(false);
 
       if (response.status === "success") {

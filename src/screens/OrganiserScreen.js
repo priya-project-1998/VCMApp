@@ -244,13 +244,6 @@ const JoinEventForm = ({ event, onClose }) => {
         return;
       }
       
-      // Debug: Log the data being sent
-      console.log("=== JOIN EVENT DEBUG ===");
-      console.log("Event ID:", event?.id);
-      console.log("Form Data:", formData);
-      console.log("Cleaned Data:", cleanedData);
-      console.log("API Endpoint: /events/join");
-      
       const response = await EventService.joinEvent(cleanedData);
       
       // Debug: Log the response
@@ -488,12 +481,6 @@ const OrganiserScreen = ({ navigation, route }) => {
     setLoading(true);
     try {
       const res = await EventService.getEvents();
-      
-      console.log("=== OrganiserScreen Events API Response ===");
-      console.log("Response:", res);
-      console.log("Response Status:", res.status);
-      console.log("Response Data:", res.data);
-      console.log("Response Code:", res.code);
       
       // Check multiple possible response structures
       let eventsArray = [];
