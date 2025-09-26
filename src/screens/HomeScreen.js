@@ -16,6 +16,7 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import BannerService from "../services/apiService/banner_service";
 import EventService from "../services/apiService/event_service";
 import { formatEventStartEndDateTime } from "../utils/helpers";
+import { isEventActive } from "../utils/eventFilter";
 
 const { width, height } = Dimensions.get("window");
 const isSmallDevice = width < 375; // For iPhone SE and similar small devices
@@ -106,40 +107,28 @@ export default function Dashboard({ navigation }) {
         return;
       }
       const response = await EventService.getEvents();
+      let eventsArray = [];
       if (response.status === "success" && response.data && Array.isArray(response.data)) {
-        const eventsWithImages = response.data.map((event) => ({
-          ...event,
-          image: event.event_pic 
-            ? { uri: `https://e-pickup.randomsoftsolution.in/${event.event_pic}` }
-            : null,
-        })).filter(e => e.image); // Only events with images
-        setEvents(eventsWithImages);
+        eventsArray = response.data;
       } else if (response.status === "success" && response.data && response.data.events && Array.isArray(response.data.events)) {
-        const eventsWithImages = response.data.events.map((event) => ({
-          ...event,
-          image: event.event_pic 
-            ? { uri: `https://e-pickup.randomsoftsolution.in/${event.event_pic}` }
-            : null,
-        })).filter(e => e.image);
-        setEvents(eventsWithImages);
+        eventsArray = response.data.events;
       } else if (response.code === 200 && response.data) {
-        let eventsArray = [];
         if (Array.isArray(response.data)) {
           eventsArray = response.data;
         } else if (response.data.events && Array.isArray(response.data.events)) {
           eventsArray = response.data.events;
         }
-        if (eventsArray.length > 0) {
-          const eventsWithImages = eventsArray.map((event) => ({
+      }
+      if (eventsArray.length > 0) {
+        const eventsWithImages = eventsArray
+          .map((event) => ({
             ...event,
             image: event.event_pic 
               ? { uri: `https://e-pickup.randomsoftsolution.in/${event.event_pic}` }
               : null,
-          })).filter(e => e.image);
-          setEvents(eventsWithImages);
-        } else {
-          setEvents([]); // No fallback
-        }
+          }))
+          .filter(e => e.image && isEventActive(e.event_end_date)); // Only events with images and not ended
+        setEvents(eventsWithImages);
       } else {
         setEvents([]); // No fallback
       }

@@ -651,7 +651,6 @@ const OrganiserScreen = ({ navigation, route }) => {
             <View style={styles.headerTitleContainer}>
               <View style={styles.titleAccent} />
               <Text style={styles.headerTitle}>Event Management</Text>
-              <NotificationBell onPress={() => navigation.navigate('Notifications')} style={{ marginLeft: 12 }} />
             </View>
             <View style={styles.headerRow}>
               <View style={styles.headerLeft}>
