@@ -30,6 +30,8 @@ const MapScreen = ({ route }) => {
   const [mapType, setMapType] = useState("standard"); // For Center Map dropdown
   const [centerDropdownVisible, setCenterDropdownVisible] = useState(false);
   const [actionDropdownVisible, setActionDropdownVisible] = useState(false);
+  const [elapsedSeconds, setElapsedSeconds] = useState(2 * 60 * 60); // 2 hours in seconds
+  const [currentSpeed, setCurrentSpeed] = useState(0);
 
   // Get checkpoints from route.params (API response)
   const { checkpoints: paramCheckpoints, event_id, kml_path } = route.params || {};
@@ -253,8 +255,46 @@ const MapScreen = ({ route }) => {
     }
   };
 
+  // Countdown timer effect
+  useEffect(() => {
+    if (elapsedSeconds <= 0) return;
+    const timer = setInterval(() => {
+      setElapsedSeconds((prev) => (prev > 0 ? prev - 1 : 0));
+    }, 1000);
+    return () => clearInterval(timer);
+  }, [elapsedSeconds]);
+
+  // Format seconds to HH:MM:SS
+  const formatTime = (secs) => {
+    const h = String(Math.floor(secs / 3600)).padStart(2, '0');
+    const m = String(Math.floor((secs % 3600) / 60)).padStart(2, '0');
+    const s = String(secs % 60).padStart(2, '0');
+    return `${h}:${m}:${s}`;
+  };
+
+  // Update speed on user location change
+  const handleUserLocationChange = (e) => {
+    try {
+      const { latitude, longitude, speed } = e.nativeEvent.coordinate;
+      setLastUserLocation({ latitude, longitude });
+      checkProximityToCheckpoints(latitude, longitude);
+      if (typeof speed === 'number' && !isNaN(speed)) {
+        // speed in m/s, convert to km/h
+        setCurrentSpeed(Math.round(speed * 3.6));
+      }
+    } catch (err) {
+      // ignore
+    }
+  };
+
   return (
     <View style={styles.container}>
+      {/* Top Left Info Bar */}
+      <View style={styles.infoBar}>
+        <Text style={styles.infoText}>Time Elapsed: {formatTime(elapsedSeconds)}</Text>
+        <Text style={styles.infoText}>Checkpoint: {checkpoints.length}</Text>
+        <Text style={styles.infoText}>Speed Limit: {currentSpeed}/60</Text>
+      </View>
       <MapView
         ref={mapRef}
         provider={PROVIDER_GOOGLE}
@@ -269,15 +309,7 @@ const MapScreen = ({ route }) => {
         scrollEnabled={true}
         pitchEnabled={true}
         rotateEnabled={true}
-        onUserLocationChange={(e) => {
-          try {
-            const { latitude, longitude } = e.nativeEvent.coordinate;
-            setLastUserLocation({ latitude, longitude });
-            checkProximityToCheckpoints(latitude, longitude);
-          } catch (err) {
-            // ignore
-          }
-        }}
+        onUserLocationChange={handleUserLocationChange}
       >
         {checkpoints.map((cp, idx) => (
           <Marker
@@ -429,6 +461,29 @@ const styles = StyleSheet.create({
     fontSize: 15,
     color: "#185a9d",
     fontWeight: "600",
+  },
+  infoBar: {
+    position: 'absolute',
+    top: 18,
+    left: 10,
+    backgroundColor: 'rgba(255,255,255,0.92)',
+    borderRadius: 12,
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+    flexDirection: 'column',
+    alignItems: 'flex-start',
+    zIndex: 30,
+    elevation: 8,
+    shadowColor: '#000',
+    shadowOpacity: 0.10,
+    shadowOffset: { width: 0, height: 2 },
+    shadowRadius: 4,
+  },
+  infoText: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: '#185a9d',
+    marginBottom: 2,
   },
 });
 
