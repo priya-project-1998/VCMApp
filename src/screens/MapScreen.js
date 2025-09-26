@@ -8,6 +8,8 @@ import {
   PermissionsAndroid,
   Platform,
   Alert,
+  Modal,
+  ScrollView,
 } from "react-native";
 import MapView, { PROVIDER_GOOGLE, Marker } from "react-native-maps";
 import Geolocation from "@react-native-community/geolocation";
@@ -32,6 +34,7 @@ const MapScreen = ({ route }) => {
   const [actionDropdownVisible, setActionDropdownVisible] = useState(false);
   const [elapsedSeconds, setElapsedSeconds] = useState(2 * 60 * 60); // 2 hours in seconds
   const [currentSpeed, setCurrentSpeed] = useState(0);
+  const [modalVisible, setModalVisible] = useState(false);
 
   // Get checkpoints from route.params (API response)
   const { checkpoints: paramCheckpoints, event_id, kml_path } = route.params || {};
@@ -301,7 +304,6 @@ const MapScreen = ({ route }) => {
         style={styles.map}
         initialRegion={getBoundingRegion(checkpoints)}
         mapType={mapType}
-        showsUserLocation={true}
         showsMyLocationButton={true}
         showsCompass={true}
         showsScale={true}
@@ -329,7 +331,7 @@ const MapScreen = ({ route }) => {
         {/* Time Stamps Button */}
         <TouchableOpacity
           style={styles.menuBtn}
-          onPress={() => Alert.alert("Time Stamps", "Show time stamps.")}
+          onPress={() => setModalVisible(true)}
         >
           <Text style={styles.menuBtnText}>Time Stamps</Text>
         </TouchableOpacity>
@@ -384,12 +386,50 @@ const MapScreen = ({ route }) => {
         </View>
       </View>
 
-      {/* <TouchableOpacity
+      {/* Checklist Details Modal */}
+      <Modal
+        visible={modalVisible}
+        animationType="slide"
+        transparent={true}
+        onRequestClose={() => setModalVisible(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <Text style={styles.modalTitle}>Checklist Details</Text>
+            {/* Header Row */}
+            <View style={styles.modalHeaderRow}>
+              <Text style={[styles.modalHeaderCell, styles.modalHeaderCellLeft]}>Sr.</Text>
+              <Text style={[styles.modalHeaderCell, styles.modalHeaderCellCenter]}>Checkpoint</Text>
+              <Text style={[styles.modalHeaderCell, styles.modalHeaderCellRight]}>Time</Text>
+            </View>
+            <ScrollView style={{ maxHeight: 350, width: '100%' }}>
+              {checkpoints.map((cp, idx) => (
+                <View
+                  key={cp.checkpoint_id || idx}
+                  style={[styles.modalRow, idx % 2 === 0 ? styles.modalRowEven : styles.modalRowOdd]}
+                >
+                  <Text style={[styles.modalCell, styles.modalCellLeft]}>{idx + 1}</Text>
+                  <Text style={[styles.modalCell, styles.modalCellCenter]}>{cp.checkpoint_name || `Checkpoint ${idx + 1}`}</Text>
+                  <Text style={[styles.modalCell, styles.modalCellRight]}>{new Date().toLocaleTimeString()}</Text>
+                </View>
+              ))}
+            </ScrollView>
+            <View style={styles.modalDivider} />
+            <TouchableOpacity style={styles.closeBtn} onPress={() => setModalVisible(false)}>
+              <Text style={styles.closeBtnText}>Close</Text>
+            </TouchableOpacity>
+            <Text style={styles.totalCountText}>Total Checkpoints: {checkpoints.length}</Text>
+          </View>
+        </View>
+      </Modal>
+
+      {/* My Location Button - bottom right */}
+      <TouchableOpacity
         style={styles.locationButton}
         onPress={getCurrentLocation}
       >
-        <Text style={styles.buttonText}>Get My Location</Text>
-      </TouchableOpacity> */}
+        <Text style={styles.buttonText}>My Location</Text>
+      </TouchableOpacity>
     </View>
   );
 };
@@ -399,8 +439,8 @@ const styles = StyleSheet.create({
   map: { width: width, height: height },
   locationButton: {
     position: "absolute",
-    bottom: 25,
-    right: 25,
+    bottom: 5,
+    right: 5,
     backgroundColor: "#2196F3",
     paddingVertical: 16,
     paddingHorizontal: 28,
@@ -411,11 +451,11 @@ const styles = StyleSheet.create({
   buttonText: { color: "#fff", fontWeight: "bold", fontSize: 16 },
   floatingMenu: {
     position: "absolute",
-    top: 60,
-    right: 0, // moved further right
+    top: 10, // move to top
+    right: 0, // move to right
     flexDirection: "column",
     alignItems: "flex-end",
-    zIndex: 20,
+    zIndex: 30, // ensure above other elements
   },
   menuBtn: {
     backgroundColor: "#2196F3",
@@ -464,9 +504,9 @@ const styles = StyleSheet.create({
   },
   infoBar: {
     position: 'absolute',
-    top: 18,
-    left: 10,
-    backgroundColor: 'rgba(255,255,255,0.92)',
+    top: 10,
+    left: 5,
+    backgroundColor: 'rgba(255,255,255,0.5)', // more transparent
     borderRadius: 12,
     paddingVertical: 8,
     paddingHorizontal: 16,
@@ -484,6 +524,118 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: '#185a9d',
     marginBottom: 2,
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.35)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    zIndex: 100,
+  },
+  modalContent: {
+    backgroundColor: '#fff',
+    borderRadius: 16,
+    padding: 20,
+    width: '85%',
+    elevation: 10,
+    shadowColor: '#000',
+    shadowOpacity: 0.18,
+    shadowOffset: { width: 0, height: 2 },
+    shadowRadius: 8,
+    alignItems: 'center',
+  },
+  modalHeaderRow: {
+    flexDirection: 'row',
+    backgroundColor: '#e3f2fd',
+    borderRadius: 8,
+    paddingVertical: 8,
+    marginBottom: 2,
+    width: '100%',
+  },
+  modalHeaderCell: {
+    width: '33%',
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#185a9d',
+    textAlign: 'center',
+  },
+  modalHeaderCellLeft: {
+    textAlign: 'left',
+    paddingLeft: 8,
+  },
+  modalHeaderCellCenter: {
+    textAlign: 'center',
+  },
+  modalHeaderCellRight: {
+    textAlign: 'right',
+    paddingRight: 8,
+  },
+  modalRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 10,
+    paddingHorizontal: 2,
+    borderRadius: 8,
+    marginBottom: 2,
+    width: '100%',
+  },
+  modalRowEven: {
+    backgroundColor: '#f7fbff',
+  },
+  modalRowOdd: {
+    backgroundColor: '#e9f5fe',
+  },
+  modalCell: {
+    width: '33%',
+    fontSize: 15,
+    color: '#333',
+    textAlign: 'center',
+    paddingVertical: 2,
+  },
+  modalCellLeft: {
+    textAlign: 'left',
+    paddingLeft: 8,
+  },
+  modalCellCenter: {
+    textAlign: 'center',
+  },
+  modalCellRight: {
+    textAlign: 'right',
+    paddingRight: 8,
+  },
+  modalDivider: {
+    height: 1,
+    backgroundColor: '#b3c6e0',
+    width: '100%',
+    marginVertical: 12,
+    borderRadius: 2,
+  },
+  modalTitle: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    color: '#185a9d',
+    marginBottom: 18,
+    textAlign: 'center',
+  },
+  closeBtn: {
+    marginTop: 18,
+    backgroundColor: '#2196F3',
+    paddingVertical: 10,
+    paddingHorizontal: 28,
+    borderRadius: 22,
+  },
+  closeBtnText: {
+    color: '#fff',
+    fontWeight: 'bold',
+    fontSize: 16,
+  },
+  totalCountText: {
+    marginTop: 10,
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#185a9d',
+    textAlign: 'center',
   },
 });
 
