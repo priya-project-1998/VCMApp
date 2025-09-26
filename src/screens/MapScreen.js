@@ -27,6 +27,9 @@ const MapScreen = ({ route }) => {
   const mapRef = useRef(null);
   const [lastUserLocation, setLastUserLocation] = useState(null);
   const [userCoords, setUserCoords] = useState(null);
+  const [mapType, setMapType] = useState("standard"); // For Center Map dropdown
+  const [centerDropdownVisible, setCenterDropdownVisible] = useState(false);
+  const [actionDropdownVisible, setActionDropdownVisible] = useState(false);
 
   // Get checkpoints from route.params (API response)
   const { checkpoints: paramCheckpoints, event_id, kml_path } = route.params || {};
@@ -184,12 +187,13 @@ const MapScreen = ({ route }) => {
 
   // Utility to get bounding region for all checkpoints
   const getBoundingRegion = (points) => {
-    if (!points.length) return {
-      latitude: 0,
-      longitude: 0,
-      latitudeDelta: 0.05,
-      longitudeDelta: 0.05,
-    };
+    if (!points.length)
+      return {
+        latitude: 0,
+        longitude: 0,
+        latitudeDelta: 0.05,
+        longitudeDelta: 0.05,
+      };
     let minLat = parseFloat(points[0].latitude);
     let maxLat = parseFloat(points[0].latitude);
     let minLng = parseFloat(points[0].longitude);
@@ -210,6 +214,45 @@ const MapScreen = ({ route }) => {
     };
   };
 
+  const centerMapOptions = [
+    { key: "standard", label: "Normal View" },
+    { key: "satellite", label: "Satellite View" },
+    { key: "hybrid", label: "Hybrid View" },
+    { key: "terrain", label: "Terrain View", androidOnly: true },
+  ];
+
+  // Handler for Center Map type change
+  const handleMapTypeChange = (type) => {
+    if (type === "terrain" && Platform.OS !== "android") {
+      Alert.alert("Not Supported", "Terrain view is only available on Android.");
+      setCenterDropdownVisible(false);
+      return;
+    }
+    setMapType(type);
+    setCenterDropdownVisible(false);
+  };
+
+  // Handler for Action Menu actions
+  const handleActionMenu = (action) => {
+    setActionDropdownVisible(false);
+    switch (action) {
+      case "Map Layer":
+        Alert.alert("Map Layer", "Map Layer option selected.");
+        break;
+      case "Distance Tool":
+        Alert.alert("Distance Tool", "Distance Tool option selected.");
+        break;
+      case "Abort Event":
+        Alert.alert("Abort Event", "Event aborted.");
+        break;
+      case "Call Organizer":
+        Alert.alert("Call Organizer", "Calling organizer...");
+        break;
+      default:
+        break;
+    }
+  };
+
   return (
     <View style={styles.container}>
       <MapView
@@ -217,6 +260,7 @@ const MapScreen = ({ route }) => {
         provider={PROVIDER_GOOGLE}
         style={styles.map}
         initialRegion={getBoundingRegion(checkpoints)}
+        mapType={mapType}
         showsUserLocation={true}
         showsMyLocationButton={true}
         showsCompass={true}
@@ -248,6 +292,66 @@ const MapScreen = ({ route }) => {
         ))}
       </MapView>
 
+      {/* Floating Menu */}
+      <View style={styles.floatingMenu}>
+        {/* Time Stamps Button */}
+        <TouchableOpacity
+          style={styles.menuBtn}
+          onPress={() => Alert.alert("Time Stamps", "Show time stamps.")}
+        >
+          <Text style={styles.menuBtnText}>Time Stamps</Text>
+        </TouchableOpacity>
+
+        {/* Center Map Dropdown */}
+        <View style={styles.dropdownContainer}>
+          <TouchableOpacity
+            style={styles.menuBtn}
+            onPress={() => setCenterDropdownVisible(!centerDropdownVisible)}
+          >
+            <Text style={styles.menuBtnText}>Center Map ▾</Text>
+          </TouchableOpacity>
+          {centerDropdownVisible && (
+            <View style={styles.dropdownMenu}>
+              {centerMapOptions.map((opt) => (
+                <TouchableOpacity
+                  key={opt.key}
+                  style={[styles.dropdownItem, opt.androidOnly && Platform.OS !== "android" && { opacity: 0.5 }]} 
+                  onPress={() => !opt.androidOnly || Platform.OS === "android" ? handleMapTypeChange(opt.key) : null}
+                  disabled={opt.androidOnly && Platform.OS !== "android"}
+                >
+                  <Text style={styles.dropdownItemText}>
+                    {opt.label + (mapType === opt.key ? " ✓" : "")}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+          )}
+        </View>
+
+        {/* Action Menu Dropdown */}
+        <View style={styles.dropdownContainer}>
+          <TouchableOpacity
+            style={styles.menuBtn}
+            onPress={() => setActionDropdownVisible(!actionDropdownVisible)}
+          >
+            <Text style={styles.menuBtnText}>Action Menu ▾</Text>
+          </TouchableOpacity>
+          {actionDropdownVisible && (
+            <View style={styles.dropdownMenu}>
+              {["Map Layer", "Distance Tool", "Abort Event", "Call Organizer"].map((action) => (
+                <TouchableOpacity
+                  key={action}
+                  style={styles.dropdownItem}
+                  onPress={() => handleActionMenu(action)}
+                >
+                  <Text style={styles.dropdownItemText}>{action}</Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+          )}
+        </View>
+      </View>
+
       <TouchableOpacity
         style={styles.locationButton}
         onPress={getCurrentLocation}
@@ -273,6 +377,58 @@ const styles = StyleSheet.create({
     zIndex: 10,
   },
   buttonText: { color: "#fff", fontWeight: "bold", fontSize: 16 },
+  floatingMenu: {
+    position: "absolute",
+    top: 60,
+    right: 25,
+    flexDirection: "column",
+    alignItems: "flex-end",
+    zIndex: 20,
+  },
+  menuBtn: {
+    backgroundColor: "#2196F3",
+    paddingVertical: 8,
+    paddingHorizontal: 18,
+    borderRadius: 18,
+    marginBottom: 10,
+    elevation: 4,
+    shadowColor: "#000",
+    shadowOpacity: 0.12,
+    shadowOffset: { width: 0, height: 2 },
+    shadowRadius: 4,
+  },
+  menuBtnText: {
+    color: "#fff",
+    fontWeight: "bold",
+    fontSize: 15,
+  },
+  dropdownContainer: {
+    width: "100%",
+    alignItems: "flex-end",
+  },
+  dropdownMenu: {
+    backgroundColor: "#fff",
+    borderRadius: 12,
+    paddingVertical: 6,
+    paddingHorizontal: 10,
+    marginTop: 2,
+    marginBottom: 8,
+    elevation: 6,
+    shadowColor: "#2196F3",
+    shadowOpacity: 0.18,
+    shadowOffset: { width: 0, height: 2 },
+    shadowRadius: 6,
+    minWidth: 140,
+  },
+  dropdownItem: {
+    paddingVertical: 8,
+    paddingHorizontal: 6,
+  },
+  dropdownItemText: {
+    fontSize: 15,
+    color: "#185a9d",
+    fontWeight: "600",
+  },
 });
 
 export default MapScreen;
