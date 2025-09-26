@@ -352,12 +352,12 @@ const MapScreen = ({ route }) => {
         </View>
       </View>
 
-      <TouchableOpacity
+      {/* <TouchableOpacity
         style={styles.locationButton}
         onPress={getCurrentLocation}
       >
         <Text style={styles.buttonText}>Get My Location</Text>
-      </TouchableOpacity>
+      </TouchableOpacity> */}
     </View>
   );
 };
@@ -380,7 +380,7 @@ const styles = StyleSheet.create({
   floatingMenu: {
     position: "absolute",
     top: 60,
-    right: 25,
+    right: 0, // moved further right
     flexDirection: "column",
     alignItems: "flex-end",
     zIndex: 20,
@@ -396,6 +396,7 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.12,
     shadowOffset: { width: 0, height: 2 },
     shadowRadius: 4,
+    marginRight: 8, // added margin from right
   },
   menuBtnText: {
     color: "#fff",
