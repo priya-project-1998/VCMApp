@@ -37,6 +37,9 @@ const MapScreen = ({ route, navigation }) => {
   const [currentSpeed, setCurrentSpeed] = useState(0);
   const [modalVisible, setModalVisible] = useState(false);
   const [userRoute, setUserRoute] = useState([]); // Track user route
+  const [checkpointStatus, setCheckpointStatus] = useState({}); // { checkpoint_id: { time, completed } }
+  const [selectedCheckpointId, setSelectedCheckpointId] = useState(null); // For testing button
+  const [eventCompletedModal, setEventCompletedModal] = useState(false);
 
   // Get checkpoints from route.params (API response)
   const { checkpoints: paramCheckpoints, event_id, kml_path } = route.params || {};
@@ -161,13 +164,19 @@ const MapScreen = ({ route, navigation }) => {
         parseFloat(cp.latitude),
         parseFloat(cp.longitude)
       );
-      if (distance < 10) { // Changed from 50 to 10 meters
-        console.log(`✅ Reached checkpoint: ${cp.checkpoint_name}`);
-        saveCheckpoint({
-          event_id: cp.event_id,
-          category_id: cp.category_id,
-          checkpoint_id: cp.checkpoint_id,
-        });
+      if (distance < 10) {
+        if (!checkpointStatus[cp.checkpoint_id]?.completed) {
+          const reachedTime = new Date().toLocaleTimeString();
+          setCheckpointStatus((prev) => ({
+            ...prev,
+            [cp.checkpoint_id]: { time: reachedTime, completed: true },
+          }));
+          saveCheckpoint({
+            event_id: cp.event_id,
+            category_id: cp.category_id,
+            checkpoint_id: cp.checkpoint_id,
+          });
+        }
       }
     });
   };
@@ -319,6 +328,16 @@ const MapScreen = ({ route, navigation }) => {
     return () => BackHandler.removeEventListener("hardwareBackPress", onBackPress);
   }, []);
 
+  // Check if all checkpoints are completed
+  useEffect(() => {
+    if (
+      checkpoints.length > 0 &&
+      checkpoints.every(cp => checkpointStatus[cp.checkpoint_id]?.completed)
+    ) {
+      setEventCompletedModal(true);
+    }
+  }, [checkpointStatus, checkpoints]);
+
   return (
     <View style={styles.container}>
       {/* Top Left Info Bar */}
@@ -343,7 +362,7 @@ const MapScreen = ({ route, navigation }) => {
         onUserLocationChange={handleUserLocationChange}
       >
         {/* Show user route as blue polyline */}
-        {userRoute.length > 1 && (
+        {userRoute && userRoute.length > 1 && (
           <MapView.Polyline
             coordinates={userRoute}
             strokeColor="#185a9d"
@@ -358,11 +377,26 @@ const MapScreen = ({ route, navigation }) => {
               longitude: parseFloat(cp.longitude),
             }}
             title={cp.checkpoint_name}
-            description={`Seq: ${cp.sequence_number}`}
+            onPress={() => setSelectedCheckpointId(cp.checkpoint_id)}
           />
         ))}
       </MapView>
-
+      {/* TEST BUTTON: Mark selected checkpoint as completed */}
+      {selectedCheckpointId && (
+        <TouchableOpacity
+          style={{ position: 'absolute', bottom: 20, right: 20, backgroundColor: '#4caf50', padding: 14, borderRadius: 28, zIndex: 100, elevation: 8 }}
+          onPress={() => {
+            const reachedTime = new Date().toLocaleTimeString();
+            setCheckpointStatus((prev) => ({
+              ...prev,
+              [selectedCheckpointId]: { time: reachedTime, completed: true },
+            }));
+            setSelectedCheckpointId(null);
+          }}
+        >
+          <Text style={{ color: '#fff', fontWeight: 'bold', fontSize: 16 }}>Mark as Completed (Test)</Text>
+        </TouchableOpacity>
+      )}
       {/* Floating Menu */}
       <View style={styles.floatingMenu}>
         {/* Time Stamps Button */}
@@ -441,23 +475,54 @@ const MapScreen = ({ route, navigation }) => {
               <Text style={[styles.modalHeaderCell, styles.modalHeaderCellRight]}>Status</Text>
             </View>
             <ScrollView style={{ maxHeight: 350, width: '100%' }}>
-              {checkpoints.map((cp, idx) => (
-                <View
-                  key={cp.checkpoint_id || idx}
-                  style={[styles.modalRow, idx % 2 === 0 ? styles.modalRowEven : styles.modalRowOdd]}
-                >
-                  <Text style={[styles.modalCell, styles.modalCellLeft]}>{idx + 1}</Text>
-                  <Text style={[styles.modalCell, styles.modalCellCenter]}>{cp.checkpoint_name || `Checkpoint ${idx + 1}`}</Text>
-                  <Text style={[styles.modalCell, styles.modalCellRight]}>{new Date().toLocaleTimeString()}</Text>
-                  <Text style={[styles.modalCell, styles.modalCellRight]}>Not Completed</Text>
-                </View>
-              ))}
+              {checkpoints.map((cp, idx) => {
+                const statusObj = checkpointStatus[cp.checkpoint_id];
+                return (
+                  <View
+                    key={cp.checkpoint_id || idx}
+                    style={[styles.modalRow, idx % 2 === 0 ? styles.modalRowEven : styles.modalRowOdd]}
+                  >
+                    <Text style={[styles.modalCell, styles.modalCellLeft]}>{idx + 1}</Text>
+                    <Text style={[styles.modalCell, styles.modalCellCenter]}>{cp.checkpoint_name || `Checkpoint ${idx + 1}`}</Text>
+                    <Text style={[styles.modalCell, styles.modalCellRight]}>{statusObj?.time || '-'}</Text>
+                    <Text style={[styles.modalCell, styles.modalCellRight]}>{statusObj?.completed ? 'Completed' : 'Not Completed'}</Text>
+                  </View>
+                );
+              })}
             </ScrollView>
             <View style={styles.modalDivider} />
             <TouchableOpacity style={styles.closeBtn} onPress={() => setModalVisible(false)}>
               <Text style={styles.closeBtnText}>Close</Text>
             </TouchableOpacity>
             <Text style={styles.totalCountText}>Total Checkpoints: {checkpoints.length}</Text>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Event Completed Modal */}
+      <Modal
+        visible={eventCompletedModal}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={() => {}}
+      >
+        <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: 'rgba(0,0,0,0.35)' }}>
+          <View style={{ backgroundColor: '#fff', borderRadius: 18, padding: 32, alignItems: 'center', width: '80%' }}>
+            <Text style={{ fontSize: 22, fontWeight: 'bold', color: '#185a9d', marginBottom: 18, textAlign: 'center' }}>
+              Event is completed!
+            </Text>
+            <Text style={{ fontSize: 16, color: '#333', marginBottom: 28, textAlign: 'center' }}>
+              You can go back to the event page.
+            </Text>
+            <TouchableOpacity
+              style={{ backgroundColor: '#2196F3', paddingVertical: 12, paddingHorizontal: 38, borderRadius: 22 }}
+              onPress={() => {
+                setEventCompletedModal(false);
+                navigation.goBack();
+              }}
+            >
+              <Text style={{ color: '#fff', fontWeight: 'bold', fontSize: 18 }}>Okay</Text>
+            </TouchableOpacity>
           </View>
         </View>
       </Modal>
