@@ -424,12 +424,12 @@ const MapScreen = ({ route }) => {
       </Modal>
 
       {/* My Location Button - bottom right */}
-      <TouchableOpacity
+      {/* <TouchableOpacity
         style={styles.locationButton}
         onPress={getCurrentLocation}
       >
         <Text style={styles.buttonText}>My Location</Text>
-      </TouchableOpacity>
+      </TouchableOpacity> */}
     </View>
   );
 };
@@ -506,7 +506,7 @@ const styles = StyleSheet.create({
     position: 'absolute',
     top: 10,
     left: 5,
-    backgroundColor: 'rgba(255,255,255,0.5)', // more transparent
+    backgroundColor: 'rgba(255,255,255,0.92)', // more transparent
     borderRadius: 12,
     paddingVertical: 8,
     paddingHorizontal: 16,
