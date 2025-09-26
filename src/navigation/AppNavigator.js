@@ -154,7 +154,7 @@ function DrawerNavigator() {
           headerTitleAlign: 'center',
         }} />
       <Drawer.Screen name="Profile" component={ProfileScreen} />
-      <Drawer.Screen name="Map" component={MapScreen} />
+      {/* <Drawer.Screen name="Map" component={MapScreen} /> */}
       <Drawer.Screen name="Notifications" component={NotificationsScreen} options={{drawerItemStyle: { display: 'none' }}}/>
       <Drawer.Screen name="Event" component={OrganiserScreen} />
       <Drawer.Screen name="Results" component={ResultsScreen} />

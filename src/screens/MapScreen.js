@@ -400,7 +400,8 @@ const MapScreen = ({ route }) => {
             <View style={styles.modalHeaderRow}>
               <Text style={[styles.modalHeaderCell, styles.modalHeaderCellLeft]}>Sr.</Text>
               <Text style={[styles.modalHeaderCell, styles.modalHeaderCellCenter]}>Checkpoint</Text>
-              <Text style={[styles.modalHeaderCell, styles.modalHeaderCellRight]}>Time</Text>
+              <Text style={[styles.modalHeaderCell, styles.modalHeaderCellTimeRight]}>Time</Text>
+              <Text style={[styles.modalHeaderCell, styles.modalHeaderCellRight]}>Completed</Text>
             </View>
             <ScrollView style={{ maxHeight: 350, width: '100%' }}>
               {checkpoints.map((cp, idx) => (
@@ -411,6 +412,7 @@ const MapScreen = ({ route }) => {
                   <Text style={[styles.modalCell, styles.modalCellLeft]}>{idx + 1}</Text>
                   <Text style={[styles.modalCell, styles.modalCellCenter]}>{cp.checkpoint_name || `Checkpoint ${idx + 1}`}</Text>
                   <Text style={[styles.modalCell, styles.modalCellRight]}>{new Date().toLocaleTimeString()}</Text>
+                  <Text style={[styles.modalCell, styles.modalCellRight]}>Not Completed</Text>
                 </View>
               ))}
             </ScrollView>
@@ -520,7 +522,7 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
   },
   infoText: {
-    fontSize: 15,
+    fontSize: 12,
     fontWeight: '600',
     color: '#185a9d',
     marginBottom: 2,
@@ -553,21 +555,29 @@ const styles = StyleSheet.create({
     width: '100%',
   },
   modalHeaderCell: {
-    width: '33%',
-    fontSize: 16,
+    fontSize: 14,
     fontWeight: 'bold',
     color: '#185a9d',
     textAlign: 'center',
   },
   modalHeaderCellLeft: {
+    width: '15%',
     textAlign: 'left',
     paddingLeft: 8,
   },
   modalHeaderCellCenter: {
+    width: '35%',
+    textAlign: 'left',
+    paddingLeft: 4,
+  },
+  modalHeaderCellTimeRight: {
+    width: '20%',
     textAlign: 'center',
+    paddingRight: 8,
   },
   modalHeaderCellRight: {
-    textAlign: 'right',
+    width: '38%',
+    textAlign: 'center',
     paddingRight: 8,
   },
   modalRow: {
@@ -587,21 +597,30 @@ const styles = StyleSheet.create({
     backgroundColor: '#e9f5fe',
   },
   modalCell: {
-    width: '33%',
-    fontSize: 15,
+    fontSize: 12,
     color: '#333',
     textAlign: 'center',
     paddingVertical: 2,
+    paddingHorizontal: 5,
   },
   modalCellLeft: {
+    width: '15%',
     textAlign: 'left',
     paddingLeft: 8,
   },
   modalCellCenter: {
+    width: '30%',
+    textAlign: 'left',
+    paddingLeft: 4,
+  },
+  modalCellTimeRight: {
+    width: '30%',
     textAlign: 'center',
+    paddingRight: 8,
   },
   modalCellRight: {
-    textAlign: 'right',
+    width: '30%',
+    textAlign: 'center',
     paddingRight: 8,
   },
   modalDivider: {
