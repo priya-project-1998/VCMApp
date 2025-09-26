@@ -23,6 +23,7 @@ export default function EventStartScreen({ navigation, route }) {
   };
   // console.log('EventStartScreen received event:', event); // Removed for clean console
   if (event.eventId) delete event.eventId;
+  if (event.categoryId) delete event.categoryId;
   if (event.participantId) delete event.participantId;
 
   const status = event?.status || { approved: false, location: false, time: false, message: "Status Unknown" };
@@ -34,6 +35,7 @@ export default function EventStartScreen({ navigation, route }) {
   const eventEndDate = event.event_end_date || 'End Date N/A';
   const eventVenue = event.event_venue || event.venue || 'Venue N/A';
   const eventId = event.event_id || 'Event ID N/A';
+  const eventCategoryId = event.category_id || 'Category ID N/A';
   const eventDateCombined = `${eventStartDate} - ${eventEndDate}`;
 
   // Timer logic
@@ -71,11 +73,14 @@ export default function EventStartScreen({ navigation, route }) {
     // Fetch checkpoints and kml_path for this event
     const res = await EventService.getCheckpointsPerEvent(eventId);
     if (res.status === 'success' && res.data) {
+      console.log('API called, response status:', res);
       navigation.navigate('MapScreen', {
         event_id: eventId,
+        category_id: eventCategoryId,
         checkpoints: res.data.checkpoints,
         kml_path: res.data.kml_path,
       });
+       console.log('API called, response status:', eventId, eventCategoryId, res.data.checkpoints, res.data.kml_path);
     } else {
       Alert.alert('Error', 'Failed to fetch checkpoints. Please try again.');
     }

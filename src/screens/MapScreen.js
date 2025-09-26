@@ -11,10 +11,13 @@ import {
   Modal,
   ScrollView,
   BackHandler,
+  ActivityIndicator,
+  ToastAndroid,
 } from "react-native";
 import MapView, { PROVIDER_GOOGLE, Marker } from "react-native-maps";
 import Geolocation from "@react-native-community/geolocation";
 import NetInfo from "@react-native-community/netinfo";
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 // ✅ Import SQLite services
 import {
@@ -40,9 +43,11 @@ const MapScreen = ({ route, navigation }) => {
   const [checkpointStatus, setCheckpointStatus] = useState({}); // { checkpoint_id: { time, completed } }
   const [selectedCheckpointId, setSelectedCheckpointId] = useState(null); // For testing button
   const [eventCompletedModal, setEventCompletedModal] = useState(false);
+  const [loadingCheckpointId, setLoadingCheckpointId] = useState(null); // For loader on marker
+  const [markerColors, setMarkerColors] = useState({}); // checkpoint_id: color
 
   // Get checkpoints from route.params (API response)
-  const { checkpoints: paramCheckpoints, event_id, kml_path } = route.params || {};
+  const { checkpoints: paramCheckpoints, category_id,event_id, kml_path } = route.params || {};
   // Use paramCheckpoints only (no static fallback)
   const checkpoints = Array.isArray(paramCheckpoints) ? paramCheckpoints : [];
 
@@ -155,6 +160,59 @@ const MapScreen = ({ route, navigation }) => {
     });
   };
 
+  const syncCheckpointToServer = async (checkpointId) => {
+    const netState = await NetInfo.fetch();
+    if (!netState.isConnected) {
+      if (Platform.OS === 'android') ToastAndroid.show('No internet connection', ToastAndroid.SHORT);
+      else Alert.alert('No internet connection');
+      return false;
+    }
+    setLoadingCheckpointId(checkpointId);
+    try {
+      const token = await AsyncStorage.getItem('authToken');
+      if (!token) {
+        if (Platform.OS === 'android') ToastAndroid.show('No auth token found', ToastAndroid.SHORT);
+        else Alert.alert('No auth token found');
+        setLoadingCheckpointId(null);
+        return false;
+      }
+      const res = await fetch(
+        "https://e-pickup.randomsoftsolution.in/api/events/checkpoints/update",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${token}`,
+          },
+          body: JSON.stringify({
+            event_id: event_id,
+            category_id: category_id,
+            checkpoint_id: checkpointId,
+          }),
+        }
+      );
+      let data = {};
+      try { data = await res.json(); } catch {}
+      if ((res.status === 200 && data.status === "success") || data.status === "success") {
+        setMarkerColors((prev) => ({ ...prev, [checkpointId]: '#185a9d' })); // blue
+        const cpObj = checkpoints.find(c => c.checkpoint_id === checkpointId);
+        const cpName = cpObj?.checkpoint_name || checkpointId;
+        if (Platform.OS === 'android') ToastAndroid.show(`Checkpoint "${cpName}" synced successfully`, ToastAndroid.SHORT);
+        else Alert.alert('Checkpoint Synced', `Checkpoint "${cpName}" synced successfully`);
+        setLoadingCheckpointId(null);
+        return true;
+      } else {
+        if (Platform.OS === 'android') ToastAndroid.show('Server error: ' + (data.message || 'Failed'), ToastAndroid.SHORT);
+        else Alert.alert('Server error', data.message || 'Failed');
+      }
+    } catch (err) {
+      if (Platform.OS === 'android') ToastAndroid.show('Network/API error', ToastAndroid.SHORT);
+      else Alert.alert('Network/API error');
+    }
+    setLoadingCheckpointId(null);
+    return false;
+  };
+
   // ✅ Checkpoint reach detection (within ~10 meters)
   const checkProximityToCheckpoints = (lat, lng) => {
     checkpoints.forEach((cp) => {
@@ -176,6 +234,8 @@ const MapScreen = ({ route, navigation }) => {
             category_id: cp.category_id,
             checkpoint_id: cp.checkpoint_id,
           });
+          // Call sync API as in button
+          syncCheckpointToServer(cp.checkpoint_id);
         }
       }
     });
@@ -377,6 +437,7 @@ const MapScreen = ({ route, navigation }) => {
               longitude: parseFloat(cp.longitude),
             }}
             title={cp.checkpoint_name}
+            pinColor={markerColors[cp.checkpoint_id] || (!checkpointStatus[cp.checkpoint_id]?.completed ? 'red' : '#185a9d')}
             onPress={() => setSelectedCheckpointId(cp.checkpoint_id)}
           />
         ))}
@@ -385,16 +446,75 @@ const MapScreen = ({ route, navigation }) => {
       {selectedCheckpointId && (
         <TouchableOpacity
           style={{ position: 'absolute', bottom: 20, right: 20, backgroundColor: '#4caf50', padding: 14, borderRadius: 28, zIndex: 100, elevation: 8 }}
-          onPress={() => {
-            const reachedTime = new Date().toLocaleTimeString();
-            setCheckpointStatus((prev) => ({
-              ...prev,
-              [selectedCheckpointId]: { time: reachedTime, completed: true },
-            }));
+          onPress={async () => {
+            // Check internet
+            const netState = await NetInfo.fetch();
+            if (!netState.isConnected) {
+              if (Platform.OS === 'android') ToastAndroid.show('No internet connection', ToastAndroid.SHORT);
+              else Alert.alert('No internet connection');
+              return;
+            }
+            setLoadingCheckpointId(selectedCheckpointId);
+            try {
+              // Use event_id and category_id from route.params, and selectedCheckpointId
+              const token = await AsyncStorage.getItem('authToken');
+              if (!token) {
+                if (Platform.OS === 'android') ToastAndroid.show('No auth token found', ToastAndroid.SHORT);
+                else Alert.alert('No auth token found');
+                setLoadingCheckpointId(null);
+                setSelectedCheckpointId(null);
+                return;
+              }
+              // Log for debug
+              console.log('Button pressed, event_id:', event_id, 'category_id:', category_id, 'checkpoint_id:', selectedCheckpointId);
+              const res = await fetch(
+                "https://e-pickup.randomsoftsolution.in/api/events/checkpoints/update",
+                {
+                  method: "POST",
+                  headers: {
+                    "Content-Type": "application/json",
+                    "Authorization": `Bearer ${token}`,
+                  },
+                  body: JSON.stringify({
+                    event_id: event_id,
+                    category_id: category_id,
+                    checkpoint_id: selectedCheckpointId,
+                  }),
+                }
+              );
+              console.log('API called, response status:', res.status);
+              let data = {};
+              try { data = await res.json(); } catch {}
+              if ((res.status === 200 && data.status === "success") || data.status === "success") {
+                // Mark as completed
+                const reachedTime = new Date().toLocaleTimeString();
+                setCheckpointStatus((prev) => ({
+                  ...prev,
+                  [selectedCheckpointId]: { time: reachedTime, completed: true },
+                }));
+                setMarkerColors((prev) => ({ ...prev, [selectedCheckpointId]: '#185a9d' })); // blue
+                const cpObj = checkpoints.find(c => c.checkpoint_id === selectedCheckpointId);
+                const cpName = cpObj?.checkpoint_name || selectedCheckpointId;
+                if (Platform.OS === 'android') ToastAndroid.show(`Checkpoint "${cpName}" synced successfully`, ToastAndroid.SHORT);
+                else Alert.alert('Checkpoint Synced', `Checkpoint "${cpName}" synced successfully`);
+              } else {
+                if (Platform.OS === 'android') ToastAndroid.show('Server error: ' + (data.message || 'Failed'), ToastAndroid.SHORT);
+                else Alert.alert('Server error', data.message || 'Failed');
+              }
+            } catch (err) {
+              console.log('API call error:', err);
+              if (Platform.OS === 'android') ToastAndroid.show('Network/API error', ToastAndroid.SHORT);
+              else Alert.alert('Network/API error');
+            }
+            setLoadingCheckpointId(null);
             setSelectedCheckpointId(null);
           }}
         >
-          <Text style={{ color: '#fff', fontWeight: 'bold', fontSize: 16 }}>Mark as Completed (Test)</Text>
+          {loadingCheckpointId === selectedCheckpointId ? (
+            <ActivityIndicator color="#fff" size="small" />
+          ) : (
+            <Text style={{ color: '#fff', fontWeight: 'bold', fontSize: 16 }}>Mark as Completed (Test)</Text>
+          )}
         </TouchableOpacity>
       )}
       {/* Floating Menu */}
