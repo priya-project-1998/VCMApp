@@ -10,6 +10,7 @@ import {
   Alert,
   Modal,
   ScrollView,
+  BackHandler,
 } from "react-native";
 import MapView, { PROVIDER_GOOGLE, Marker } from "react-native-maps";
 import Geolocation from "@react-native-community/geolocation";
@@ -25,7 +26,7 @@ import {
 
 const { width, height } = Dimensions.get("window");
 
-const MapScreen = ({ route }) => {
+const MapScreen = ({ route, navigation }) => {
   const mapRef = useRef(null);
   const [lastUserLocation, setLastUserLocation] = useState(null);
   const [userCoords, setUserCoords] = useState(null);
@@ -289,6 +290,33 @@ const MapScreen = ({ route }) => {
       // ignore
     }
   };
+
+  // Handle back button with confirmation
+  useEffect(() => {
+    const onBackPress = () => {
+      Alert.alert(
+        "Close Map",
+        "Do you want to close the map and save/sync all checkpoint data till you reached?",
+        [
+          {
+            text: "Cancel",
+            style: "cancel",
+            onPress: () => {},
+          },
+          {
+            text: "Yes",
+            onPress: () => {
+              // Optionally trigger sync here if needed
+              navigation.goBack();
+            },
+          },
+        ]
+      );
+      return true; // Prevent default back
+    };
+    BackHandler.addEventListener("hardwareBackPress", onBackPress);
+    return () => BackHandler.removeEventListener("hardwareBackPress", onBackPress);
+  }, []);
 
   return (
     <View style={styles.container}>
