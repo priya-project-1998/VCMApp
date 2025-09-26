@@ -36,6 +36,7 @@ const MapScreen = ({ route, navigation }) => {
   const [elapsedSeconds, setElapsedSeconds] = useState(2 * 60 * 60); // 2 hours in seconds
   const [currentSpeed, setCurrentSpeed] = useState(0);
   const [modalVisible, setModalVisible] = useState(false);
+  const [userRoute, setUserRoute] = useState([]); // Track user route
 
   // Get checkpoints from route.params (API response)
   const { checkpoints: paramCheckpoints, event_id, kml_path } = route.params || {};
@@ -151,7 +152,7 @@ const MapScreen = ({ route, navigation }) => {
     });
   };
 
-  // ✅ Checkpoint reach detection (within ~50 meters)
+  // ✅ Checkpoint reach detection (within ~10 meters)
   const checkProximityToCheckpoints = (lat, lng) => {
     checkpoints.forEach((cp) => {
       const distance = getDistanceFromLatLonInMeters(
@@ -160,8 +161,7 @@ const MapScreen = ({ route, navigation }) => {
         parseFloat(cp.latitude),
         parseFloat(cp.longitude)
       );
-
-      if (distance < 50) {
+      if (distance < 10) { // Changed from 50 to 10 meters
         console.log(`✅ Reached checkpoint: ${cp.checkpoint_name}`);
         saveCheckpoint({
           event_id: cp.event_id,
@@ -276,11 +276,12 @@ const MapScreen = ({ route, navigation }) => {
     return `${h}:${m}:${s}`;
   };
 
-  // Update speed on user location change
+  // Update speed and route on user location change
   const handleUserLocationChange = (e) => {
     try {
       const { latitude, longitude, speed } = e.nativeEvent.coordinate;
       setLastUserLocation({ latitude, longitude });
+      setUserRoute((prev) => [...prev, { latitude, longitude }]); // Add to route
       checkProximityToCheckpoints(latitude, longitude);
       if (typeof speed === 'number' && !isNaN(speed)) {
         // speed in m/s, convert to km/h
@@ -341,6 +342,14 @@ const MapScreen = ({ route, navigation }) => {
         rotateEnabled={true}
         onUserLocationChange={handleUserLocationChange}
       >
+        {/* Show user route as blue polyline */}
+        {userRoute.length > 1 && (
+          <MapView.Polyline
+            coordinates={userRoute}
+            strokeColor="#185a9d"
+            strokeWidth={5}
+          />
+        )}
         {checkpoints.map((cp, idx) => (
           <Marker
             key={cp.checkpoint_id}
@@ -429,7 +438,7 @@ const MapScreen = ({ route, navigation }) => {
               <Text style={[styles.modalHeaderCell, styles.modalHeaderCellLeft]}>Sr.</Text>
               <Text style={[styles.modalHeaderCell, styles.modalHeaderCellCenter]}>Checkpoint</Text>
               <Text style={[styles.modalHeaderCell, styles.modalHeaderCellTimeRight]}>Time</Text>
-              <Text style={[styles.modalHeaderCell, styles.modalHeaderCellRight]}>Completed</Text>
+              <Text style={[styles.modalHeaderCell, styles.modalHeaderCellRight]}>Status</Text>
             </View>
             <ScrollView style={{ maxHeight: 350, width: '100%' }}>
               {checkpoints.map((cp, idx) => (
