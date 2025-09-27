@@ -17,7 +17,9 @@ export const createTables = () => {
         longitude TEXT,
         sequence_number TEXT,
         description TEXT,
-        synced INTEGER
+        synced INTEGER,
+        time_stamp TEXT, // new column
+        status TEXT // new column
       );`
     );
   });
@@ -28,8 +30,8 @@ export const saveCheckpoint = (checkpoint) => {
   db.transaction(tx => {
     tx.executeSql(
       `INSERT INTO checkpoints (
-        event_id, category_id, checkpoint_id, checkpoint_name, checkpoint_point, latitude, longitude, sequence_number, description, synced
-      ) VALUES (?,?,?,?,?,?,?,?,?,?)`,
+        event_id, category_id, checkpoint_id, checkpoint_name, checkpoint_point, latitude, longitude, sequence_number, description, synced, time_stamp, status
+      ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)`,
       [
         checkpoint.event_id,
         checkpoint.category_id,
@@ -40,7 +42,9 @@ export const saveCheckpoint = (checkpoint) => {
         checkpoint.longitude,
         checkpoint.sequence_number,
         checkpoint.description,
-        0
+        0,
+        checkpoint.time_stamp || '',
+        checkpoint.status || 'not completed'
       ]
     );
   });
