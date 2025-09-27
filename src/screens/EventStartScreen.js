@@ -73,14 +73,12 @@ export default function EventStartScreen({ navigation, route }) {
     // Fetch checkpoints and kml_path for this event
     const res = await EventService.getCheckpointsPerEvent(eventId);
     if (res.status === 'success' && res.data) {
-      console.log('API called, response status:', res);
       navigation.navigate('MapScreen', {
         event_id: eventId,
         category_id: eventCategoryId,
         checkpoints: res.data.checkpoints,
         kml_path: res.data.kml_path,
       });
-       console.log('API called, response status:', eventId, eventCategoryId, res.data.checkpoints, res.data.kml_path);
     } else {
       Alert.alert('Error', 'Failed to fetch checkpoints. Please try again.');
     }

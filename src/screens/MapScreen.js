@@ -490,7 +490,6 @@ const MapScreen = ({ route, navigation }) => {
                   }),
                 }
               );
-              console.log('API called, response status:', res.status);
               let data = {};
               try { data = await res.json(); } catch {}
               if ((res.status === 200 && data.status === "success") || data.status === "success") {
