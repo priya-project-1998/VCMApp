@@ -510,6 +510,7 @@ const MapScreen = ({ route, navigation }) => {
         {checkpoints.map((cp, idx) => (
           <Marker
             key={cp.checkpoint_id}
+            testID={`marker-${cp.checkpoint_id}`}
             coordinate={{
               latitude: parseFloat(cp.latitude),
               longitude: parseFloat(cp.longitude),
