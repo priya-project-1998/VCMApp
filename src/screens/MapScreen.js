@@ -25,6 +25,7 @@ import {
   saveCheckpoint,
   getPendingCheckpoints,
   markSynced,
+  getCheckpointById, // <-- import the new function
 } from "../services/dbService";
 
 const { width, height } = Dimensions.get("window");
@@ -516,6 +517,15 @@ const MapScreen = ({ route, navigation }) => {
                   time_stamp: reachedTime,
                   status: 'completed'
                 });
+                // Print local DB log for this checkpoint after saving
+                setTimeout(() => {
+                  getCheckpointById(selectedCheckpointId, (checkpointData) => {
+                    console.log('Local DB checkpoint log:', checkpointData);
+                    if (!checkpointData) {
+                      console.log('No checkpoint found in local DB for id:', selectedCheckpointId);
+                    }
+                  });
+                }, 300); // slight delay to ensure save
                 if (Platform.OS === 'android') ToastAndroid.show(`Checkpoint "${cpName}" synced successfully`, ToastAndroid.SHORT);
                 else Alert.alert('Checkpoint Synced', `Checkpoint "${cpName}" synced successfully`);
               } else {

@@ -90,3 +90,14 @@ export const updateCheckpoint = (checkpoint) => {
     );
   });
 };
+
+// ✅ Fetch checkpoint by checkpoint_id
+export const getCheckpointById = (checkpoint_id, callback) => {
+  db.transaction(tx => {
+    tx.executeSql(
+      `SELECT * FROM checkpoints WHERE checkpoint_id = ?`,
+      [checkpoint_id],
+      (txObj, { rows: { _array } }) => callback(_array && _array.length > 0 ? _array[0] : null)
+    );
+  });
+};
