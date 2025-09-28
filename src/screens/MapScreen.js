@@ -46,6 +46,10 @@ const MapScreen = ({ route, navigation }) => {
   const [eventCompletedModal, setEventCompletedModal] = useState(false);
   const [loadingCheckpointId, setLoadingCheckpointId] = useState(null); // For loader on marker
   const [markerColors, setMarkerColors] = useState({}); // checkpoint_id: color
+  const [timeStampDropdownVisible, setTimeStampDropdownVisible] = useState(false); // Dropdown for Time Stamp
+  const [showCurrentLocationMarker, setShowCurrentLocationMarker] = useState(false);
+  const [currentLocationMarkerCoords, setCurrentLocationMarkerCoords] = useState(null);
+  const currentLocationTimeoutRef = useRef(null);
 
   // Get checkpoints from route.params (API response)
   const { checkpoints: paramCheckpoints, category_id,event_id, kml_path } = route.params || {};
@@ -337,6 +341,53 @@ const MapScreen = ({ route, navigation }) => {
     }
   };
 
+  // Handler for Time Stamp dropdown actions
+  const handleTimeStampMenu = (action) => {
+    setTimeStampDropdownVisible(false);
+    switch (action) {
+      case 'Checkpoint History':
+        setModalVisible(true);
+        break;
+      case 'My Location':
+        if (mapRef.current) {
+          Geolocation.getCurrentPosition(
+            (pos) => {
+              const { latitude, longitude } = pos.coords;
+              mapRef.current.animateToRegion({
+                latitude,
+                longitude,
+                latitudeDelta: 0.01,
+                longitudeDelta: 0.01,
+              }, 1000);
+              setUserCoords({ latitude, longitude });
+              setLastUserLocation({ latitude, longitude });
+              setCurrentLocationMarkerCoords({ latitude, longitude });
+              setShowCurrentLocationMarker(true);
+              if (currentLocationTimeoutRef.current) {
+                clearTimeout(currentLocationTimeoutRef.current);
+              }
+              currentLocationTimeoutRef.current = setTimeout(() => {
+                setShowCurrentLocationMarker(false);
+                currentLocationTimeoutRef.current = null;
+              }, 15000);
+            },
+            (error) => {
+              Alert.alert('Location error', error && error.message ? error.message : 'Unable to get location');
+            },
+            { enableHighAccuracy: true, timeout: 15000, maximumAge: 10000 }
+          );
+        }
+        break;
+      case 'Checkpoint Location':
+        if (checkpoints.length && mapRef.current) {
+          mapRef.current.animateToRegion(getBoundingRegion(checkpoints), 1000);
+        }
+        break;
+      default:
+        break;
+    }
+  };
+
   // Countdown timer effect
   useEffect(() => {
     if (elapsedSeconds <= 0) return;
@@ -407,6 +458,14 @@ const MapScreen = ({ route, navigation }) => {
     }
   }, [checkpointStatus, checkpoints]);
 
+  useEffect(() => {
+    return () => {
+      if (currentLocationTimeoutRef.current) {
+        clearTimeout(currentLocationTimeoutRef.current);
+      }
+    };
+  }, []);
+
   return (
     <View style={styles.container}>
       {/* Top Left Info Bar */}
@@ -438,6 +497,14 @@ const MapScreen = ({ route, navigation }) => {
             strokeWidth={5}
             linecap={'round'}
             linejoin={'round'}
+          />
+        )}
+        {/* Show current location marker if requested */}
+        {showCurrentLocationMarker && currentLocationMarkerCoords && (
+          <Marker
+            coordinate={currentLocationMarkerCoords}
+            title="My Current Location"
+            pinColor="#2196F3"
           />
         )}
         {checkpoints.map((cp, idx) => (
@@ -552,14 +619,28 @@ const MapScreen = ({ route, navigation }) => {
       )}
       {/* Floating Menu */}
       <View style={styles.floatingMenu}>
-        {/* Time Stamps Button */}
-        <TouchableOpacity
-          style={styles.menuBtn}
-          onPress={() => setModalVisible(true)}
-        >
-          <Text style={styles.menuBtnText}>Time Stamps</Text>
-        </TouchableOpacity>
-
+        {/* Time Stamp Dropdown */}
+        <View style={styles.dropdownContainer}>
+          <TouchableOpacity
+            style={styles.menuBtn}
+            onPress={() => setTimeStampDropdownVisible(!timeStampDropdownVisible)}
+          >
+            <Text style={styles.menuBtnText}>Time Stamp ▾</Text>
+          </TouchableOpacity>
+          {timeStampDropdownVisible && (
+            <View style={styles.dropdownMenu}>
+              {['Checkpoint History', 'My Location', 'Checkpoint Location'].map((action) => (
+                <TouchableOpacity
+                  key={action}
+                  style={styles.dropdownItem}
+                  onPress={() => handleTimeStampMenu(action)}
+                >
+                  <Text style={styles.dropdownItemText}>{action}</Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+          )}
+        </View>
         {/* Center Map Dropdown */}
         <View style={styles.dropdownContainer}>
           <TouchableOpacity
