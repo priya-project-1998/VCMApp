@@ -436,6 +436,8 @@ const MapScreen = ({ route, navigation }) => {
             coordinates={userRoute}
             strokeColor="#185a9d"
             strokeWidth={5}
+            linecap={'round'}
+            linejoin={'round'}
           />
         )}
         {checkpoints.map((cp, idx) => (
