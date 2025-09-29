@@ -247,7 +247,7 @@ const MapScreen = ({ route, navigation }) => {
             time_stamp: reachedTime,
             status: 'completed'
           });
-          // Call sync API as in button
+          // Only sync if not already completed
           syncCheckpointToServer(cp.checkpoint_id);
         }
       }
@@ -526,7 +526,6 @@ const MapScreen = ({ route, navigation }) => {
                 ...prev,
                 [cp.checkpoint_id]: { time: new Date().toLocaleTimeString(), completed: true },
               }));
-              setMarkerColors((prev) => ({ ...prev, [cp.checkpoint_id]: '#185a9d' }));
               const cpName = cp.checkpoint_name || cp.checkpoint_id;
               if (Platform.OS === 'android') ToastAndroid.show(`Checkpoint \"${cpName}\" synced successfully`, ToastAndroid.SHORT);
               else Alert.alert('Checkpoint Synced', `Checkpoint \"${cpName}\" synced successfully`);
@@ -575,7 +574,7 @@ const MapScreen = ({ route, navigation }) => {
       setUserRoute(prev => [...prev, newPoint]);
       current = newPoint;
       steps++;
-      // Check if reached any checkpoint (within 10m)
+      // Check if reached any checkpoint (within 100m)
       for (let cp of checkpoints) {
         const dist = getDistanceFromLatLonInMeters(
           current.latitude,
@@ -583,7 +582,7 @@ const MapScreen = ({ route, navigation }) => {
           parseFloat(cp.latitude),
           parseFloat(cp.longitude)
         );
-        if (dist < 100) { // changed from 10 to 100 meters
+        if (dist < 100 && !checkpointStatus[cp.checkpoint_id]?.completed) {
           // Call the same API as 'Mark as Completed (Test)' for this checkpoint
           (async () => {
             setLoadingCheckpointId(cp.checkpoint_id);
@@ -617,7 +616,6 @@ const MapScreen = ({ route, navigation }) => {
                   ...prev,
                   [cp.checkpoint_id]: { time: new Date().toLocaleTimeString(), completed: true },
                 }));
-                setMarkerColors((prev) => ({ ...prev, [cp.checkpoint_id]: '#185a9d' }));
                 const cpName = cp.checkpoint_name || cp.checkpoint_id;
                 if (Platform.OS === 'android') ToastAndroid.show(`Checkpoint \"${cpName}\" synced successfully`, ToastAndroid.SHORT);
                 else Alert.alert('Checkpoint Synced', `Checkpoint \"${cpName}\" synced successfully`);
@@ -725,7 +723,11 @@ const MapScreen = ({ route, navigation }) => {
               longitude: parseFloat(cp.longitude),
             }}
             title={cp.checkpoint_name}
-            pinColor={markerColors[cp.checkpoint_id] || (!checkpointStatus[cp.checkpoint_id]?.completed ? 'red' : '#185a9d')}
+            pinColor={
+              checkpointStatus[cp.checkpoint_id]?.completed
+                ? '#4caf50' // green for completed
+                : 'red' // red for pending
+            }
             onPress={() => setSelectedCheckpointId(cp.checkpoint_id)}
           />
         ))}
