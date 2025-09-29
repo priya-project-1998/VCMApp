@@ -487,14 +487,91 @@ const MapScreen = ({ route, navigation }) => {
     let current = startPoint;
     let steps = 0;
     simulationIntervalRef.current = setInterval(() => {
-      // Randomly move marker within ~50m radius
-      const randomLat = current.latitude + (Math.random() - 0.5) * 0.0005;
-      const randomLng = current.longitude + (Math.random() - 0.5) * 0.0005;
-      const newPoint = { latitude: randomLat, longitude: randomLng };
+      // Move towards a random checkpoint (other than current)
+      const availableCheckpoints = checkpoints.filter(cp =>
+        parseFloat(cp.latitude) !== current.latitude || parseFloat(cp.longitude) !== current.longitude
+      );
+      if (availableCheckpoints.length === 0) {
+        clearInterval(simulationIntervalRef.current);
+        setIsSimulating(false);
+        return;
+      }
+      // Pick a random checkpoint as target
+      const targetCp = availableCheckpoints[Math.floor(Math.random() * availableCheckpoints.length)];
+      const target = {
+        latitude: parseFloat(targetCp.latitude),
+        longitude: parseFloat(targetCp.longitude),
+      };
+      // Move a small step towards the target
+      const stepLat = (target.latitude - current.latitude) * 0.1;
+      const stepLng = (target.longitude - current.longitude) * 0.1;
+      const newPoint = {
+        latitude: current.latitude + stepLat,
+        longitude: current.longitude + stepLng,
+      };
       setMarkerPosition(newPoint);
-      setUserRoute((prev) => [...prev, newPoint]); // <-- fix: spread previous array, not [prev, newPoint]
+      setUserRoute(prev => [...prev, newPoint]);
       current = newPoint;
       steps++;
+      // Check if reached any checkpoint (within 10m)
+      for (let cp of checkpoints) {
+        const dist = getDistanceFromLatLonInMeters(
+          current.latitude,
+          current.longitude,
+          parseFloat(cp.latitude),
+          parseFloat(cp.longitude)
+        );
+        if (dist < 100) { // changed from 10 to 100 meters
+          // Call the same API as 'Mark as Completed (Test)' for this checkpoint
+          (async () => {
+            setLoadingCheckpointId(cp.checkpoint_id);
+            try {
+              const token = await AsyncStorage.getItem('authToken');
+              if (!token) {
+                if (Platform.OS === 'android') ToastAndroid.show('No auth token found', ToastAndroid.SHORT);
+                else Alert.alert('No auth token found');
+                setLoadingCheckpointId(null);
+                return;
+              }
+              const res = await fetch(
+                "https://e-pickup.randomsoftsolution.in/api/events/checkpoints/update",
+                {
+                  method: "POST",
+                  headers: {
+                    "Content-Type": "application/json",
+                    "Authorization": `Bearer ${token}`,
+                  },
+                  body: JSON.stringify({
+                    event_id: event_id,
+                    category_id: category_id,
+                    checkpoint_id: cp.checkpoint_id,
+                  }),
+                }
+              );
+              let data = {};
+              try { data = await res.json(); } catch {}
+              if ((res.status === 200 && data.status === "success") || data.status === "success") {
+                setCheckpointStatus((prev) => ({
+                  ...prev,
+                  [cp.checkpoint_id]: { time: new Date().toLocaleTimeString(), completed: true },
+                }));
+                setMarkerColors((prev) => ({ ...prev, [cp.checkpoint_id]: '#185a9d' }));
+                const cpName = cp.checkpoint_name || cp.checkpoint_id;
+                if (Platform.OS === 'android') ToastAndroid.show(`Checkpoint \"${cpName}\" synced successfully`, ToastAndroid.SHORT);
+                else Alert.alert('Checkpoint Synced', `Checkpoint \"${cpName}\" synced successfully`);
+              } else {
+                if (Platform.OS === 'android') ToastAndroid.show('Server error: ' + (data.message || 'Failed'), ToastAndroid.SHORT);
+                else Alert.alert('Server error', data.message || 'Failed');
+              }
+            } catch (err) {
+              if (Platform.OS === 'android') ToastAndroid.show('Network/API error', ToastAndroid.SHORT);
+              else Alert.alert('Network/API error');
+            }
+            setLoadingCheckpointId(null);
+          })();
+          break;
+        }
+      }
       if (steps >= 30) { // 30 steps = 1 min (2s interval)
         clearInterval(simulationIntervalRef.current);
         setIsSimulating(false);
