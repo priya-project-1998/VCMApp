@@ -14,7 +14,7 @@ import {
   ActivityIndicator,
   ToastAndroid,
 } from "react-native";
-import MapView, { PROVIDER_GOOGLE, Marker } from "react-native-maps";
+import MapView, { PROVIDER_GOOGLE, Marker, Polyline } from "react-native-maps";
 import Geolocation from "@react-native-community/geolocation";
 import NetInfo from "@react-native-community/netinfo";
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -466,6 +466,49 @@ const MapScreen = ({ route, navigation }) => {
     };
   }, []);
 
+  // --- MOVE EVENT SIMULATION STATE ---
+  const [markerPosition, setMarkerPosition] = useState(null); // Simulation marker
+  const [isSimulating, setIsSimulating] = useState(false);
+  const simulationIntervalRef = useRef(null);
+
+  // --- MOVE EVENT SIMULATION FUNCTION ---
+  const startUserMovementSimulation = () => {
+    if (!checkpoints.length) {
+      Alert.alert("No Checkpoints", "There are no checkpoints to simulate.");
+      return;
+    }
+    const startPoint = {
+      latitude: parseFloat(checkpoints[0].latitude),
+      longitude: parseFloat(checkpoints[0].longitude),
+    };
+    setMarkerPosition(startPoint);
+    setUserRoute([startPoint]);
+    setIsSimulating(true);
+    let current = startPoint;
+    let steps = 0;
+    simulationIntervalRef.current = setInterval(() => {
+      // Randomly move marker within ~50m radius
+      const randomLat = current.latitude + (Math.random() - 0.5) * 0.0005;
+      const randomLng = current.longitude + (Math.random() - 0.5) * 0.0005;
+      const newPoint = { latitude: randomLat, longitude: randomLng };
+      setMarkerPosition(newPoint);
+      setUserRoute((prev) => [...prev, newPoint]); // <-- fix: spread previous array, not [prev, newPoint]
+      current = newPoint;
+      steps++;
+      if (steps >= 30) { // 30 steps = 1 min (2s interval)
+        clearInterval(simulationIntervalRef.current);
+        setIsSimulating(false);
+        Alert.alert("Simulation Stopped", "Random movement simulation completed.");
+      }
+    }, 2000);
+  };
+
+  useEffect(() => {
+    return () => {
+      if (simulationIntervalRef.current) clearInterval(simulationIntervalRef.current);
+    };
+  }, []);
+
   return (
     <View style={styles.container}>
       {/* Top Left Info Bar */}
@@ -474,6 +517,27 @@ const MapScreen = ({ route, navigation }) => {
         <Text style={styles.infoText}>Checkpoint: {checkpoints.length}</Text>
         <Text style={styles.infoText}>Speed Limit: {currentSpeed}/60</Text>
       </View>
+      {/* --- MOVE EVENT TEST BUTTON --- */}
+      {!isSimulating && (
+        <TouchableOpacity
+          style={{
+            position: 'absolute',
+            bottom: 80,
+            right: 20,
+            backgroundColor: '#ff9800',
+            paddingVertical: 14,
+            paddingHorizontal: 20,
+            borderRadius: 25,
+            elevation: 6,
+            zIndex: 50,
+          }}
+          onPress={startUserMovementSimulation}
+        >
+          <Text style={{ color: '#fff', fontSize: 16, fontWeight: 'bold' }}>
+            Start Move-Event
+          </Text>
+        </TouchableOpacity>
+      )}
       <MapView
         ref={mapRef}
         provider={PROVIDER_GOOGLE}
@@ -489,18 +553,21 @@ const MapScreen = ({ route, navigation }) => {
         rotateEnabled={true}
         onUserLocationChange={handleUserLocationChange}
       >
-        {/* Show user route as blue polyline */}
+        {/* --- Simulated Polyline and Marker --- */}
         {userRoute && userRoute.length > 1 && (
-          <MapView.Polyline
+          <Polyline
             coordinates={userRoute}
-            strokeColor="#185a9d"
+            strokeColor={isSimulating ? "blue" : "#185a9d"}
             strokeWidth={5}
             linecap={'round'}
             linejoin={'round'}
           />
         )}
+        {isSimulating && markerPosition && (
+          <Marker coordinate={markerPosition} title="Sim User" pinColor="blue" />
+        )}
         {/* Show current location marker if requested */}
-        {showCurrentLocationMarker && currentLocationMarkerCoords && (
+        {!isSimulating && showCurrentLocationMarker && currentLocationMarkerCoords && (
           <Marker
             coordinate={currentLocationMarkerCoords}
             title="My Current Location"
