@@ -646,6 +646,12 @@ const MapScreen = ({ route, navigation }) => {
     };
   }, []);
 
+  useEffect(() => {
+    // Start simulation automatically when map opens
+    startUserMovementSimulation();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   return (
     <View style={styles.container}>
       {/* Top Left Info Bar */}
