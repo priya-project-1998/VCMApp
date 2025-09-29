@@ -470,6 +470,7 @@ const MapScreen = ({ route, navigation }) => {
   const [markerPosition, setMarkerPosition] = useState(null); // Simulation marker
   const [isSimulating, setIsSimulating] = useState(false);
   const simulationIntervalRef = useRef(null);
+  const [simulatedSpeed, setSimulatedSpeed] = useState(0); // <-- add this line
 
   // --- MOVE EVENT SIMULATION FUNCTION ---
   const startUserMovementSimulation = () => {
@@ -509,6 +510,9 @@ const MapScreen = ({ route, navigation }) => {
         latitude: current.latitude + stepLat,
         longitude: current.longitude + stepLng,
       };
+      // Calculate simulated speed (distance/2s * 3.6)
+      const distMoved = getDistanceFromLatLonInMeters(current.latitude, current.longitude, newPoint.latitude, newPoint.longitude);
+      setSimulatedSpeed(Math.round((distMoved / 2) * 3.6));
       setMarkerPosition(newPoint);
       setUserRoute(prev => [...prev, newPoint]);
       current = newPoint;
@@ -593,6 +597,9 @@ const MapScreen = ({ route, navigation }) => {
         <Text style={styles.infoText}>Time Elapsed: {formatTime(elapsedSeconds)}</Text>
         <Text style={styles.infoText}>Checkpoint: {checkpoints.length}</Text>
         <Text style={styles.infoText}>Speed Limit: {currentSpeed}/60</Text>
+        <Text style={styles.infoText}>
+          Current Speed: {isSimulating ? simulatedSpeed : currentSpeed} km/h
+        </Text>
       </View>
       {/* --- MOVE EVENT TEST BUTTON --- */}
       {!isSimulating && (
