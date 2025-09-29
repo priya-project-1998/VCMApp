@@ -510,7 +510,7 @@ const MapScreen = ({ route, navigation }) => {
       msg = 'App is on Real Device';
     }
     if (Platform.OS === 'android') {
-      ToastAndroid.show(msg, ToastAndroid.LONG);
+      //ToastAndroid.show(msg, ToastAndroid.LONG);
     } else {
       Alert.alert('Device Info', msg);
     }
@@ -538,7 +538,7 @@ const MapScreen = ({ route, navigation }) => {
         parseFloat(cp.latitude),
         parseFloat(cp.longitude)
       );
-      if (dist < 100 && !checkpointStatus[cp.checkpoint_id]?.completed) {
+      if (dist < 10 && !checkpointStatus[cp.checkpoint_id]?.completed) {
         (async () => {
           setLoadingCheckpointId(cp.checkpoint_id);
           try {
@@ -572,8 +572,8 @@ const MapScreen = ({ route, navigation }) => {
                 [cp.checkpoint_id]: { time: new Date().toLocaleTimeString(), completed: true },
               }));
               const cpName = cp.checkpoint_name || cp.checkpoint_id;
-              if (Platform.OS === 'android') ToastAndroid.show(`Checkpoint \"${cpName}\" synced successfully`, ToastAndroid.SHORT);
-              else Alert.alert('Checkpoint Synced', `Checkpoint \"${cpName}\" synced successfully`);
+              if (Platform.OS === 'android') ToastAndroid.show(`Checkpoint "${cpName}" synced successfully`, ToastAndroid.SHORT);
+              else Alert.alert('Checkpoint Synced', `Checkpoint "${cpName}" synced successfully`);
             } else {
               if (Platform.OS === 'android') ToastAndroid.show('Server error: ' + (data.message || 'Failed'), ToastAndroid.SHORT);
               else Alert.alert('Server error', data.message || 'Failed');
@@ -619,7 +619,7 @@ const MapScreen = ({ route, navigation }) => {
       setUserRoute(prev => [...prev, newPoint]);
       current = newPoint;
       steps++;
-      // Check if reached any checkpoint (within 100m)
+      // Check if reached any checkpoint (within 10m)
       for (let cp of checkpoints) {
         const dist = getDistanceFromLatLonInMeters(
           current.latitude,
@@ -627,7 +627,7 @@ const MapScreen = ({ route, navigation }) => {
           parseFloat(cp.latitude),
           parseFloat(cp.longitude)
         );
-        if (dist < 100 && !checkpointStatus[cp.checkpoint_id]?.completed) {
+        if (dist < 10 && !checkpointStatus[cp.checkpoint_id]?.completed) {
           // Call the same API as 'Mark as Completed (Test)' for this checkpoint
           (async () => {
             setLoadingCheckpointId(cp.checkpoint_id);
@@ -662,8 +662,8 @@ const MapScreen = ({ route, navigation }) => {
                   [cp.checkpoint_id]: { time: new Date().toLocaleTimeString(), completed: true },
                 }));
                 const cpName = cp.checkpoint_name || cp.checkpoint_id;
-                if (Platform.OS === 'android') ToastAndroid.show(`Checkpoint \"${cpName}\" synced successfully`, ToastAndroid.SHORT);
-                else Alert.alert('Checkpoint Synced', `Checkpoint \"${cpName}\" synced successfully`);
+                if (Platform.OS === 'android') ToastAndroid.show(`Checkpoint "${cpName}" synced successfully`, ToastAndroid.SHORT);
+                else Alert.alert('Checkpoint Synced', `Checkpoint "${cpName}" synced successfully`);
               } else {
                 if (Platform.OS === 'android') ToastAndroid.show('Server error: ' + (data.message || 'Failed'), ToastAndroid.SHORT);
                 else Alert.alert('Server error', data.message || 'Failed');
@@ -711,7 +711,7 @@ const MapScreen = ({ route, navigation }) => {
         </Text>
       </View>
       {/* --- MOVE EVENT TEST BUTTON --- */}
-      {!isSimulating && (
+      {isTestMode && !isSimulating && (
         <TouchableOpacity
           style={{
             position: 'absolute',
