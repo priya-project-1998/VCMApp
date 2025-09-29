@@ -485,6 +485,64 @@ const MapScreen = ({ route, navigation }) => {
     setMarkerPosition(startPoint);
     setUserRoute([startPoint]);
     setIsSimulating(true);
+    // Immediately check and sync if at a checkpoint (for first point)
+    for (let cp of checkpoints) {
+      const dist = getDistanceFromLatLonInMeters(
+        startPoint.latitude,
+        startPoint.longitude,
+        parseFloat(cp.latitude),
+        parseFloat(cp.longitude)
+      );
+      if (dist < 100 && !checkpointStatus[cp.checkpoint_id]?.completed) {
+        (async () => {
+          setLoadingCheckpointId(cp.checkpoint_id);
+          try {
+            const token = await AsyncStorage.getItem('authToken');
+            if (!token) {
+              if (Platform.OS === 'android') ToastAndroid.show('No auth token found', ToastAndroid.SHORT);
+              else Alert.alert('No auth token found');
+              setLoadingCheckpointId(null);
+              return;
+            }
+            const res = await fetch(
+              "https://e-pickup.randomsoftsolution.in/api/events/checkpoints/update",
+              {
+                method: "POST",
+                headers: {
+                  "Content-Type": "application/json",
+                  "Authorization": `Bearer ${token}`,
+                },
+                body: JSON.stringify({
+                  event_id: event_id,
+                  category_id: category_id,
+                  checkpoint_id: cp.checkpoint_id,
+                }),
+              }
+            );
+            let data = {};
+            try { data = await res.json(); } catch {}
+            if ((res.status === 200 && data.status === "success") || data.status === "success") {
+              setCheckpointStatus((prev) => ({
+                ...prev,
+                [cp.checkpoint_id]: { time: new Date().toLocaleTimeString(), completed: true },
+              }));
+              setMarkerColors((prev) => ({ ...prev, [cp.checkpoint_id]: '#185a9d' }));
+              const cpName = cp.checkpoint_name || cp.checkpoint_id;
+              if (Platform.OS === 'android') ToastAndroid.show(`Checkpoint \"${cpName}\" synced successfully`, ToastAndroid.SHORT);
+              else Alert.alert('Checkpoint Synced', `Checkpoint \"${cpName}\" synced successfully`);
+            } else {
+              if (Platform.OS === 'android') ToastAndroid.show('Server error: ' + (data.message || 'Failed'), ToastAndroid.SHORT);
+              else Alert.alert('Server error', data.message || 'Failed');
+            }
+          } catch (err) {
+            if (Platform.OS === 'android') ToastAndroid.show('Network/API error', ToastAndroid.SHORT);
+            else Alert.alert('Network/API error');
+          }
+          setLoadingCheckpointId(null);
+        })();
+        break;
+      }
+    }
     let current = startPoint;
     let steps = 0;
     simulationIntervalRef.current = setInterval(() => {
@@ -595,8 +653,8 @@ const MapScreen = ({ route, navigation }) => {
       {/* Top Left Info Bar */}
       <View style={styles.infoBar}>
         <Text style={styles.infoText}>Time Elapsed: {formatTime(elapsedSeconds)}</Text>
-        <Text style={styles.infoText}>Checkpoint: {checkpoints.length}</Text>
-        <Text style={styles.infoText}>Speed Limit: {currentSpeed}/60</Text>
+        <Text style={styles.infoText}>Checkpoint: {Object.values(checkpointStatus).filter(s => s.completed).length}/{checkpoints.length}</Text>
+        {/* <Text style={styles.infoText}>Speed Limit: {currentSpeed}/60</Text> */}
         <Text style={styles.infoText}>
           Current Speed: {isSimulating ? simulatedSpeed : currentSpeed} km/h
         </Text>
