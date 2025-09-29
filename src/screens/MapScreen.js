@@ -18,6 +18,7 @@ import MapView, { PROVIDER_GOOGLE, Marker, Polyline } from "react-native-maps";
 import Geolocation from "@react-native-community/geolocation";
 import NetInfo from "@react-native-community/netinfo";
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import DeviceInfo from 'react-native-device-info';
 
 // ✅ Import SQLite services
 import {
@@ -50,6 +51,7 @@ const MapScreen = ({ route, navigation }) => {
   const [showCurrentLocationMarker, setShowCurrentLocationMarker] = useState(false);
   const [currentLocationMarkerCoords, setCurrentLocationMarkerCoords] = useState(null);
   const currentLocationTimeoutRef = useRef(null);
+  const [shouldCenterOnUser, setShouldCenterOnUser] = useState(false); // Flag to center map on user
 
   // Get checkpoints from route.params (API response)
   const { checkpoints: paramCheckpoints, category_id,event_id, kml_path } = route.params || {};
@@ -349,6 +351,7 @@ const MapScreen = ({ route, navigation }) => {
         setModalVisible(true);
         break;
       case 'My Location':
+        setShouldCenterOnUser(true); // set flag to center on user
         if (mapRef.current) {
           Geolocation.getCurrentPosition(
             (pos) => {
@@ -372,9 +375,12 @@ const MapScreen = ({ route, navigation }) => {
               }, 15000);
             },
             (error) => {
-              Alert.alert('Location error', error && error.message ? error.message : 'Unable to get location');
+              let msg = 'Location error';
+              if (error && error.message) msg += ': ' + error.message;
+              if (error && error.code) msg += ` (code: ${error.code})`;
+              Alert.alert(msg);
             },
-            { enableHighAccuracy: true, timeout: 15000, maximumAge: 10000 }
+            { enableHighAccuracy: true, timeout: 30000, maximumAge: 0 }
           );
         }
         break;
@@ -415,6 +421,16 @@ const MapScreen = ({ route, navigation }) => {
       if (typeof speed === 'number' && !isNaN(speed)) {
         // speed in m/s, convert to km/h
         setCurrentSpeed(Math.round(speed * 3.6));
+      }
+      // Center map if flag is set
+      if (shouldCenterOnUser && mapRef.current) {
+        mapRef.current.animateToRegion({
+          latitude,
+          longitude,
+          latitudeDelta: 0.01,
+          longitudeDelta: 0.01,
+        }, 1000);
+        setShouldCenterOnUser(false);
       }
     } catch (err) {
       // ignore
@@ -471,6 +487,35 @@ const MapScreen = ({ route, navigation }) => {
   const [isSimulating, setIsSimulating] = useState(false);
   const simulationIntervalRef = useRef(null);
   const [simulatedSpeed, setSimulatedSpeed] = useState(0); // <-- add this line
+
+  // Detect test mode (emulator/simulator) vs real device
+  const [isTestMode, setIsTestMode] = useState(false);
+  const [isTestModeChecked, setIsTestModeChecked] = useState(false);
+
+  useEffect(() => {
+    // Use DeviceInfo for reliable detection
+    DeviceInfo.isEmulator().then((isEmu) => {
+      setIsTestMode(isEmu);
+      setIsTestModeChecked(true);
+    });
+  }, []);
+
+  // Show device info on mount (only after check is complete)
+  useEffect(() => {
+    if (!isTestModeChecked) return;
+    //let msg = `isTestMode: ${isTestMode}\n`;
+    if (isTestMode) {
+      msg = 'App is on Virtual Device';
+    } else {
+      msg = 'App is on Real Device';
+    }
+    if (Platform.OS === 'android') {
+      ToastAndroid.show(msg, ToastAndroid.LONG);
+    } else {
+      Alert.alert('Device Info', msg);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isTestModeChecked, isTestMode]);
 
   // --- MOVE EVENT SIMULATION FUNCTION ---
   const startUserMovementSimulation = () => {
@@ -646,11 +691,13 @@ const MapScreen = ({ route, navigation }) => {
     };
   }, []);
 
+  // Only auto-start simulation on emulator/test mode
   useEffect(() => {
-    // Start simulation automatically when map opens
-    startUserMovementSimulation();
+    if (isTestMode) {
+      startUserMovementSimulation();
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [isTestMode]);
 
   return (
     <View style={styles.container}>
@@ -697,6 +744,8 @@ const MapScreen = ({ route, navigation }) => {
         scrollEnabled={true}
         pitchEnabled={true}
         rotateEnabled={true}
+        showsUserLocation={!isSimulating} // Hide default user location during simulation
+        followsUserLocation={!isSimulating} // Don't follow user location during simulation
         onUserLocationChange={handleUserLocationChange}
       >
         {/* --- Simulated Polyline and Marker --- */}
@@ -713,7 +762,7 @@ const MapScreen = ({ route, navigation }) => {
           <Marker coordinate={markerPosition} title="Sim User" pinColor="blue" />
         )}
         {/* Show current location marker if requested */}
-        {!isSimulating && showCurrentLocationMarker && currentLocationMarkerCoords && (
+        {!isSimulating && showCurrentLocationMarker && currentLocationMarkerCoords && false && (
           <Marker
             coordinate={currentLocationMarkerCoords}
             title="My Current Location"
