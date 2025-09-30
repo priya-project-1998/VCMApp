@@ -157,10 +157,10 @@ const MapScreen = ({ route, navigation }) => {
           checkProximityToCheckpoints(latitude, longitude);
         },
         (error) => {
-          Alert.alert(
-            "Location error",
-            error && error.message ? error.message : "Unable to get location"
-          );
+          // Alert.alert(
+          //   "Location error",
+          //   error && error.message ? error.message : "Unable to get location"
+          // );
         },
         { enableHighAccuracy: true, timeout: 15000, maximumAge: 10000 }
       );
@@ -378,7 +378,7 @@ const MapScreen = ({ route, navigation }) => {
               let msg = 'Location error';
               if (error && error.message) msg += ': ' + error.message;
               if (error && error.code) msg += ` (code: ${error.code})`;
-              Alert.alert(msg);
+              //Alert.alert(msg);
             },
             { enableHighAccuracy: true, timeout: 30000, maximumAge: 0 }
           );
