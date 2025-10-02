@@ -21,7 +21,6 @@ export default function EventStartScreen({ navigation, route }) {
       message: "All Good To Start."
     }
   };
-  // console.log('EventStartScreen received event:', event); // Removed for clean console
   if (event.eventId) delete event.eventId;
   if (event.categoryId) delete event.categoryId;
   if (event.participantId) delete event.participantId;
@@ -84,6 +83,36 @@ export default function EventStartScreen({ navigation, route }) {
     }
   };
 
+  // Config state
+  const [eventConfig, setEventConfig] = useState(null);
+  const [configLoading, setConfigLoading] = useState(true);
+  const [configError, setConfigError] = useState(null);
+
+  useEffect(() => {
+    // Fetch event config on mount
+    async function fetchConfig() {
+      setConfigLoading(true);
+      setConfigError(null);
+      if (!event.event_id || event.event_id === 'Event ID N/A') {
+        setConfigLoading(false);
+        return;
+      }
+      const res = await EventService.getConfigPerEvent(event.event_id);
+      if (res.status === 'success' && res.data) {
+        setEventConfig(res.data);
+      } else {
+        setConfigError('Failed to fetch event config');
+      }
+      setConfigLoading(false);
+    }
+    fetchConfig();
+  }, [eventId]);
+
+  // Use config values if available, else fallback to event
+  const flagOffDisplay = eventConfig?.flag_off_time || event.flagOff || 'N/A';
+  const durationDisplay = eventConfig?.speed_limit ? `${eventConfig.speed_limit} kmph` : (event.duration || 'N/A');
+  const gpsAccuracyDisplay = eventConfig?.gps_accuracy ? `${eventConfig.gps_accuracy} Meters` : (event.gpsAccuracy || 'N/A');
+
   return (
     <LinearGradient colors={["#0f2027", "#203a43", "#2c5364"]} style={styles.gradientBg}>
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
@@ -124,9 +153,9 @@ export default function EventStartScreen({ navigation, route }) {
         <View style={styles.glassCard}>
           <Text style={styles.eventTitle}>{eventName}</Text>
           <View style={styles.divider} />
-          <View style={styles.infoRow}><Text style={styles.detailIcon}>⏰</Text><Text style={styles.label}>Flag Off</Text><Text style={styles.value}>{event.flagOff || 'N/A'}</Text></View>
-          <View style={styles.infoRow}><Text style={styles.detailIcon}>⏳</Text><Text style={styles.label}>Duration</Text><Text style={[styles.value, styles.danger]}>{event.duration || 'N/A'}</Text></View>
-          <View style={styles.infoRow}><Text style={styles.detailIcon}>📍</Text><Text style={styles.label}>GPS Accuracy</Text><Text style={[styles.value, styles.success]}>{event.gpsAccuracy || 'N/A'}</Text></View>
+          <View style={styles.infoRow}><Text style={styles.detailIcon}>⏰</Text><Text style={styles.label}>Flag Off</Text><Text style={styles.value}>{flagOffDisplay}</Text></View>
+          <View style={styles.infoRow}><Text style={styles.detailIcon}>⏳</Text><Text style={styles.label}>Speed Limit</Text><Text style={[styles.value, styles.danger]}>{durationDisplay}</Text></View>
+          <View style={styles.infoRow}><Text style={styles.detailIcon}>📍</Text><Text style={styles.label}>GPS Accuracy</Text><Text style={[styles.value, styles.success]}>{gpsAccuracyDisplay}</Text></View>
           {/* Buttons */}
           <View style={styles.featureBtnRow}>
             <TouchableOpacity style={styles.featureBtn} onPress={() => {
@@ -368,17 +397,27 @@ const styles = StyleSheet.create({
   infoRow: {
     flexDirection: "row",
     justifyContent: "space-between",
+    alignItems: "flex-start",
+    flexWrap: "wrap",
     marginBottom: 7,
   },
   label: {
     fontSize: 15,
     color: "#e0e0e0",
     fontWeight: "500",
+    minWidth: 80,
+    flexShrink: 0,
   },
   value: {
     fontSize: 15,
     color: "#fff",
     fontWeight: "400",
+    flex: 1,
+    flexWrap: 'wrap',
+    textAlign: 'right',
+    marginLeft: 8,
+    minWidth: 60,
+    maxWidth: width * 0.45,
   },
   danger: {
     color: '#185a9d',

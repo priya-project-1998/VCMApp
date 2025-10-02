@@ -194,6 +194,25 @@ class EventService {
       return new ApiResponse("error", 500, err.message || "Fetching checkpoints failed", { kml_path: null, checkpoints: [] });
     }
   }
+
+  // 🔹 Get config for a specific event (requires auth token)
+  async getConfigPerEvent(eventId) {
+    
+    try {
+      const response = await getRequest(
+        `${ENDPOINTS.GET_CONFIG_PER_EVENT}${eventId}`,
+        HEADER_TYPES.AUTH // Bearer token header
+      );
+      if ((response.status === "success" || response.code === 200) && response.data.config) {
+        const config = response.data.config || null;
+        return new ApiResponse("success", response.code || 200, response.message || "Config fetched successfully", config);
+      } else {
+        return new ApiResponse("error", response.code || 500, response.message || "Failed to fetch config", null);
+      }
+    } catch (err) {
+      return new ApiResponse("error", 500, err.message || "Fetching config failed", null);
+    }
+  }
 }
 
 export default new EventService();
