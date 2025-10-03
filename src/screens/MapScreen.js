@@ -884,18 +884,18 @@ const MapScreen = ({ route, navigation }) => {
           )}
         </TouchableOpacity>
       )}
-      {/* Floating Menu */}
-      <View style={styles.floatingMenu}>
+      {/* Bottom Floating Menu */}
+      <View style={styles.bottomFloatingMenu}>
         {/* Time Stamp Dropdown */}
-        <View style={styles.dropdownContainer}>
+        <View style={styles.bottomDropdownContainer}>
           <TouchableOpacity
-            style={styles.menuBtn}
+            style={styles.bottomMenuBtn}
             onPress={() => setTimeStampDropdownVisible(!timeStampDropdownVisible)}
           >
-            <Text style={styles.menuBtnText}>Time Stamp ▾</Text>
+            <Text style={styles.bottomMenuBtnText}>Time Stamp ▴</Text>
           </TouchableOpacity>
           {timeStampDropdownVisible && (
-            <View style={styles.dropdownMenu}>
+            <View style={styles.bottomDropdownMenu}>
               {['Checkpoint History', 'My Location', 'Checkpoint Location'].map((action) => (
                 <TouchableOpacity
                   key={action}
@@ -908,16 +908,17 @@ const MapScreen = ({ route, navigation }) => {
             </View>
           )}
         </View>
+        
         {/* Center Map Dropdown */}
-        <View style={styles.dropdownContainer}>
+        <View style={styles.bottomDropdownContainer}>
           <TouchableOpacity
-            style={styles.menuBtn}
+            style={styles.bottomMenuBtn}
             onPress={() => setCenterDropdownVisible(!centerDropdownVisible)}
           >
-            <Text style={styles.menuBtnText}>Center Map ▾</Text>
+            <Text style={styles.bottomMenuBtnText}>Center Map ▴</Text>
           </TouchableOpacity>
           {centerDropdownVisible && (
-            <View style={styles.dropdownMenu}>
+            <View style={styles.bottomDropdownMenu}>
               {centerMapOptions.map((opt) => (
                 <TouchableOpacity
                   key={opt.key}
@@ -935,15 +936,15 @@ const MapScreen = ({ route, navigation }) => {
         </View>
 
         {/* Action Menu Dropdown */}
-        <View style={styles.dropdownContainer}>
+        <View style={styles.bottomDropdownContainer}>
           <TouchableOpacity
-            style={styles.menuBtn}
+            style={styles.bottomMenuBtn}
             onPress={() => setActionDropdownVisible(!actionDropdownVisible)}
           >
-            <Text style={styles.menuBtnText}>Action Menu ▾</Text>
+            <Text style={styles.bottomMenuBtnText}>Action Menu ▴</Text>
           </TouchableOpacity>
           {actionDropdownVisible && (
-            <View style={styles.dropdownMenu}>
+            <View style={styles.bottomDropdownMenu}>
               {["Map Layer", "Distance Tool", "Abort Event", "Call Organizer"].map((action) => (
                 <TouchableOpacity
                   key={action}
@@ -1061,6 +1062,56 @@ const styles = StyleSheet.create({
     flexDirection: "column",
     alignItems: "flex-end",
     zIndex: 30, // ensure above other elements
+  },
+  bottomFloatingMenu: {
+    position: "absolute",
+    bottom: 20,
+    left: 10,
+    right: 10,
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "flex-end",
+    zIndex: 30,
+  },
+  bottomDropdownContainer: {
+    flex: 1,
+    marginHorizontal: 5,
+    alignItems: "center",
+  },
+  bottomMenuBtn: {
+    backgroundColor: "#2196F3",
+    paddingVertical: 10,
+    paddingHorizontal: 15,
+    borderRadius: 20,
+    elevation: 4,
+    shadowColor: "#000",
+    shadowOpacity: 0.12,
+    shadowOffset: { width: 0, height: 2 },
+    shadowRadius: 4,
+    minWidth: 100,
+    alignItems: "center",
+  },
+  bottomMenuBtnText: {
+    color: "#fff",
+    fontWeight: "bold",
+    fontSize: 14,
+  },
+  bottomDropdownMenu: {
+    backgroundColor: "#fff",
+    borderRadius: 12,
+    paddingVertical: 6,
+    paddingHorizontal: 10,
+    marginBottom: 8,
+    elevation: 6,
+    shadowColor: "#2196F3",
+    shadowOpacity: 0.18,
+    shadowOffset: { width: 0, height: 2 },
+    shadowRadius: 6,
+    minWidth: 140,
+    position: "absolute",
+    bottom: 50,
+    left: 0,
+    right: 0,
   },
   menuBtn: {
     backgroundColor: "#2196F3",
