@@ -1,6 +1,8 @@
 import React, { useState } from "react";
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from "react-native";
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Dimensions } from "react-native";
 import LinearGradient from "react-native-linear-gradient";
+
+const { width } = Dimensions.get("window");
 
 const ResultsScreen = () => {
   const [selectedResult, setSelectedResult] = useState(null);
@@ -129,12 +131,12 @@ const ResultsScreen = () => {
   ];
 
   return (
-    <LinearGradient colors={["#1e3c72", "#2a5298", "#1e3c72"]} style={{ flex: 1 }}>
+    <LinearGradient colors={["#0f2027", "#203a43", "#2c5364"]} style={{ flex: 1 }}>
       <View style={[styles.container, selectedResult && styles.containerFullScreen]}>
         {/* Header - Only show when not viewing details */}
         {!selectedResult && (
           <View style={styles.headerContainer}>
-            <LinearGradient colors={["rgba(102, 126, 234, 0.2)", "rgba(118, 75, 162, 0.2)"]} style={styles.headerGradient}>
+            <LinearGradient colors={["#43cea2", "#185a9d"]} style={styles.headerGradient}>
               <Text style={styles.headerTitle}>🏆 Race Results</Text>
               <Text style={styles.headerSubtitle}>Your completed events</Text>
             </LinearGradient>
@@ -150,10 +152,10 @@ const ResultsScreen = () => {
                 onPress={() => setSelectedResult(result)}
               >
                 <LinearGradient 
-                  colors={idx % 4 === 0 ? ["rgba(76, 201, 240, 0.3)", "rgba(67, 206, 162, 0.3)"] : 
-                         idx % 4 === 1 ? ["rgba(255, 107, 107, 0.3)", "rgba(238, 90, 111, 0.3)"] : 
-                         idx % 4 === 2 ? ["rgba(254, 202, 87, 0.3)", "rgba(255, 159, 243, 0.3)"] : 
-                         ["rgba(84, 160, 255, 0.3)", "rgba(95, 39, 205, 0.3)"]} 
+                  colors={idx % 4 === 0 ? ["#43cea2", "#185a9d"] : 
+                         idx % 4 === 1 ? ["#185a9d", "#43cea2"] : 
+                         idx % 4 === 2 ? ["#43cea2", "#2c5364"] : 
+                         ["#185a9d", "#2c5364"]} 
                   style={styles.eventCardGradient}
                 >
                   <View style={styles.eventIconContainer}>
@@ -185,12 +187,12 @@ const ResultsScreen = () => {
 
             <ScrollView contentContainerStyle={styles.detailsContainer} showsVerticalScrollIndicator={false}>
               <View>
-                <LinearGradient colors={["rgba(255, 255, 255, 0.95)", "rgba(248, 250, 252, 0.95)"]} style={styles.detailHeader}>
+                <View style={styles.glassCard}>
                   <Text style={styles.detailTitle}>🏆 {selectedResult.name}</Text>
-                </LinearGradient>
+                </View>
 
                 {/* Timeline Section */}
-                <View>
+                <View style={styles.glassCard}>
                   <Text style={styles.sectionTitle}>📍 Race Timeline</Text>
                   <View style={styles.timelineContainer}>
                     {selectedResult.checkpoints.map((cp, idx) => (
@@ -210,13 +212,7 @@ const ResultsScreen = () => {
                           }
                         </View>
                         <View style={styles.timelineRight}>
-                          <LinearGradient 
-                            colors={cp.status === "missed" ? ["rgba(255, 255, 255, 0.98)", "rgba(255, 245, 245, 0.98)"] :
-                                   idx === 0 ? ["rgba(255, 255, 255, 0.98)", "rgba(255, 253, 240, 0.98)"] : 
-                                   idx === selectedResult.checkpoints.length-1 ? ["rgba(255, 255, 255, 0.98)", "rgba(240, 255, 250, 0.98)"] : 
-                                   ["rgba(255, 255, 255, 0.98)", "rgba(248, 252, 255, 0.98)"]} 
-                            style={styles.checkpointCard}
-                          >
+                          <View style={styles.checkpointCard}>
                             <Text style={[styles.enhancedCheckpointName, cp.status === "missed" && styles.missedCheckpointName]}>
                               {cp.name}
                             </Text>
@@ -228,7 +224,7 @@ const ResultsScreen = () => {
                                 🏅 {cp.points} pts
                               </Text>
                             </View>
-                          </LinearGradient>
+                          </View>
                         </View>
                       </View>
                     ))}
@@ -236,7 +232,7 @@ const ResultsScreen = () => {
                 </View>
 
                 {/* Performance Section */}
-                <View style={styles.enhancedPerformanceSection}>
+                <View style={styles.glassCard}>
                   <Text style={styles.sectionTitle}>📊 Performance Summary</Text>
                   
                   {/* Missed Checkpoints Details */}
@@ -295,47 +291,47 @@ const ResultsScreen = () => {
                   )}
                   <View style={styles.statsGrid}>
                     <View style={styles.statCard}>
-                      <LinearGradient colors={["rgba(248, 250, 255, 0.95)", "rgba(240, 245, 255, 0.95)"]} style={styles.statGradient}>
+                      <View style={styles.statGradient}>
                         <Text style={styles.statIcon}>⏰</Text>
                         <Text style={styles.statLabel}>Duration</Text>
                         <Text style={styles.statValue}>{selectedResult.performance.timeTaken}</Text>
-                      </LinearGradient>
+                      </View>
                     </View>
                     <View style={styles.statCard}>
-                      <LinearGradient colors={["rgba(240, 255, 248, 0.95)", "rgba(235, 250, 245, 0.95)"]} style={styles.statGradient}>
+                      <View style={styles.statGradient}>
                         <Text style={styles.statIcon}>🎯</Text>
                         <Text style={styles.statLabel}>Completed</Text>
                         <Text style={styles.statValue}>{selectedResult.performance.checkpoints}/{selectedResult.performance.totalCheckpoints}</Text>
-                      </LinearGradient>
+                      </View>
                     </View>
                     <View style={styles.statCard}>
-                      <LinearGradient colors={["rgba(255, 245, 245, 0.95)", "rgba(255, 235, 235, 0.95)"]} style={styles.statGradient}>
+                      <View style={styles.statGradient}>
                         <Text style={styles.statIcon}>❌</Text>
                         <Text style={styles.statLabel}>Missed</Text>
                         <Text style={styles.statValue}>{selectedResult.performance.missedCheckpoints}</Text>
-                      </LinearGradient>
+                      </View>
                     </View>
 
                     <View style={styles.statCard}>
-                      <LinearGradient colors={["rgba(255, 240, 255, 0.95)", "rgba(250, 230, 250, 0.95)"]} style={styles.statGradient}>
+                      <View style={styles.statGradient}>
                         <Text style={styles.statIcon}>⚡</Text>
                         <Text style={styles.statLabel}>Penalty</Text>
                         <Text style={styles.statValue}>-{selectedResult.performance.speedPenalty}</Text>
-                      </LinearGradient>
+                      </View>
                     </View>
                     <View style={styles.statCard}>
-                      <LinearGradient colors={["rgba(245, 248, 255, 0.95)", "rgba(235, 240, 255, 0.95)"]} style={styles.statGradient}>
+                      <View style={styles.statGradient}>
                         <Text style={styles.statIcon}>🏅</Text>
                         <Text style={styles.statLabel}>Checkpoint Points</Text>
                         <Text style={styles.statValue}>{selectedResult.performance.checkpointPoints}</Text>
-                      </LinearGradient>
+                      </View>
                     </View>
                     <View style={styles.statCard}>
-                      <LinearGradient colors={["rgba(255, 248, 235, 0.95)", "rgba(255, 240, 220, 0.95)"]} style={styles.statGradient}>
+                      <View style={styles.statGradient}>
                         <Text style={styles.statIcon}>🏆</Text>
                         <Text style={styles.statLabel}>Total Points</Text>
                         <Text style={styles.statValue}>{selectedResult.performance.totalPoints}</Text>
-                      </LinearGradient>
+                      </View>
                     </View>
                   </View>
                 </View>
@@ -356,6 +352,22 @@ const styles = StyleSheet.create({
   containerFullScreen: {
     paddingTop: 0,
   },
+  glassCard: {
+    width: width * 0.92,
+    backgroundColor: 'rgba(15,15,20,0.95)',
+    borderRadius: 24,
+    padding: 20,
+    marginTop: 18,
+    marginBottom: 10,
+    alignSelf: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.18,
+    shadowRadius: 10,
+    elevation: 8,
+    borderWidth: 1,
+    borderColor: 'rgba(67,206,162,0.18)',
+  },
   headerContainer: {
     marginBottom: 20,
     marginHorizontal: 20,
@@ -364,10 +376,9 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     padding: 20,
     alignItems: 'center',
-    backgroundColor: 'rgba(255, 255, 255, 0.1)',
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.2)',
-    shadowColor: '#667eea',
+    borderColor: 'rgba(255, 255, 255, 0.3)',
+    shadowColor: '#43cea2',
     shadowOpacity: 0.25,
     shadowOffset: { width: 0, height: 4 },
     shadowRadius: 12,
@@ -391,7 +402,7 @@ const styles = StyleSheet.create({
     marginBottom: 16,
     borderRadius: 18,
     overflow: 'hidden',
-    shadowColor: '#667eea',
+    shadowColor: '#43cea2',
     shadowOpacity: 0.15,
     shadowOffset: { width: 0, height: 4 },
     shadowRadius: 10,
@@ -401,9 +412,8 @@ const styles = StyleSheet.create({
     padding: 20,
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'rgba(255, 255, 255, 0.1)',
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.2)',
+    borderColor: 'rgba(255, 255, 255, 0.3)',
   },
   eventIconContainer: {
     width: 50,
@@ -445,7 +455,7 @@ const styles = StyleSheet.create({
   },
   detailsWrapper: {
     flex: 1,
-    backgroundColor: 'rgba(255, 255, 255, 0.92)',
+    backgroundColor: '#203a43',
   },
   topHeader: {
     flexDirection: 'row',
@@ -453,10 +463,10 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingTop: 35,
     paddingBottom: 6,
-    backgroundColor: '#fff',
+    backgroundColor: '#2c5364',
     borderBottomLeftRadius: 20,
     borderBottomRightRadius: 20,
-    shadowColor: '#000',
+    shadowColor: '#43cea2',
     shadowOpacity: 0.1,
     shadowOffset: { width: 0, height: 2 },
     shadowRadius: 8,
@@ -466,10 +476,10 @@ const styles = StyleSheet.create({
     width: 30,
     height: 30,
     borderRadius: 15,
-    backgroundColor: '#667eea',
+    backgroundColor: '#43cea2',
     alignItems: 'center',
     justifyContent: 'center',
-    shadowColor: '#667eea',
+    shadowColor: '#43cea2',
     shadowOpacity: 0.3,
     shadowOffset: { width: 0, height: 2 },
     shadowRadius: 6,
@@ -484,7 +494,7 @@ const styles = StyleSheet.create({
     flex: 1,
     fontSize: 15,
     fontWeight: 'bold',
-    color: '#2d3748',
+    color: '#fff',
     textAlign: 'center',
   },
   headerSpacer: {
@@ -494,16 +504,16 @@ const styles = StyleSheet.create({
     padding: 12,
   },
   detailCard: {
-    backgroundColor: 'rgba(255, 255, 255, 0.95)',
-    borderRadius: 20,
+    backgroundColor: '#2c5364',
+    borderRadius: 24,
     overflow: 'hidden',
-    borderWidth: 2,
-    borderColor: 'rgba(255, 255, 255, 0.8)',
-    shadowColor: '#000',
-    shadowOpacity: 0.25,
-    shadowOffset: { width: 0, height: 8 },
-    shadowRadius: 20,
-    elevation: 10,
+    borderWidth: 1,
+    borderColor: '#43cea2',
+    shadowColor: '#43cea2',
+    shadowOpacity: 0.18,
+    shadowOffset: { width: 0, height: 2 },
+    shadowRadius: 10,
+    elevation: 8,
     marginBottom: 10,
     marginHorizontal: 4,
   },
@@ -511,16 +521,14 @@ const styles = StyleSheet.create({
     padding: 16,
     alignItems: 'center',
     borderBottomWidth: 1,
-    borderBottomColor: 'rgba(255, 255, 255, 0.1)',
+    borderBottomColor: '#43cea2',
   },
   detailTitle: {
     fontSize: 18,
     fontWeight: 'bold',
-    color: '#1a202c',
+    color: '#43cea2',
     textAlign: 'center',
-    textShadowColor: 'rgba(255, 255, 255, 0.8)',
-    textShadowOffset: { width: 0, height: 1 },
-    textShadowRadius: 2,
+    marginBottom: 12,
   },
   timelineSection: {
     padding: 20,
@@ -540,12 +548,9 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 18,
     fontWeight: 'bold',
-    color: '#1a202c',
+    color: '#43cea2',
     marginBottom: 16,
     textAlign: 'center',
-    textShadowColor: 'rgba(255, 255, 255, 0.8)',
-    textShadowOffset: { width: 0, height: 1 },
-    textShadowRadius: 2,
   },
   timelineContainer: {
     paddingLeft: 10,
@@ -571,16 +576,16 @@ const styles = StyleSheet.create({
     elevation: 3,
   },
   startDot: {
-    backgroundColor: '#ffecd2',
-    borderColor: '#fcb69f',
+    backgroundColor: '#43cea2',
+    borderColor: '#185a9d',
   },
   checkpointDot: {
-    backgroundColor: '#d299c2',
-    borderColor: '#fef9d7',
+    backgroundColor: '#43cea2',
+    borderColor: '#185a9d',
   },
   finishDot: {
-    backgroundColor: '#a8edea',
-    borderColor: '#fed6e3',
+    backgroundColor: '#43cea2',
+    borderColor: '#185a9d',
   },
   missedDot: {
     backgroundColor: '#ff6b6b',
@@ -589,12 +594,12 @@ const styles = StyleSheet.create({
   timelineConnector: {
     width: 3,
     height: 50,
-    backgroundColor: '#d299c2',
+    backgroundColor: '#185a9d',
     marginTop: 2,
     borderRadius: 2,
   },
   normalConnector: {
-    backgroundColor: '#54a0ff',
+    backgroundColor: '#185a9d',
   },
   missedConnector: {
     backgroundColor: '#ff6b6b',
@@ -605,9 +610,12 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   checkpointCard: {
+    backgroundColor: 'rgba(67,206,162,0.1)',
     borderRadius: 12,
     padding: 12,
-    shadowColor: '#185a9d',
+    borderWidth: 1,
+    borderColor: 'rgba(67,206,162,0.2)',
+    shadowColor: '#43cea2',
     shadowOpacity: 0.15,
     shadowOffset: { width: 0, height: 2 },
     shadowRadius: 6,
@@ -635,7 +643,7 @@ const styles = StyleSheet.create({
   enhancedCheckpointName: {
     fontSize: 16,
     fontWeight: 'bold',
-    color: '#1a202c',
+    color: '#e0e0e0',
     marginBottom: 8,
   },
   checkpointDetails: {
@@ -650,28 +658,28 @@ const styles = StyleSheet.create({
   },
   enhancedCheckpointTime: {
     fontSize: 15,
-    color: '#1a202c',
+    color: '#e0e0e0',
     fontWeight: '600',
   },
   checkpointPoints: {
     fontSize: 14,
-    color: '#2d3748',
+    color: '#e0e0e0',
     fontWeight: 'bold',
   },
   enhancedCheckpointPoints: {
     fontSize: 15,
-    color: '#1a202c',
+    color: '#e0e0e0',
     fontWeight: 'bold',
   },
   missedCheckpointName: {
-    color: '#dc2626',
+    color: '#ff6b6b',
   },
   missedTime: {
-    color: '#dc2626',
+    color: '#ff6b6b',
     fontStyle: 'italic',
   },
   missedPoints: {
-    color: '#dc2626',
+    color: '#ff6b6b',
   },
   performanceSection: {
     padding: 20,
@@ -680,10 +688,10 @@ const styles = StyleSheet.create({
   enhancedPerformanceSection: {
     padding: 20,
     paddingTop: 10,
-    backgroundColor: 'rgba(255, 255, 255, 0.85)',
+    backgroundColor: '#2c5364',
     borderRadius: 20,
     margin: 12,
-    shadowColor: '#000',
+    shadowColor: '#43cea2',
     shadowOpacity: 0.1,
     shadowOffset: { width: 0, height: 4 },
     shadowRadius: 12,
@@ -699,13 +707,14 @@ const styles = StyleSheet.create({
     marginBottom: 16,
     borderRadius: 16,
     overflow: 'hidden',
-    shadowColor: '#000',
+    backgroundColor: 'rgba(67,206,162,0.1)',
+    borderWidth: 1,
+    borderColor: 'rgba(67,206,162,0.2)',
+    shadowColor: '#43cea2',
     shadowOpacity: 0.25,
     shadowOffset: { width: 0, height: 4 },
     shadowRadius: 12,
     elevation: 6,
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.8)',
   },
   statGradient: {
     padding: 20,
@@ -719,7 +728,7 @@ const styles = StyleSheet.create({
   },
   statLabel: {
     fontSize: 13,
-    color: '#6B7280',
+    color: '#e0e0e0',
     marginBottom: 6,
     textAlign: 'center',
     fontWeight: '600',
@@ -727,7 +736,7 @@ const styles = StyleSheet.create({
   statValue: {
     fontSize: 18,
     fontWeight: 'bold',
-    color: '#1F2937',
+    color: '#fff',
     textAlign: 'center',
   },
   fullScreenDetailsWrapper: {
@@ -835,11 +844,11 @@ const styles = StyleSheet.create({
     width: 48,
     height: 48,
     borderRadius: 24,
-    backgroundColor: '#667eea',
+    backgroundColor: '#185a9d',
     alignItems: 'center',
     justifyContent: 'center',
     marginRight: 16,
-    shadowColor: '#667eea',
+    shadowColor: '#43cea2',
     shadowOpacity: 0.25,
     shadowOffset: { width: 0, height: 4 },
     shadowRadius: 12,
@@ -983,17 +992,20 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   missedSummaryCard: {
+    width: width * 0.92,
+    backgroundColor: 'rgba(15,15,20,0.95)',
+    borderRadius: 24,
+    padding: 20,
+    marginTop: 18,
     marginBottom: 16,
-    borderRadius: 16,
-    overflow: 'hidden',
-    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    alignSelf: 'center',
+    shadowColor: '#ff7675',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.18,
+    shadowRadius: 10,
+    elevation: 8,
     borderWidth: 1,
     borderColor: 'rgba(255, 107, 107, 0.3)',
-    shadowColor: '#ff7675',
-    shadowOpacity: 0.15,
-    shadowOffset: { width: 0, height: 3 },
-    shadowRadius: 8,
-    elevation: 4,
   },
   missedSummaryGradient: {
     padding: 16,
@@ -1050,17 +1062,20 @@ const styles = StyleSheet.create({
     borderColor: 'rgba(220, 38, 38, 0.3)',
   },
   earnedSummaryCard: {
+    width: width * 0.92,
+    backgroundColor: 'rgba(15,15,20,0.95)',
+    borderRadius: 24,
+    padding: 20,
+    marginTop: 18,
     marginBottom: 16,
-    borderRadius: 16,
-    overflow: 'hidden',
-    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    alignSelf: 'center',
+    shadowColor: '#43cea2',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.18,
+    shadowRadius: 10,
+    elevation: 8,
     borderWidth: 1,
-    borderColor: 'rgba(76, 201, 240, 0.3)',
-    shadowColor: '#00b894',
-    shadowOpacity: 0.15,
-    shadowOffset: { width: 0, height: 3 },
-    shadowRadius: 8,
-    elevation: 4,
+    borderColor: 'rgba(67, 206, 162, 0.3)',
   },
   earnedSummaryGradient: {
     padding: 16,
