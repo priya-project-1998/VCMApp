@@ -54,7 +54,7 @@ const MapScreen = ({ route, navigation }) => {
   const [shouldCenterOnUser, setShouldCenterOnUser] = useState(false); // Flag to center map on user
 
   // Get checkpoints from route.params (API response)
-  const { checkpoints: paramCheckpoints, category_id,event_id, kml_path } = route.params || {};
+  const { checkpoints: paramCheckpoints, category_id,event_id, kml_path, color } = route.params || {};
   // Use paramCheckpoints only (no static fallback)
   const checkpoints = Array.isArray(paramCheckpoints) ? paramCheckpoints : [];
 
@@ -62,6 +62,7 @@ const MapScreen = ({ route, navigation }) => {
   // console.log('MapScreen event_id:', event_id);
   // console.log('MapScreen kml_path:', kml_path);
   // console.log('MapScreen checkpoints:', checkpoints);
+  // console.log('MapScreen color:', color);
 
   // ✅ Table create
   useEffect(() => {
@@ -792,7 +793,7 @@ const MapScreen = ({ route, navigation }) => {
             pinColor={
               checkpointStatus[cp.checkpoint_id]?.completed
                 ? '#4caf50' // green for completed
-                : 'red' // red for pending
+                : (color || 'red') // use passed color or fallback to red for pending
             }
             onPress={() => setSelectedCheckpointId(cp.checkpoint_id)}
           />
