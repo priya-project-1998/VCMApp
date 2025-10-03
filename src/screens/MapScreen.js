@@ -195,6 +195,7 @@ const MapScreen = ({ route, navigation }) => {
             event_id: event_id,
             category_id: category_id,
             checkpoint_id: checkpointId,
+            over_speed: 14
           }),
         }
       );
@@ -549,6 +550,14 @@ const MapScreen = ({ route, navigation }) => {
               setLoadingCheckpointId(null);
               return;
             }
+            // Log API details
+            console.log("API Endpoint:", "https://e-pickup.randomsoftsolution.in/api/events/checkpoints/update");
+            console.log("API Params:", {
+              event_id: event_id,
+              category_id: category_id,
+              checkpoint_id: cp.checkpoint_id,
+            });
+            
             const res = await fetch(
               "https://e-pickup.randomsoftsolution.in/api/events/checkpoints/update",
               {
@@ -561,6 +570,7 @@ const MapScreen = ({ route, navigation }) => {
                   event_id: event_id,
                   category_id: category_id,
                   checkpoint_id: cp.checkpoint_id,
+                  over_speed: 14
                 }),
               }
             );
@@ -651,6 +661,7 @@ const MapScreen = ({ route, navigation }) => {
                     event_id: event_id,
                     category_id: category_id,
                     checkpoint_id: cp.checkpoint_id,
+                    over_speed: 14
                   }),
                 }
               );
@@ -824,6 +835,7 @@ const MapScreen = ({ route, navigation }) => {
                     event_id: event_id,
                     category_id: category_id,
                     checkpoint_id: selectedCheckpointId,
+                    over_speed: 14
                   }),
                 }
               );
@@ -892,7 +904,7 @@ const MapScreen = ({ route, navigation }) => {
             style={styles.bottomMenuBtn}
             onPress={() => setTimeStampDropdownVisible(!timeStampDropdownVisible)}
           >
-            <Text style={styles.bottomMenuBtnText}>Time Stamp ▴</Text>
+            <Text style={styles.bottomMenuBtnText}>Time Stamp</Text>
           </TouchableOpacity>
           {timeStampDropdownVisible && (
             <View style={styles.bottomDropdownMenu}>
@@ -915,7 +927,7 @@ const MapScreen = ({ route, navigation }) => {
             style={styles.bottomMenuBtn}
             onPress={() => setCenterDropdownVisible(!centerDropdownVisible)}
           >
-            <Text style={styles.bottomMenuBtnText}>Center Map ▴</Text>
+            <Text style={styles.bottomMenuBtnText}>Center Map</Text>
           </TouchableOpacity>
           {centerDropdownVisible && (
             <View style={styles.bottomDropdownMenu}>
@@ -941,7 +953,7 @@ const MapScreen = ({ route, navigation }) => {
             style={styles.bottomMenuBtn}
             onPress={() => setActionDropdownVisible(!actionDropdownVisible)}
           >
-            <Text style={styles.bottomMenuBtnText}>Action Menu ▴</Text>
+            <Text style={styles.bottomMenuBtnText}>Action Menu</Text>
           </TouchableOpacity>
           {actionDropdownVisible && (
             <View style={styles.bottomDropdownMenu}>
