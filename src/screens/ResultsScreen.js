@@ -100,7 +100,7 @@ const ResultsScreen = () => {
       },
     },
     {
-      id: 3,
+      id: 4,
       name: "Priya Sharma - Event Results",
       checkpoints: [
         { sr: 1, name: "Start1", time: "08:00:00", points: 1000, status: "completed" },
@@ -131,12 +131,12 @@ const ResultsScreen = () => {
   ];
 
   return (
-    <LinearGradient colors={["#0f2027", "#203a43", "#2c5364"]} style={{ flex: 1 }}>
+    <LinearGradient colors={["#1a1a2e", "#16213e", "#0f3460"]} style={{ flex: 1 }}>
       <View style={[styles.container, selectedResult && styles.containerFullScreen]}>
         {/* Header - Only show when not viewing details */}
         {!selectedResult && (
           <View style={styles.headerContainer}>
-            <LinearGradient colors={["#43cea2", "#185a9d"]} style={styles.headerGradient}>
+            <LinearGradient colors={["#667eea", "#764ba2"]} style={styles.headerGradient}>
               <Text style={styles.headerTitle}>🏆 Race Results</Text>
               <Text style={styles.headerSubtitle}>Your completed events</Text>
             </LinearGradient>
@@ -152,10 +152,10 @@ const ResultsScreen = () => {
                 onPress={() => setSelectedResult(result)}
               >
                 <LinearGradient 
-                  colors={idx % 4 === 0 ? ["#43cea2", "#185a9d"] : 
-                         idx % 4 === 1 ? ["#185a9d", "#43cea2"] : 
-                         idx % 4 === 2 ? ["#43cea2", "#2c5364"] : 
-                         ["#185a9d", "#2c5364"]} 
+                  colors={idx % 4 === 0 ? ["#667eea", "#764ba2"] : 
+                         idx % 4 === 1 ? ["#f093fb", "#f5576c"] : 
+                         idx % 4 === 2 ? ["#4facfe", "#00f2fe"] : 
+                         ["#43e97b", "#38f9d7"]} 
                   style={styles.eventCardGradient}
                 >
                   <View style={styles.eventIconContainer}>
@@ -235,6 +235,33 @@ const ResultsScreen = () => {
                 <View style={styles.glassCard}>
                   <Text style={styles.sectionTitle}>📊 Performance Summary</Text>
                   
+                  {/* Earned Checkpoints Details */}
+                  {selectedResult.performance.checkpoints > 0 && (
+                    <View style={styles.earnedSummaryCard}>
+                      <LinearGradient colors={["rgba(235, 250, 255, 0.95)", "rgba(220, 245, 245, 0.95)"]} style={styles.earnedSummaryGradient}>
+                        <Text style={styles.earnedSummaryTitle}>✅ Completed Checkpoints Details</Text>
+                        <Text style={styles.earnedSummaryText}>
+                          You completed {selectedResult.performance.checkpoints} out of {selectedResult.performance.totalCheckpoints} checkpoints
+                        </Text>
+                        <View style={styles.earnedPointsContainer}>
+                          {selectedResult.checkpoints
+                            .filter(cp => cp.status === "completed")
+                            .map((cp, idx) => (
+                              <View key={idx} style={styles.earnedPointItem}>
+                                <Text style={styles.earnedPointName}>{cp.name}</Text>
+                                <Text style={styles.earnedPointTime}>{cp.time}</Text>
+                                <Text style={styles.earnedPointValue}>+{cp.points} pts</Text>
+                              </View>
+                            ))
+                          }
+                        </View>
+                        <Text style={styles.totalEarnedPoints}>
+                          Total Points Earned: {selectedResult.performance.checkpointPoints} pts
+                        </Text>
+                      </LinearGradient>
+                    </View>
+                  )}
+
                   {/* Missed Checkpoints Details */}
                   {selectedResult.performance.missedCheckpoints > 0 && (
                     <View style={styles.missedSummaryCard}>
@@ -258,33 +285,6 @@ const ResultsScreen = () => {
                           Total Points Lost: {selectedResult.checkpoints
                             .filter(cp => cp.status === "missed")
                             .reduce((sum, cp) => sum + cp.potentialPoints, 0)} pts
-                        </Text>
-                      </LinearGradient>
-                    </View>
-                  )}
-
-                  {/* Earned Checkpoints Details */}
-                  {selectedResult.performance.checkpoints > 0 && (
-                    <View style={styles.earnedSummaryCard}>
-                      <LinearGradient colors={["rgba(235, 250, 255, 0.95)", "rgba(220, 245, 245, 0.95)"]} style={styles.earnedSummaryGradient}>
-                        <Text style={styles.earnedSummaryTitle}>✅ Completed Checkpoints Details</Text>
-                        <Text style={styles.earnedSummaryText}>
-                          You completed {selectedResult.performance.checkpoints} out of {selectedResult.performance.totalCheckpoints} checkpoints
-                        </Text>
-                        <View style={styles.earnedPointsContainer}>
-                          {selectedResult.checkpoints
-                            .filter(cp => cp.status === "completed")
-                            .map((cp, idx) => (
-                              <View key={idx} style={styles.earnedPointItem}>
-                                <Text style={styles.earnedPointName}>{cp.name}</Text>
-                                <Text style={styles.earnedPointTime}>{cp.time}</Text>
-                                <Text style={styles.earnedPointValue}>+{cp.points} pts</Text>
-                              </View>
-                            ))
-                          }
-                        </View>
-                        <Text style={styles.totalEarnedPoints}>
-                          Total Points Earned: {selectedResult.performance.checkpointPoints} pts
                         </Text>
                       </LinearGradient>
                     </View>
@@ -354,19 +354,19 @@ const styles = StyleSheet.create({
   },
   glassCard: {
     width: width * 0.92,
-    backgroundColor: 'rgba(15,15,20,0.95)',
+    backgroundColor: '#1e293b',
     borderRadius: 24,
     padding: 20,
     marginTop: 18,
     marginBottom: 10,
     alignSelf: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.18,
-    shadowRadius: 10,
+    shadowColor: '#667eea',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 15,
     elevation: 8,
     borderWidth: 1,
-    borderColor: 'rgba(67,206,162,0.18)',
+    borderColor: '#334155',
   },
   headerContainer: {
     marginBottom: 20,
@@ -377,22 +377,22 @@ const styles = StyleSheet.create({
     padding: 20,
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.3)',
-    shadowColor: '#43cea2',
-    shadowOpacity: 0.25,
-    shadowOffset: { width: 0, height: 4 },
-    shadowRadius: 12,
-    elevation: 8,
+    borderColor: 'rgba(255, 255, 255, 0.2)',
+    shadowColor: '#667eea',
+    shadowOpacity: 0.4,
+    shadowOffset: { width: 0, height: 6 },
+    shadowRadius: 15,
+    elevation: 10,
   },
   headerTitle: {
     fontSize: 24,
     fontWeight: 'bold',
-    color: '#fff',
+    color: '#f7f7fa',
     marginBottom: 4,
   },
   headerSubtitle: {
     fontSize: 16,
-    color: 'rgba(255,255,255,0.8)',
+    color: 'rgba(247,247,250,0.8)',
   },
   listContainer: { 
     paddingBottom: 30,
@@ -402,18 +402,18 @@ const styles = StyleSheet.create({
     marginBottom: 16,
     borderRadius: 18,
     overflow: 'hidden',
-    shadowColor: '#43cea2',
-    shadowOpacity: 0.15,
-    shadowOffset: { width: 0, height: 4 },
-    shadowRadius: 10,
-    elevation: 5,
+    shadowColor: '#667eea',
+    shadowOpacity: 0.25,
+    shadowOffset: { width: 0, height: 6 },
+    shadowRadius: 15,
+    elevation: 8,
   },
   eventCardGradient: {
     padding: 20,
     flexDirection: 'row',
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.3)',
+    borderColor: 'rgba(255, 255, 255, 0.2)',
   },
   eventIconContainer: {
     width: 50,
@@ -433,12 +433,12 @@ const styles = StyleSheet.create({
   eventTitle: {
     fontSize: 16,
     fontWeight: 'bold',
-    color: '#fff',
+    color: '#f7f7fa',
     marginBottom: 4,
   },
   eventSubtitle: {
     fontSize: 14,
-    color: 'rgba(255,255,255,0.8)',
+    color: 'rgba(247,247,250,0.8)',
   },
   eventArrowContainer: {
     width: 30,
@@ -450,12 +450,12 @@ const styles = StyleSheet.create({
   },
   eventArrow: {
     fontSize: 18,
-    color: '#fff',
+    color: '#f7f7fa',
     fontWeight: 'bold',
   },
   detailsWrapper: {
     flex: 1,
-    backgroundColor: '#203a43',
+    backgroundColor: '#1e293b',
   },
   topHeader: {
     flexDirection: 'row',
@@ -463,38 +463,38 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingTop: 35,
     paddingBottom: 6,
-    backgroundColor: '#2c5364',
+    backgroundColor: '#334155',
     borderBottomLeftRadius: 20,
     borderBottomRightRadius: 20,
-    shadowColor: '#43cea2',
-    shadowOpacity: 0.1,
-    shadowOffset: { width: 0, height: 2 },
-    shadowRadius: 8,
-    elevation: 4,
+    shadowColor: '#667eea',
+    shadowOpacity: 0.2,
+    shadowOffset: { width: 0, height: 4 },
+    shadowRadius: 12,
+    elevation: 6,
   },
   backButtonTop: {
     width: 30,
     height: 30,
     borderRadius: 15,
-    backgroundColor: '#43cea2',
+    backgroundColor: '#667eea',
     alignItems: 'center',
     justifyContent: 'center',
-    shadowColor: '#43cea2',
-    shadowOpacity: 0.3,
-    shadowOffset: { width: 0, height: 2 },
-    shadowRadius: 6,
-    elevation: 3,
+    shadowColor: '#667eea',
+    shadowOpacity: 0.4,
+    shadowOffset: { width: 0, height: 3 },
+    shadowRadius: 8,
+    elevation: 5,
   },
   backIconTop: {
     fontSize: 14,
-    color: '#fff',
+    color: '#f7f7fa',
     fontWeight: 'bold',
   },
   headerTitleDetail: {
     flex: 1,
     fontSize: 15,
     fontWeight: 'bold',
-    color: '#fff',
+    color: '#f7f7fa',
     textAlign: 'center',
   },
   headerSpacer: {
@@ -526,7 +526,7 @@ const styles = StyleSheet.create({
   detailTitle: {
     fontSize: 18,
     fontWeight: 'bold',
-    color: '#43cea2',
+    color: '#667eea',
     textAlign: 'center',
     marginBottom: 12,
   },
@@ -548,7 +548,7 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 18,
     fontWeight: 'bold',
-    color: '#43cea2',
+    color: '#667eea',
     marginBottom: 16,
     textAlign: 'center',
   },
@@ -568,24 +568,24 @@ const styles = StyleSheet.create({
     height: 14,
     borderRadius: 7,
     borderWidth: 3,
-    borderColor: '#fff',
-    shadowColor: '#185a9d',
-    shadowOpacity: 0.3,
-    shadowOffset: { width: 0, height: 2 },
-    shadowRadius: 4,
-    elevation: 3,
+    borderColor: '#f1f5f9',
+    shadowColor: '#667eea',
+    shadowOpacity: 0.4,
+    shadowOffset: { width: 0, height: 3 },
+    shadowRadius: 6,
+    elevation: 4,
   },
   startDot: {
-    backgroundColor: '#43cea2',
-    borderColor: '#185a9d',
+    backgroundColor: '#43e97b',
+    borderColor: '#667eea',
   },
   checkpointDot: {
-    backgroundColor: '#43cea2',
-    borderColor: '#185a9d',
+    backgroundColor: '#43e97b',
+    borderColor: '#667eea',
   },
   finishDot: {
-    backgroundColor: '#43cea2',
-    borderColor: '#185a9d',
+    backgroundColor: '#43e97b',
+    borderColor: '#667eea',
   },
   missedDot: {
     backgroundColor: '#ff6b6b',
@@ -594,12 +594,12 @@ const styles = StyleSheet.create({
   timelineConnector: {
     width: 3,
     height: 50,
-    backgroundColor: '#185a9d',
+    backgroundColor: '#667eea',
     marginTop: 2,
     borderRadius: 2,
   },
   normalConnector: {
-    backgroundColor: '#185a9d',
+    backgroundColor: '#667eea',
   },
   missedConnector: {
     backgroundColor: '#ff6b6b',
@@ -610,16 +610,16 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   checkpointCard: {
-    backgroundColor: 'rgba(67,206,162,0.1)',
+    backgroundColor: 'rgba(102,126,234,0.15)',
     borderRadius: 12,
     padding: 12,
     borderWidth: 1,
-    borderColor: 'rgba(67,206,162,0.2)',
-    shadowColor: '#43cea2',
-    shadowOpacity: 0.15,
-    shadowOffset: { width: 0, height: 2 },
-    shadowRadius: 6,
-    elevation: 3,
+    borderColor: 'rgba(102,126,234,0.3)',
+    shadowColor: '#667eea',
+    shadowOpacity: 0.2,
+    shadowOffset: { width: 0, height: 3 },
+    shadowRadius: 8,
+    elevation: 4,
   },
   enhancedCheckpointCard: {
     borderRadius: 16,
@@ -643,7 +643,7 @@ const styles = StyleSheet.create({
   enhancedCheckpointName: {
     fontSize: 16,
     fontWeight: 'bold',
-    color: '#e0e0e0',
+    color: '#f7f7fa',
     marginBottom: 8,
   },
   checkpointDetails: {
@@ -707,11 +707,11 @@ const styles = StyleSheet.create({
     marginBottom: 16,
     borderRadius: 16,
     overflow: 'hidden',
-    backgroundColor: 'rgba(67,206,162,0.1)',
+    backgroundColor: 'rgba(102,126,234,0.15)',
     borderWidth: 1,
-    borderColor: 'rgba(67,206,162,0.2)',
-    shadowColor: '#43cea2',
-    shadowOpacity: 0.25,
+    borderColor: 'rgba(102,126,234,0.3)',
+    shadowColor: '#667eea',
+    shadowOpacity: 0.3,
     shadowOffset: { width: 0, height: 4 },
     shadowRadius: 12,
     elevation: 6,
@@ -728,7 +728,7 @@ const styles = StyleSheet.create({
   },
   statLabel: {
     fontSize: 13,
-    color: '#e0e0e0',
+    color: '#cbd5e1',
     marginBottom: 6,
     textAlign: 'center',
     fontWeight: '600',
@@ -736,7 +736,7 @@ const styles = StyleSheet.create({
   statValue: {
     fontSize: 18,
     fontWeight: 'bold',
-    color: '#fff',
+    color: '#f1f5f9',
     textAlign: 'center',
   },
   fullScreenDetailsWrapper: {

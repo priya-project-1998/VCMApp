@@ -20,9 +20,12 @@ const ENDPOINTS = {
   // My Events Endpoints
   GET_MY_EVENTS: "/events/myevents",
   GET_CHECKPOINTS_PER_EVENT: "/events/checkpoints/",
-  GET_CONFIG_PER_EVENT: "/events/config/"
-  
-  
+  GET_CONFIG_PER_EVENT: "/events/config/",
+
+  //Result Endpoints
+  GET_PER_EVENT_RESULTS: "/events/getuser/result/"
+
+
 };
 
 export default ENDPOINTS;
