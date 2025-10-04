@@ -1,134 +1,263 @@
-import React, { useState } from "react";
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Dimensions } from "react-native";
+import React, { useState, useEffect } from "react";
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Dimensions, ActivityIndicator, Alert } from "react-native";
 import LinearGradient from "react-native-linear-gradient";
+import EventService from "../services/apiService/event_service";
+import ResultService from "../services/apiService/result_service";
 
 const { width } = Dimensions.get("window");
 
 const ResultsScreen = () => {
   const [selectedResult, setSelectedResult] = useState(null);
+  const [myEvents, setMyEvents] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [loadingEventId, setLoadingEventId] = useState(null);
+  const [resultsData, setResultsData] = useState([]);
 
-  // Dummy Completed Event Results
-  const resultsData = [
-    {
-      id: 1,
-      name: "Alok Kumrawat - Event Results",
-      checkpoints: [
-        { sr: 1, name: "Start1 - 1000", time: "12:46:30", points: 1000, status: "completed", potentialPoints: 1000 },
-        { sr: 2, name: "Point 2 - 1000", time: "Missed", points: 1000, status: "missed", potentialPoints: 1000 },
-        { sr: 3, name: "Point 3 - 500", time: "Missed", points: 500, status: "missed", potentialPoints: 500 },
-        { sr: 4, name: "Point 4 - 1500", time: "Missed", points: 1500, status: "missed", potentialPoints: 1500 },
-        { sr: 5, name: "Point 5 - 1000", time: "Missed", points: 1000, status: "missed", potentialPoints: 1000 },
-        { sr: 6, name: "Point 6 - 500", time: "13:56:35", points: 500, status: "completed", potentialPoints: 500 },
-        { sr: 7, name: "Point 7 - 600", time: "13:58:28", points: 600, status: "completed", potentialPoints: 600 },
-        { sr: 8, name: "Point 8 - 1800", time: "14:00:48", points: 1800, status: "completed", potentialPoints: 1800 },
-        { sr: 9, name: "Point 9 - 1200", time: "14:01:58", points: 1200, status: "completed", potentialPoints: 1200 },
-        { sr: 10, name: "Point 10 - 1200", time: "Missed", points: 1200, status: "missed", potentialPoints: 1200 },
-      ],
-      performance: {
-        startTime: "12:46:30",
-        endTime: "14:01:58",
-        checkpoints: 5,
-        totalCheckpoints: 10,
-        bonus: 0,
-        speedPenalty: 0,
-        timeTaken: "00:05:23",
-        totalPoints: 10100,
-        checkpointPoints: 5100,
-        missedCheckpoints: 5,
-        completionRate: "50%",
-        totalPossiblePoints: 10300
-      },
-    },
-    {
-      id: 2,
-      name: "Alok Kum - Event Results",
-      checkpoints: [
-        { sr: 1, name: "Start1 - 1000", time: "Missed", points: 1000, status: "missed", potentialPoints: 1000 },
-        { sr: 2, name: "Point 2 - 1000", time: "Missed", points: 1000, status: "missed", potentialPoints: 1000 },
-        { sr: 3, name: "Point 3 - 500", time: "Missed", points: 500, status: "missed", potentialPoints: 500 },
-        { sr: 4, name: "Point 4 - 1500", time: "Missed", points: 1500, status: "missed", potentialPoints: 1500 },
-        { sr: 5, name: "Point 5 - 1000", time: "Missed", points: 1000, status: "missed", potentialPoints: 1000 },
-        { sr: 6, name: "Point 6 - 500", time: "Missed", points: 500, status: "missed", potentialPoints: 500 },
-        { sr: 7, name: "Point 7 - 600", time: "Missed", points: 600, status: "missed", potentialPoints: 600 },
-        { sr: 8, name: "Point 8 - 1800", time: "Missed", points: 1800, status: "missed", potentialPoints: 1800 },
-        { sr: 9, name: "Point 9 - 1200", time: "Missed", points: 1200, status: "missed", potentialPoints: 1200 },
-        { sr: 10, name: "Point 10 - 1200", time: "Missed", points: 1200, status: "missed", potentialPoints: 1200 },
-      ],
-      performance: {
-        startTime: "N/A",
-        endTime: "N/A",
-        checkpoints: 0,
-        totalCheckpoints: 10,
-        bonus: 0,
-        speedPenalty: 0,
-        timeTaken: "N/A",
-        totalPoints: 0,
-        checkpointPoints: 0,
-        missedCheckpoints: 10,
-        completionRate: "0%",
-        totalPossiblePoints: 10300
-      },
-    },
-    {
-      id: 3,
-      name: "Alok k - Event Results",
-      checkpoints: [
-        { sr: 1, name: "Start1 - 1000", time: "Missed", points: 1000, status: "missed", potentialPoints: 1000 },
-        { sr: 2, name: "Point 2 - 1000", time: "Missed", points: 1000, status: "missed", potentialPoints: 1000 },
-        { sr: 3, name: "Point 3 - 500", time: "Missed", points: 500, status: "missed", potentialPoints: 500 },
-        { sr: 4, name: "Point 4 - 1500", time: "Missed", points: 1500, status: "missed", potentialPoints: 1500 },
-        { sr: 5, name: "Point 5 - 1000", time: "Missed", points: 1000, status: "missed", potentialPoints: 1000 },
-        { sr: 6, name: "Point 6 - 500", time: "Missed", points: 500, status: "missed", potentialPoints: 500 },
-        { sr: 7, name: "Point 7 - 600", time: "Missed", points: 600, status: "missed", potentialPoints: 600 },
-        { sr: 8, name: "Point 8 - 1800", time: "Missed", points: 1800, status: "missed", potentialPoints: 1800 },
-        { sr: 9, name: "Point 9 - 1200", time: "Missed", points: 1200, status: "missed", potentialPoints: 1200 },
-        { sr: 10, name: "Point 10 - 1200", time: "Missed", points: 1200, status: "missed", potentialPoints: 1200 },
-      ],
-      performance: {
-        startTime: "N/A",
-        endTime: "N/A",
-        checkpoints: 0,
-        totalCheckpoints: 10,
-        bonus: 0,
-        speedPenalty: 0,
-        timeTaken: "N/A",
-        totalPoints: 0,
-        checkpointPoints: 0,
-        missedCheckpoints: 10,
-        completionRate: "0%",
-        totalPossiblePoints: 10300
-      },
-    },
-    {
-      id: 4,
-      name: "Priya Sharma - Event Results",
-      checkpoints: [
-        { sr: 1, name: "Start1", time: "08:00:00", points: 1000, status: "completed" },
-        { sr: 2, name: "Point 2", time: "08:30:10", points: 1000, status: "completed" },
-        { sr: 3, name: "Point 3", time: "09:15:45", points: 500, status: "completed" },
-        { sr: 4, name: "Point 4", time: "Missed", points: 1500, status: "missed" },
-        { sr: 5, name: "Point 5", time: "Missed", points: 1000, status: "missed" },
-        { sr: 6, name: "Point 6", time: "10:20:12", points: 500, status: "completed" },
-        { sr: 7, name: "Point 7", time: "10:35:28", points: 600, status: "completed" },
-        { sr: 8, name: "Point 8", time: "Missed", points: 1800, status: "missed" },
-        { sr: 9, name: "Point 9", time: "Missed", points: 1200, status: "missed" },
-        { sr: 10, name: "Point 10", time: "10:40:20", points: 1200, status: "completed" },
-      ],
-      performance: {
-        startTime: "08:00:00",
-        endTime: "10:40:20",
-        checkpoints: 6,
-        totalCheckpoints: 10,
-        bonus: 0,
-        speedPenalty: 0,
-        timeTaken: "02:40:20",
-        totalPoints: 5800,
-        checkpointPoints: 5800,
-        missedCheckpoints: 4,
-        completionRate: "60%"
-      },
-    },
-  ];
+  // Fetch my events on component mount
+  useEffect(() => {
+    fetchMyEvents();
+  }, []);
+
+  const fetchMyEvents = async () => {
+    try {
+      setLoading(true);
+      const response = await EventService.getMyEvents();
+      
+      if (response.status === "success") {
+        setMyEvents(response.data);
+        // Don't process results here - only when user clicks on an event
+      } else {
+        Alert.alert("Error", response.message || "Failed to fetch events");
+        setMyEvents([]);
+      }
+    } catch (error) {
+      Alert.alert("Error", "Failed to load events");
+      setMyEvents([]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // New function to handle event click and fetch results
+  const handleEventClick = async (event) => {
+    try {
+      setLoadingEventId(event.event_id);
+      
+      // Fetch checkpoints for this event
+      const checkpointsResponse = await EventService.getCheckpointsPerEvent(event.event_id);
+      
+      // Fetch result for this event using dynamic event_id
+      const resultResponse = await ResultService.getUserResultPerEvent(event.event_id);
+      
+      if (checkpointsResponse.status === "success") {
+        const checkpoints = checkpointsResponse.data?.checkpoints || [];
+        
+        if (resultResponse.status === "success") {
+          // User has participated and has results
+          const userResult = resultResponse.data?.data || resultResponse.data || {};
+          const userCheckpoints = userResult.checkpoints || [];
+          
+          // Process checkpoints to match the required format
+          const processedCheckpoints = processCheckpoints(checkpoints, userCheckpoints);
+          
+          // Calculate performance metrics
+          const performance = calculatePerformance(checkpoints, userResult);
+          
+          const eventResult = {
+            id: parseInt(event.participant_id) || Math.random(),
+            name: `${event.user_name || 'User'} - ${event.event_name}`,
+            eventId: event.event_id,
+            participantId: event.participant_id,
+            eventName: event.event_name,
+            userName: event.user_name,
+            checkpoints: processedCheckpoints,
+            performance: performance,
+            hasResults: true
+          };
+          
+          setSelectedResult(eventResult);
+          
+        } else if (resultResponse.status === "no_results") {
+          // User hasn't participated in this event yet
+          
+          // Show all checkpoints as missed since user didn't participate
+          const processedCheckpoints = checkpoints.map((checkpoint, index) => ({
+            sr: parseInt(checkpoint.sequence_number) || (index + 1),
+            name: checkpoint.checkpoint_name || `Checkpoint ${index + 1}`,
+            time: "Not Participated",
+            points: 0,
+            status: "not_participated",
+            potentialPoints: parseInt(checkpoint.description) || parseInt(checkpoint.points) || 0
+          }));
+          
+          const eventResult = {
+            id: parseInt(event.participant_id) || Math.random(),
+            name: `${event.user_name || 'User'} - ${event.event_name}`,
+            eventId: event.event_id,
+            participantId: event.participant_id,
+            eventName: event.event_name,
+            userName: event.user_name,
+            checkpoints: processedCheckpoints,
+            performance: {
+              startTime: "N/A",
+              endTime: "N/A",
+              checkpoints: 0,
+              totalCheckpoints: checkpoints.length,
+              bonus: 0,
+              speedPenalty: 0,
+              timeTaken: "N/A",
+              totalPoints: 0,
+              checkpointPoints: 0,
+              missedCheckpoints: 0,
+              completionRate: "0%",
+              totalPossiblePoints: checkpoints.reduce((sum, cp) => sum + (parseInt(cp.description) || parseInt(cp.points) || 0), 0)
+            },
+            hasResults: false,
+            noParticipation: true
+          };
+          
+          setSelectedResult(eventResult);
+          
+        } else {
+          // Error fetching results - but don't show alert for every failed event
+          
+          // Show event with no results instead of blocking user
+          const processedCheckpoints = checkpoints.map((checkpoint, index) => ({
+            sr: parseInt(checkpoint.sequence_number) || (index + 1),
+            name: checkpoint.checkpoint_name || `Checkpoint ${index + 1}`,
+            time: "Unable to load",
+            points: 0,
+            status: "error",
+            potentialPoints: parseInt(checkpoint.description) || parseInt(checkpoint.points) || 0
+          }));
+          
+          const eventResult = {
+            id: parseInt(event.participant_id) || Math.random(),
+            name: `${event.user_name || 'User'} - ${event.event_name}`,
+            eventId: event.event_id,
+            participantId: event.participant_id,
+            eventName: event.event_name,
+            userName: event.user_name,
+            checkpoints: processedCheckpoints,
+            performance: {
+              startTime: "N/A",
+              endTime: "N/A",
+              checkpoints: 0,
+              totalCheckpoints: checkpoints.length,
+              bonus: 0,
+              speedPenalty: 0,
+              timeTaken: "N/A",
+              totalPoints: 0,
+              checkpointPoints: 0,
+              missedCheckpoints: 0,
+              completionRate: "0%",
+              totalPossiblePoints: checkpoints.reduce((sum, cp) => sum + (parseInt(cp.description) || parseInt(cp.points) || 0), 0)
+            },
+            hasResults: false,
+            hasError: true
+          };
+          
+          setSelectedResult(eventResult);
+        }
+      } else {
+        // Error fetching checkpoints - show a more user-friendly message
+        Alert.alert("Unable to Load Event", `Sorry, we couldn't load the details for "${event.event_name}". Please try again later.`);
+      }
+    } catch (error) {
+      Alert.alert("Error", "Something went wrong while loading event details.");
+    } finally {
+      setLoadingEventId(null);
+    }
+  };
+
+  const processCheckpoints = (allCheckpoints, userCheckpoints) => {
+    const processedCheckpoints = [];
+    
+    // Handle case when userCheckpoints is undefined or null
+    const safeUserCheckpoints = userCheckpoints || [];
+    
+    allCheckpoints.forEach((checkpoint, index) => {
+      // Try to find matching user checkpoint by checkpoint_id
+      const userCheckpoint = safeUserCheckpoints.find(uc => 
+        uc.checkpoint_id === checkpoint.checkpoint_id || 
+        uc.checkpoint_id === checkpoint.id
+      );
+      
+      const processedCheckpoint = {
+        sr: parseInt(checkpoint.sequence_number) || (index + 1),
+        name: checkpoint.checkpoint_name || `Checkpoint ${index + 1}`,
+        time: userCheckpoint ? formatTime(userCheckpoint.reached_at) : "Missed",
+        points: parseInt(checkpoint.description) || parseInt(checkpoint.points) || 0,
+        status: userCheckpoint ? "completed" : "missed",
+        potentialPoints: parseInt(checkpoint.description) || parseInt(checkpoint.points) || 0
+      };
+      
+      processedCheckpoints.push(processedCheckpoint);
+    });
+    
+    return processedCheckpoints;
+  };
+
+  const calculatePerformance = (allCheckpoints, userResult) => {
+    const totalCheckpoints = allCheckpoints.length;
+    const safeUserCheckpoints = userResult?.checkpoints || [];
+    const completedCheckpoints = safeUserCheckpoints.length;
+    const missedCheckpoints = totalCheckpoints - completedCheckpoints;
+    const totalPossiblePoints = allCheckpoints.reduce((sum, cp) => sum + (parseInt(cp.description) || 0), 0);
+    const completionRate = totalCheckpoints > 0 ? Math.round((completedCheckpoints / totalCheckpoints) * 100) : 0;
+    
+    // Calculate start and end times
+    let startTime = "N/A";
+    let endTime = "N/A";
+    
+    if (safeUserCheckpoints.length > 0) {
+      const checkpointTimes = safeUserCheckpoints.map(cp => new Date(cp.reached_at));
+      startTime = formatTime(Math.min(...checkpointTimes));
+      endTime = formatTime(Math.max(...checkpointTimes));
+    }
+    
+    // Calculate total earned points from completed checkpoints
+    const totalEarnedPoints = safeUserCheckpoints.reduce((sum, userCP) => {
+      const checkpoint = allCheckpoints.find(cp => cp.checkpoint_id === userCP.checkpoint_id);
+      const points = parseInt(checkpoint?.description) || parseInt(checkpoint?.points) || 0;
+      return sum + points;
+    }, 0);
+    
+    return {
+      startTime: startTime,
+      endTime: endTime,
+      checkpoints: completedCheckpoints, // Count of completed checkpoints
+      totalCheckpoints: totalCheckpoints,
+      bonus: 0,
+      speedPenalty: 0,
+      timeTaken: userResult?.final_result?.formatted_time || "N/A",
+      totalPoints: totalEarnedPoints, // Sum of all earned points
+      checkpointPoints: completedCheckpoints, // Count of completed checkpoints (same as checkpoints)
+      missedCheckpoints: missedCheckpoints,
+      completionRate: `${completionRate}%`,
+      totalPossiblePoints: totalPossiblePoints
+    };
+  };
+
+  const formatTime = (timestamp) => {
+    if (!timestamp) return "N/A";
+    const date = new Date(timestamp);
+    return date.toLocaleTimeString('en-GB', { 
+      hour12: false,
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit'
+    });
+  };
+
+  if (loading) {
+    return (
+      <LinearGradient colors={["#1a1a2e", "#16213e", "#0f3460"]} style={styles.loadingContainer}>
+        <ActivityIndicator size="large" color="#667eea" />
+        <Text style={styles.loadingText}>Loading Results...</Text>
+      </LinearGradient>
+    );
+  }
 
   return (
     <LinearGradient colors={["#1a1a2e", "#16213e", "#0f3460"]} style={{ flex: 1 }}>
@@ -138,39 +267,60 @@ const ResultsScreen = () => {
           <View style={styles.headerContainer}>
             <LinearGradient colors={["#667eea", "#764ba2"]} style={styles.headerGradient}>
               <Text style={styles.headerTitle}>🏆 Race Results</Text>
-              <Text style={styles.headerSubtitle}>Your completed events</Text>
+              <Text style={styles.headerSubtitle}>Your completed events ({myEvents.length})</Text>
+              <TouchableOpacity style={styles.refreshButton} onPress={fetchMyEvents}>
+                <Text style={styles.refreshIcon}>↻</Text>
+              </TouchableOpacity>
             </LinearGradient>
           </View>
         )}
 
         {!selectedResult && (
           <ScrollView contentContainerStyle={styles.listContainer} showsVerticalScrollIndicator={false}>
-            {resultsData.map((result, idx) => (
-              <TouchableOpacity
-                key={result.id}
-                style={styles.eventCard}
-                onPress={() => setSelectedResult(result)}
-              >
-                <LinearGradient 
-                  colors={idx % 4 === 0 ? ["#667eea", "#764ba2"] : 
-                         idx % 4 === 1 ? ["#f093fb", "#f5576c"] : 
-                         idx % 4 === 2 ? ["#4facfe", "#00f2fe"] : 
-                         ["#43e97b", "#38f9d7"]} 
-                  style={styles.eventCardGradient}
+            {myEvents.length === 0 ? (
+              <View style={styles.emptyStateContainer}>
+                <Text style={styles.emptyStateIcon}>📊</Text>
+                <Text style={styles.emptyStateTitle}>No Events Found</Text>
+                <Text style={styles.emptyStateText}>You haven't joined any events yet.</Text>
+                <TouchableOpacity style={styles.refreshButtonLarge} onPress={fetchMyEvents}>
+                  <Text style={styles.refreshButtonText}>Refresh</Text>
+                </TouchableOpacity>
+              </View>
+            ) : (
+              myEvents.map((event, idx) => (
+                <TouchableOpacity
+                  key={`event-${event.event_id}-${idx}`}
+                  style={styles.eventCard}
+                  onPress={() => handleEventClick(event)}
+                  disabled={loadingEventId === event.event_id}
                 >
-                  <View style={styles.eventIconContainer}>
-                    <Text style={styles.eventIcon}>{idx === 0 ? '🏁' : idx === 1 ? '🚵‍♂️' : idx === 2 ? '🚶‍♂️' : idx === 3 ? '🏎️' : '🚴‍♂️'}</Text>
-                  </View>
-                  <View style={styles.eventTextContainer}>
-                    <Text style={styles.eventTitle}>{result.name}</Text>
-                    <Text style={styles.eventSubtitle}>📊 View detailed results</Text>
-                  </View>
-                  <View style={styles.eventArrowContainer}>
-                    <Text style={styles.eventArrow}>→</Text>
-                  </View>
-                </LinearGradient>
-              </TouchableOpacity>
-            ))}
+                  <LinearGradient 
+                    colors={idx % 4 === 0 ? ["#667eea", "#764ba2"] : 
+                           idx % 4 === 1 ? ["#f093fb", "#f5576c"] : 
+                           idx % 4 === 2 ? ["#4facfe", "#00f2fe"] : 
+                           ["#43e97b", "#38f9d7"]} 
+                    style={styles.eventCardGradient}
+                  >
+                    <View style={styles.eventIconContainer}>
+                      <Text style={styles.eventIcon}>{idx === 0 ? '🏁' : idx === 1 ? '🚵‍♂️' : idx === 2 ? '🚶‍♂️' : idx === 3 ? '🏎️' : '🚴‍♂️'}</Text>
+                    </View>
+                    <View style={styles.eventTextContainer}>
+                      <Text style={styles.eventTitle}>{event.event_name}</Text>
+                      <Text style={styles.eventSubtitle}>
+                        {loadingEventId === event.event_id ? "Loading..." : `📊 Event ID: ${event.event_id} • Tap to view results`}
+                      </Text>
+                    </View>
+                    <View style={styles.eventArrowContainer}>
+                      {loadingEventId === event.event_id ? (
+                        <ActivityIndicator size="small" color="#f7f7fa" />
+                      ) : (
+                        <Text style={styles.eventArrow}>→</Text>
+                      )}
+                    </View>
+                  </LinearGradient>
+                </TouchableOpacity>
+              ))
+            )}
           </ScrollView>
         )}
 
@@ -189,38 +339,69 @@ const ResultsScreen = () => {
               <View>
                 <View style={styles.glassCard}>
                   <Text style={styles.detailTitle}>🏆 {selectedResult.name}</Text>
+                  <Text style={styles.eventIdText}>Event ID: {selectedResult.eventId}</Text>
+                  {selectedResult.noParticipation && (
+                    <View style={styles.noParticipationBanner}>
+                      <Text style={styles.noParticipationIcon}>📭</Text>
+                      <Text style={styles.noParticipationTitle}>No Participation Found</Text>
+                      <Text style={styles.noParticipationText}>
+                        You haven't participated in this event yet or results are not available.
+                      </Text>
+                    </View>
+                  )}
+                  {selectedResult.hasError && (
+                    <View style={styles.errorBanner}>
+                      <Text style={styles.errorIcon}>🔍</Text>
+                      <Text style={styles.errorTitle}>No results found for this event</Text>
+                      <Text style={styles.errorText}>
+                        Looks like you haven't participated in this race yet, or the results are still being processed. Check back later!
+                      </Text>
+                    </View>
+                  )}
                 </View>
 
-                {/* Timeline Section */}
-                <View style={styles.glassCard}>
-                  <Text style={styles.sectionTitle}>📍 Race Timeline</Text>
-                  <View style={styles.timelineContainer}>
-                    {selectedResult.checkpoints.map((cp, idx) => (
-                      <View key={cp.sr} style={styles.timelineItem}>
+                {/* Timeline Section - Only show if there are checkpoints and no errors */}
+                {!selectedResult.noParticipation && !selectedResult.hasError && (selectedResult.checkpoints || []).length > 0 && (
+                  <View style={styles.glassCard}>
+                    <Text style={styles.sectionTitle}>📍 Race Timeline</Text>
+                    <View style={styles.timelineContainer}>
+                    {(selectedResult.checkpoints || []).map((cp, idx) => (
+                      <View key={`checkpoint-${selectedResult.eventId}-${cp.sr}-${idx}`} style={styles.timelineItem}>
                         <View style={styles.timelineLeft}>
                           <View style={[
                             styles.timelineDot, 
                             idx === 0 ? styles.startDot : 
-                            idx === selectedResult.checkpoints.length-1 ? styles.finishDot :
-                            cp.status === "missed" ? styles.missedDot : styles.checkpointDot
+                            idx === (selectedResult.checkpoints || []).length-1 ? styles.finishDot :
+                            cp.status === "missed" ? styles.missedDot : 
+                            cp.status === "not_participated" ? styles.notParticipatedDot : 
+                            cp.status === "error" ? styles.errorDot : styles.checkpointDot
                           ]} />
-                          {idx < selectedResult.checkpoints.length-1 && 
+                          {idx < (selectedResult.checkpoints || []).length-1 && 
                             <View style={[
                               styles.timelineConnector,
-                              cp.status === "missed" ? styles.missedConnector : styles.normalConnector
+                              cp.status === "missed" || cp.status === "not_participated" || cp.status === "error" ? styles.missedConnector : styles.normalConnector
                             ]} />
                           }
                         </View>
                         <View style={styles.timelineRight}>
                           <View style={styles.checkpointCard}>
-                            <Text style={[styles.enhancedCheckpointName, cp.status === "missed" && styles.missedCheckpointName]}>
+                            <Text style={[
+                              styles.enhancedCheckpointName, 
+                              (cp.status === "missed" || cp.status === "not_participated" || cp.status === "error") && styles.missedCheckpointName
+                            ]}>
                               {cp.name}
                             </Text>
                             <View style={styles.checkpointDetails}>
-                              <Text style={[styles.enhancedCheckpointTime, cp.status === "missed" && styles.missedTime]}>
+                              <Text style={[
+                                styles.enhancedCheckpointTime, 
+                                (cp.status === "missed" || cp.status === "not_participated" || cp.status === "error") && styles.missedTime
+                              ]}>
                                 🕐 {cp.time}
                               </Text>
-                              <Text style={[styles.enhancedCheckpointPoints, cp.status === "missed" && styles.missedPoints]}>
+                              <Text style={[
+                                styles.enhancedCheckpointPoints, 
+                                (cp.status === "missed" || cp.status === "not_participated" || cp.status === "error") && styles.missedPoints
+                              ]}>
                                 🏅 {cp.points} pts
                               </Text>
                             </View>
@@ -230,8 +411,10 @@ const ResultsScreen = () => {
                     ))}
                   </View>
                 </View>
+                )}
 
-                {/* Performance Section */}
+                {/* Performance Section - Only show if there are performance stats and no errors */}
+                {!selectedResult.noParticipation && !selectedResult.hasError && selectedResult.performance && (
                 <View style={styles.glassCard}>
                   <Text style={styles.sectionTitle}>📊 Performance Summary</Text>
                   
@@ -244,10 +427,10 @@ const ResultsScreen = () => {
                           You completed {selectedResult.performance.checkpoints} out of {selectedResult.performance.totalCheckpoints} checkpoints
                         </Text>
                         <View style={styles.earnedPointsContainer}>
-                          {selectedResult.checkpoints
+                          {(selectedResult.checkpoints || [])
                             .filter(cp => cp.status === "completed")
                             .map((cp, idx) => (
-                              <View key={idx} style={styles.earnedPointItem}>
+                              <View key={`earned-${selectedResult.eventId}-${cp.sr}-${idx}`} style={styles.earnedPointItem}>
                                 <Text style={styles.earnedPointName}>{cp.name}</Text>
                                 <Text style={styles.earnedPointTime}>{cp.time}</Text>
                                 <Text style={styles.earnedPointValue}>+{cp.points} pts</Text>
@@ -256,7 +439,7 @@ const ResultsScreen = () => {
                           }
                         </View>
                         <Text style={styles.totalEarnedPoints}>
-                          Total Points Earned: {selectedResult.performance.checkpointPoints} pts
+                          Total Points Earned: {selectedResult.performance.totalPoints} pts
                         </Text>
                       </LinearGradient>
                     </View>
@@ -271,10 +454,10 @@ const ResultsScreen = () => {
                           You missed {selectedResult.performance.missedCheckpoints} out of {selectedResult.performance.totalCheckpoints} checkpoints
                         </Text>
                         <View style={styles.missedPointsContainer}>
-                          {selectedResult.checkpoints
+                          {(selectedResult.checkpoints || [])
                             .filter(cp => cp.status === "missed")
                             .map((cp, idx) => (
-                              <View key={idx} style={styles.missedPointItem}>
+                              <View key={`missed-${selectedResult.eventId}-${cp.sr}-${idx}`} style={styles.missedPointItem}>
                                 <Text style={styles.missedPointName}>{cp.name}</Text>
                                 <Text style={styles.missedPointValue}>-{cp.potentialPoints} pts</Text>
                               </View>
@@ -282,7 +465,7 @@ const ResultsScreen = () => {
                           }
                         </View>
                         <Text style={styles.totalMissedPoints}>
-                          Total Points Lost: {selectedResult.checkpoints
+                          Total Points Lost: {(selectedResult.checkpoints || [])
                             .filter(cp => cp.status === "missed")
                             .reduce((sum, cp) => sum + cp.potentialPoints, 0)} pts
                         </Text>
@@ -293,7 +476,7 @@ const ResultsScreen = () => {
                     <View style={styles.statCard}>
                       <View style={styles.statGradient}>
                         <Text style={styles.statIcon}>⏰</Text>
-                        <Text style={styles.statLabel}>Duration</Text>
+                        <Text style={styles.statLabel}>Duration Cover</Text>
                         <Text style={styles.statValue}>{selectedResult.performance.timeTaken}</Text>
                       </View>
                     </View>
@@ -322,8 +505,8 @@ const ResultsScreen = () => {
                     <View style={styles.statCard}>
                       <View style={styles.statGradient}>
                         <Text style={styles.statIcon}>🏅</Text>
-                        <Text style={styles.statLabel}>Checkpoint Points</Text>
-                        <Text style={styles.statValue}>{selectedResult.performance.checkpointPoints}</Text>
+                        <Text style={styles.statLabel}>Completed Checkpoints</Text>
+                        <Text style={styles.statValue}>{selectedResult.performance.checkpoints}</Text>
                       </View>
                     </View>
                     <View style={styles.statCard}>
@@ -335,6 +518,7 @@ const ResultsScreen = () => {
                     </View>
                   </View>
                 </View>
+                )}
               </View>
             </ScrollView>
           </View>
@@ -345,6 +529,17 @@ const ResultsScreen = () => {
 };
 
 const styles = StyleSheet.create({
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  loadingText: {
+    color: '#f7f7fa',
+    fontSize: 16,
+    marginTop: 10,
+    fontWeight: '600',
+  },
   container: { 
     flex: 1, 
     paddingTop: 40,
@@ -383,6 +578,23 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 6 },
     shadowRadius: 15,
     elevation: 10,
+    position: 'relative',
+  },
+  refreshButton: {
+    position: 'absolute',
+    right: 15,
+    top: 15,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: 'rgba(255,255,255,0.2)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  refreshIcon: {
+    fontSize: 20,
+    color: '#f7f7fa',
+    fontWeight: 'bold',
   },
   headerTitle: {
     fontSize: 24,
@@ -397,6 +609,47 @@ const styles = StyleSheet.create({
   listContainer: { 
     paddingBottom: 30,
     paddingHorizontal: 20,
+  },
+  emptyStateContainer: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 60,
+  },
+  emptyStateIcon: {
+    fontSize: 64,
+    marginBottom: 20,
+  },
+  emptyStateTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#f7f7fa',
+    marginBottom: 12,
+    textAlign: 'center',
+  },
+  emptyStateText: {
+    fontSize: 16,
+    color: 'rgba(247,247,250,0.7)',
+    textAlign: 'center',
+    marginBottom: 30,
+    paddingHorizontal: 20,
+    lineHeight: 24,
+  },
+  refreshButtonLarge: {
+    backgroundColor: '#667eea',
+    paddingHorizontal: 30,
+    paddingVertical: 12,
+    borderRadius: 25,
+    shadowColor: '#667eea',
+    shadowOpacity: 0.4,
+    shadowOffset: { width: 0, height: 4 },
+    shadowRadius: 10,
+    elevation: 5,
+  },
+  refreshButtonText: {
+    color: '#f7f7fa',
+    fontSize: 16,
+    fontWeight: 'bold',
   },
   eventCard: {
     marginBottom: 16,
@@ -530,6 +783,18 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     marginBottom: 12,
   },
+  eventIdText: {
+    fontSize: 14,
+    color: '#94a3b8',
+    textAlign: 'center',
+    marginBottom: 15,
+    fontWeight: '600',
+    backgroundColor: 'rgba(102,126,234,0.1)',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 12,
+    alignSelf: 'center',
+  },
   timelineSection: {
     padding: 20,
     backgroundColor: 'rgba(255, 255, 255, 0.05)',
@@ -590,6 +855,14 @@ const styles = StyleSheet.create({
   missedDot: {
     backgroundColor: '#ff6b6b',
     borderColor: '#ee5a6f',
+  },
+  notParticipatedDot: {
+    backgroundColor: '#94a3b8',
+    borderColor: '#64748b',
+  },
+  errorDot: {
+    backgroundColor: '#f59e0b',
+    borderColor: '#d97706',
   },
   timelineConnector: {
     width: 3,
@@ -1136,6 +1409,58 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     borderWidth: 1,
     borderColor: 'rgba(5, 150, 105, 0.3)',
+  },
+  noParticipationBanner: {
+    backgroundColor: 'rgba(148, 163, 184, 0.15)',
+    borderRadius: 16,
+    padding: 20,
+    marginTop: 15,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: 'rgba(148, 163, 184, 0.3)',
+  },
+  noParticipationIcon: {
+    fontSize: 48,
+    marginBottom: 12,
+  },
+  noParticipationTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#64748b',
+    marginBottom: 8,
+    textAlign: 'center',
+  },
+  noParticipationText: {
+    fontSize: 15,
+    color: '#94a3b8',
+    textAlign: 'center',
+    lineHeight: 22,
+  },
+  errorBanner: {
+    backgroundColor: 'rgba(245, 158, 11, 0.15)',
+    borderRadius: 16,
+    padding: 20,
+    marginTop: 15,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: 'rgba(245, 158, 11, 0.3)',
+  },
+  errorIcon: {
+    fontSize: 48,
+    marginBottom: 12,
+  },
+  errorTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#d97706',
+    marginBottom: 8,
+    textAlign: 'center',
+  },
+  errorText: {
+    fontSize: 15,
+    color: '#f59e0b',
+    textAlign: 'center',
+    lineHeight: 22,
   },
 });
 
