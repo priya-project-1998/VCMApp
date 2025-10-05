@@ -1,4 +1,4 @@
-import React, { useRef, useState, useEffect } from "react";
+import React, { useRef, useState, useEffect,useCallback } from "react";
 import {
   View,
   StyleSheet,
@@ -14,6 +14,7 @@ import {
   ActivityIndicator,
   ToastAndroid,
   TextInput,
+  Linking,
 } from "react-native";
 import MapView, { PROVIDER_GOOGLE, Marker, Polyline } from "react-native-maps";
 import Geolocation from "@react-native-community/geolocation";
@@ -57,9 +58,18 @@ const MapScreen = ({ route, navigation }) => {
   const [abortPassword, setAbortPassword] = useState("");
   const [isFollowingUser, setIsFollowingUser] = useState(false); // Track if following user location
   const [watchId, setWatchId] = useState(null); // Store watch position ID
+  
+  // ✅ Speed Limit States
+  const [speedLimit, setSpeedLimit] = useState(60); // Default speed limit
+  const [isOverspeedAlertShown, setIsOverspeedAlertShown] = useState(false);
+  const [overspeedCount, setOverspeedCount] = useState(0);
+  const [lastOverspeedAlert, setLastOverspeedAlert] = useState(0);
+  const [abortLoading, setAbortLoading] = useState(false);
+  const [randomAbortCode, setRandomAbortCode] = useState("");
+  const [enteredAbortCode, setEnteredAbortCode] = useState("");
 
   // Get checkpoints from route.params (API response)
-  const { checkpoints: paramCheckpoints, category_id,event_id, kml_path, color, event_organizer_no } = route.params || {};
+  const { checkpoints: paramCheckpoints, category_id, event_id, kml_path, color, event_organizer_no, speed_limit } = route.params || {};
   // Use paramCheckpoints only (no static fallback)
   const checkpoints = Array.isArray(paramCheckpoints) ? paramCheckpoints : [];
 
@@ -69,6 +79,16 @@ const MapScreen = ({ route, navigation }) => {
   useEffect(() => {
     createTables();
   }, []);
+
+  // ✅ Update speed limit when route param changes
+  useEffect(() => {
+    if (speed_limit && speed_limit !== speedLimit) {
+      setSpeedLimit(speed_limit);
+      if (Platform.OS === 'android') {
+        ToastAndroid.show(`Speed limit set to ${speed_limit} km/h from event data`, ToastAndroid.SHORT);
+      }
+    }
+  }, [speed_limit]);
 
   // ✅ Internet change listener → sync pending checkpoints
   useEffect(() => {
@@ -111,6 +131,27 @@ const MapScreen = ({ route, navigation }) => {
     });
     return () => unsubscribe();
   }, []);
+
+  // ✅ Simple Speed Limit Checking Function
+  const checkSpeedLimit = useCallback((currentSpeedKmh) => {
+    const now = Date.now();
+    
+    // Simple check - if speed exceeds limit, show continuous red alerts
+    if (currentSpeedKmh > speedLimit) {
+      setOverspeedCount(prev => prev + 1);
+      
+      if (!isOverspeedAlertShown || now - lastOverspeedAlert > 1500) {
+        setLastOverspeedAlert(now);
+        setIsOverspeedAlertShown(true);
+      }
+    } else {
+      // Reset overspeed alert when speed is back under limit
+      if (isOverspeedAlertShown) {
+        setIsOverspeedAlertShown(false);
+        setLastOverspeedAlert(0);
+      }
+    }
+  }, [speedLimit, lastOverspeedAlert, isOverspeedAlertShown]);
 
   // ✅ Permission aur location fetch
   const getCurrentLocation = () => {
@@ -329,51 +370,186 @@ const MapScreen = ({ route, navigation }) => {
     setLayerDropdownVisible(false);
   };
 
-  // Handler for Abort Event password verification
-  const handleAbortEventPassword = () => {
-    if (abortPassword.trim() === "") {
-      if (Platform.OS === 'android') {
-        ToastAndroid.show('Please enter password', ToastAndroid.SHORT);
-      } else {
-        Alert.alert('Error', 'Please enter password');
-      }
-      return;
-    }
-    
-    // For now, accepting any non-empty password
-    // You can add actual password verification here
-    setAbortPasswordModal(false);
-    setAbortPassword("");
-    
-    if (Platform.OS === 'android') {
-      ToastAndroid.show('Event aborted successfully', ToastAndroid.SHORT);
-    } else {
-      Alert.alert('Success', 'Event aborted successfully');
-    }
-    
-    // Navigate to homepage/back
-    navigation.navigate('HomeScreen'); // or navigation.goBack() if you want to go back
+  // ✅ Generate Random Abort Code
+  const generateRandomAbortCode = () => {
+    const code = Math.floor(1000 + Math.random() * 9000).toString();
+    setRandomAbortCode(code);
+    return code;
   };
 
-  // Handler for Action Menu actions
+  // ✅ SOS Emergency Call Function
+  const handleSOSCall = async () => {
+    try {
+      if (!event_organizer_no) {
+        if (Platform.OS === 'android') {
+          ToastAndroid.show('Organizer contact not available', ToastAndroid.SHORT);
+        } else {
+          Alert.alert('Error', 'Organizer contact not available');
+        }
+        return;
+      }
+
+      Alert.alert(
+        "🆘 Emergency Call",
+        `Do you want to call the event organizer?\n\nNumber: ${event_organizer_no}`,
+        [
+          { text: "Cancel", style: "cancel" },
+          {
+            text: "Call Now",
+            style: "default",
+            onPress: () => {
+              Linking.openURL(`tel:${event_organizer_no}`);
+            }
+          }
+        ]
+      );
+    } catch (error) {
+      console.log('SOS call error:', error);
+      if (Platform.OS === 'android') {
+        ToastAndroid.show('Error making SOS call', ToastAndroid.SHORT);
+      } else {
+        Alert.alert('Error', 'Failed to make SOS call');
+      }
+    }
+  };
+
+  // ✅ Enhanced Action Menu handler with Speed Limit Settings
   const handleActionMenu = (action) => {
     setActionDropdownVisible(false);
     switch (action) {
       case "Map Layer":
-        Alert.alert("Map Layer", "Map Layer option selected.");
+        setLayerDropdownVisible(true);
         break;
       case "Distance Tool":
-        Alert.alert("Distance Tool", "Distance Tool option selected.");
+        Alert.alert("Distance Tool", "Distance measurement tool coming soon...");
+        break;
+      case "Speed Limit":
+        Alert.alert(
+          "⚡ Speed Limit Settings",
+          `Current Speed Limit: ${speedLimit} km/h (${speed_limit ? 'from event data' : 'default'})\nOverspeed Count: ${overspeedCount}`,
+          [
+            { text: "Cancel", style: "cancel" },
+            {
+              text: "Set to 40 km/h",
+              onPress: () => {
+                setSpeedLimit(40);
+                setOverspeedCount(0);
+                if (Platform.OS === 'android') {
+                  ToastAndroid.show('Speed limit manually set to 40 km/h', ToastAndroid.SHORT);
+                }
+              }
+            },
+            {
+              text: "Set to 60 km/h",
+              onPress: () => {
+                setSpeedLimit(60);
+                setOverspeedCount(0);
+                if (Platform.OS === 'android') {
+                  ToastAndroid.show('Speed limit manually set to 60 km/h', ToastAndroid.SHORT);
+                }
+              }
+            },
+            {
+              text: "Set to 80 km/h",
+              onPress: () => {
+                setSpeedLimit(80);
+                setOverspeedCount(0);
+                if (Platform.OS === 'android') {
+                  ToastAndroid.show('Speed limit manually set to 80 km/h', ToastAndroid.SHORT);
+                }
+              }
+            },
+            speed_limit ? {
+              text: `Reset to Event Limit (${speed_limit})`,
+              onPress: () => {
+                setSpeedLimit(speed_limit);
+                setOverspeedCount(0);
+                if (Platform.OS === 'android') {
+                  ToastAndroid.show(`Speed limit reset to event data: ${speed_limit} km/h`, ToastAndroid.SHORT);
+                }
+              }
+            } : null
+          ].filter(Boolean)
+        );
         break;
       case "Abort Event":
-        Alert.alert("Abort Event", "Event aborted.");
+        Alert.alert(
+          "⚠️ Abort Event",
+          "Are you sure you want to abort this event?",
+          [
+            { text: "Cancel", style: "cancel" },
+            {
+              text: "Yes, Abort",
+              style: "destructive",
+              onPress: () => {
+                generateRandomAbortCode();
+                setAbortPasswordModal(true);
+              }
+            }
+          ]
+        );
         break;
       case "Call Organizer":
-        Alert.alert("Call Organizer", "Calling organizer...");
+        handleSOSCall();
         break;
       default:
         break;
     }
+  };
+
+  // ✅ Improved Abort Event Handler
+  const handleAbortEventPassword = async () => {
+    if (enteredAbortCode.trim() === "") {
+      if (Platform.OS === 'android') {
+        ToastAndroid.show('Please enter the abort code', ToastAndroid.SHORT);
+      } else {
+        Alert.alert('Error', 'Please enter the abort code');
+      }
+      return;
+    }
+
+    if (enteredAbortCode.trim() !== randomAbortCode) {
+      if (Platform.OS === 'android') {
+        ToastAndroid.show('Invalid abort code. Please try again.', ToastAndroid.SHORT);
+      } else {
+        Alert.alert('Error', 'Invalid abort code. Please try again.');
+      }
+      return;
+    }
+
+    setAbortLoading(true);
+
+    try {
+      // Save abort event locally
+      await AsyncStorage.setItem(`event_${event_id}_aborted`, 'true');
+      await AsyncStorage.setItem(`event_${event_id}_abort_time`, new Date().toISOString());
+      
+      // Clear location watching
+      if (watchId) {
+        Geolocation.clearWatch(watchId);
+        setWatchId(null);
+      }
+
+      if (Platform.OS === 'android') {
+        ToastAndroid.show('Event aborted successfully', ToastAndroid.LONG);
+      } else {
+        Alert.alert('Success', 'Event aborted successfully');
+      }
+
+      // Navigate directly to Home screen (no details alert)
+      navigation.navigate('Drawer', { screen: 'Dashboard' });
+    } catch (error) {
+      console.log('Abort error:', error);
+      if (Platform.OS === 'android') {
+        ToastAndroid.show('Error aborting event', ToastAndroid.SHORT);
+      } else {
+        Alert.alert('Error', 'Failed to abort event');
+      }
+    }
+
+    setAbortLoading(false);
+    setAbortPasswordModal(false);
+    setEnteredAbortCode("");
   };
 
   // Handler for Time Stamp dropdown actions
@@ -479,7 +655,11 @@ const MapScreen = ({ route, navigation }) => {
       checkProximityToCheckpoints(latitude, longitude);
       if (typeof speed === 'number' && !isNaN(speed)) {
         // speed in m/s, convert to km/h
-        setCurrentSpeed(Math.round(speed * 3.6));
+        const speedKmh = Math.round(speed * 3.6);
+        setCurrentSpeed(speedKmh);
+        
+        // ✅ Check speed limit
+        checkSpeedLimit(speedKmh);
       }
       // Center map if flag is set
       if (shouldCenterOnUser && mapRef.current) {
@@ -597,6 +777,13 @@ const MapScreen = ({ route, navigation }) => {
           // Update user coordinates
           setUserCoords({ latitude, longitude });
           setLastUserLocation({ latitude, longitude });
+          
+          // ✅ Check speed and speed limit
+          if (typeof position.coords.speed === 'number' && !isNaN(position.coords.speed)) {
+            const speedKmh = Math.round(position.coords.speed * 3.6);
+            setCurrentSpeed(speedKmh);
+            checkSpeedLimit(speedKmh);
+          }
           
           // If first time or user wants to center, animate to location
           if (!isFollowingUser || shouldCenterOnUser) {
@@ -800,7 +987,11 @@ const MapScreen = ({ route, navigation }) => {
       };
       // Calculate simulated speed (distance/2s * 3.6)
       const distMoved = getDistanceFromLatLonInMeters(current.latitude, current.longitude, newPoint.latitude, newPoint.longitude);
-      setSimulatedSpeed(Math.round((distMoved / 2) * 3.6));
+      const calculatedSpeed = Math.round((distMoved / 2) * 3.6);
+      setSimulatedSpeed(calculatedSpeed);
+      
+      // ✅ Check speed limit for simulation too
+      checkSpeedLimit(calculatedSpeed);
       setMarkerPosition(newPoint);
       setUserRoute(prev => [...prev, newPoint]);
       current = newPoint;
@@ -892,13 +1083,74 @@ const MapScreen = ({ route, navigation }) => {
       <View style={styles.infoBar}>
         <Text style={styles.infoText}>Time Elapsed: {formatTime(elapsedSeconds)}</Text>
         <Text style={styles.infoText}>Checkpoint: {Object.values(checkpointStatus).filter(s => s.completed).length}/{checkpoints.length}</Text>
-        {/* <Text style={styles.infoText}>Speed Limit: {currentSpeed}/60</Text> */}
-        <Text style={styles.infoText}>
-          Current Speed: {isSimulating ? simulatedSpeed : currentSpeed} km/h
+        <Text style={[
+          styles.infoText,
+          { 
+            color: (isSimulating ? simulatedSpeed : currentSpeed) > speedLimit ? '#FF5722' : '#333',
+            fontWeight: (isSimulating ? simulatedSpeed : currentSpeed) > speedLimit ? 'bold' : 'normal',
+          }
+        ]}>
+          {(isSimulating ? simulatedSpeed : currentSpeed) > speedLimit && '⚠️ '}
+          Speed: {isSimulating ? simulatedSpeed : currentSpeed}/{speedLimit} km/h
+          {(isSimulating ? simulatedSpeed : currentSpeed) > speedLimit && ' ⚠️'}
         </Text>
+        {/* ✅ Only show this when actually overspeeding */}
+        {isOverspeedAlertShown && (isSimulating ? simulatedSpeed : currentSpeed) > speedLimit && (
+          <Text style={[styles.infoText, { 
+            color: '#fff', 
+            backgroundColor: '#FF5722', 
+            fontSize: 12, 
+            fontWeight: 'bold',
+            padding: 4,
+            borderRadius: 4,
+            textAlign: 'center'
+          }]}>
+            🚨 REDUCE SPEED! 🚨
+          </Text>
+        )}
       </View>
+
+      {/* ✅ Centered Overspeed Warning - Only show when actually overspeeding */}
+      {isOverspeedAlertShown && (isSimulating ? simulatedSpeed : currentSpeed) > speedLimit && (
+        <View style={{
+          position: 'absolute',
+          top: '40%', // ✅ Center vertically on screen
+          left: 20,
+          right: 20,
+          backgroundColor: '#FF5722',
+          padding: 20,
+          borderRadius: 15,
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 999,
+          elevation: 15,
+          shadowColor: '#FF5722',
+          shadowOpacity: 0.5,
+          shadowOffset: { width: 0, height: 5 },
+          shadowRadius: 10,
+        }}>
+          <Text style={{
+            color: '#fff',
+            fontSize: 20,
+            fontWeight: 'bold',
+            textAlign: 'center'
+          }}>
+            🚨 OVERSPEED! SLOW DOWN! 🚨
+          </Text>
+          <Text style={{
+            color: '#fff',
+            fontSize: 16,
+            textAlign: 'center',
+            marginTop: 8
+          }}>
+            {isSimulating ? simulatedSpeed : currentSpeed} km/h | Limit: {speedLimit} km/h
+          </Text>
+        </View>
+      )}
+
       {/* Top Right Layers Button */}
       <View style={styles.topRightContainer}>
+        
         {/* Abort Event Button */}
         <TouchableOpacity
           style={[styles.iconBtn, { backgroundColor: '#FF5722', marginBottom: 15, marginRight: 0 }]}
@@ -918,7 +1170,10 @@ const MapScreen = ({ route, navigation }) => {
                 {
                   text: "Yes, Abort",
                   style: "destructive",
-                  onPress: () => setAbortPasswordModal(true)
+                  onPress: () => {
+                    generateRandomAbortCode();
+                    setAbortPasswordModal(true);
+                  }
                 }
               ]
             );
@@ -996,6 +1251,7 @@ const MapScreen = ({ route, navigation }) => {
             }}
             onPress={() => {
               // Test button pressed, opening modal
+              generateRandomAbortCode();
               setAbortPasswordModal(true);
             }}
           >
@@ -1224,7 +1480,7 @@ const MapScreen = ({ route, navigation }) => {
         {/* Checkpoint History Button */}
         <TouchableOpacity
           style={styles.iconBtn}
-          onPress={() => setModalVisible(false)}
+          onPress={() => setModalVisible(true)}
         >
           <Text style={styles.iconBtnText}>📋</Text>
         </TouchableOpacity>
@@ -1301,7 +1557,7 @@ const MapScreen = ({ route, navigation }) => {
         {/* Call Organizer Button (SOS) */}
         <TouchableOpacity
           style={[styles.iconBtn, { backgroundColor: '#F44336', marginRight: 0 }]}
-          onPress={() => Alert.alert("Call Organizer", "Calling organizer...")}
+          onPress={handleSOSCall}
         >
           <Text style={styles.iconBtnText}>🆘</Text>
         </TouchableOpacity></View>
@@ -1416,12 +1672,61 @@ const MapScreen = ({ route, navigation }) => {
             <Text style={{ 
               fontSize: 18, 
               color: '#333', 
-              marginBottom: 25, 
+              marginBottom: 15, 
               textAlign: 'center',
               lineHeight: 24
             }}>
-              Enter your password to abort the event
+              To confirm event abort, enter the code below:
             </Text>
+            
+            <View style={{
+              backgroundColor: '#f8f9fa',
+              borderRadius: 12,
+              padding: 15,
+              marginBottom: 20,
+              borderWidth: 2,
+              borderColor: '#FF5722',
+              alignItems: 'center'
+            }}>
+              <Text style={{
+                fontSize: 14,
+                color: '#666',
+                marginBottom: 8,
+                fontWeight: 'bold'
+              }}>
+                ABORT CODE:
+              </Text>
+              <Text style={{
+                fontSize: 28,
+                fontWeight: 'bold',
+                color: '#FF5722',
+                letterSpacing: 8,
+                fontFamily: 'monospace'
+              }}>
+                {randomAbortCode}
+              </Text>
+              <TouchableOpacity
+                style={{
+                  marginTop: 10,
+                  paddingVertical: 6,
+                  paddingHorizontal: 12,
+                  backgroundColor: '#6c757d',
+                  borderRadius: 8
+                }}
+                onPress={() => {
+                  generateRandomAbortCode();
+                }}
+              >
+                <Text style={{
+                  color: '#fff',
+                  fontSize: 12,
+                  fontWeight: 'bold'
+                }}>
+                  Generate New Code
+                </Text>
+              </TouchableOpacity>
+            </View>
+            
             <TextInput
               style={{
                 width: '100%',
@@ -1433,13 +1738,16 @@ const MapScreen = ({ route, navigation }) => {
                 fontSize: 18,
                 marginBottom: 25,
                 backgroundColor: '#fff',
-                textAlign: 'center'
+                textAlign: 'center',
+                letterSpacing: 4,
+                fontFamily: 'monospace'
               }}
-              placeholder="Enter password"
+              placeholder="Enter the 4-digit code"
               placeholderTextColor="#999"
-              secureTextEntry={true}
-              value={abortPassword}
-              onChangeText={setAbortPassword}
+              keyboardType="numeric"
+              maxLength={4}
+              value={enteredAbortCode}
+              onChangeText={setEnteredAbortCode}
               autoFocus={true}
             />
             <View style={{ 
@@ -1459,7 +1767,7 @@ const MapScreen = ({ route, navigation }) => {
                 }}
                 onPress={() => {
                   setAbortPasswordModal(false);
-                  setAbortPassword("");
+                  setEnteredAbortCode("");
                 }}
               >
                 <Text style={{ 
@@ -1473,7 +1781,7 @@ const MapScreen = ({ route, navigation }) => {
               </TouchableOpacity>
               <TouchableOpacity
                 style={{ 
-                  backgroundColor: '#FF5722', 
+                  backgroundColor: abortLoading ? '#999' : '#FF5722', 
                   paddingVertical: 15, 
                   paddingHorizontal: 25, 
                   borderRadius: 25,
@@ -1481,15 +1789,20 @@ const MapScreen = ({ route, navigation }) => {
                   elevation: 3
                 }}
                 onPress={handleAbortEventPassword}
+                disabled={abortLoading}
               >
-                <Text style={{ 
-                  color: '#fff', 
-                  fontWeight: 'bold', 
-                  fontSize: 18, 
-                  textAlign: 'center' 
-                }}>
-                  Abort
-                </Text>
+                {abortLoading ? (
+                  <ActivityIndicator color="#fff" size="small" />
+                ) : (
+                  <Text style={{ 
+                    color: '#fff', 
+                    fontWeight: 'bold', 
+                    fontSize: 18, 
+                    textAlign: 'center' 
+                  }}>
+                    Abort
+                  </Text>
+                )}
               </TouchableOpacity>
             </View>
           </View>

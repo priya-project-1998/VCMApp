@@ -72,6 +72,8 @@ export default function EventStartScreen({ navigation, route }) {
     // Fetch checkpoints and kml_path for this event
     const res = await EventService.getCheckpointsPerEvent(eventId);
     if (res.status === 'success' && res.data) {
+      // Get speed limit from config or fallback to event data
+      const speedLimit = eventConfig?.speed_limit || event.speedLimit || 60; // Default 60 kmph
       navigation.navigate('MapScreen', {
         event_id: eventId,
         category_id: eventCategoryId,
@@ -79,6 +81,7 @@ export default function EventStartScreen({ navigation, route }) {
         kml_path: res.data.kml_path,
         color: res.data.color || '#0000FF',
         event_organizer_no: res.data.event_organizer_no || 'N/A',
+        speed_limit: speedLimit, // Pass speed limit to MapScreen
       });
     } else {
       Alert.alert('Error', 'Failed to fetch checkpoints. Please try again.');
