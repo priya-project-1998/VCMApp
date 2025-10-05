@@ -185,13 +185,14 @@ class EventService {
 
       if ((response.status === "success" || response.code === 200) && response.data) {
         const kmlPath = response.data.kml_path || null;
+        const organizerNo = response.data.event_organizer_no || null;
         const checkpoints = Array.isArray(response.data.checkpoints) ? response.data.checkpoints : [];
-        return new ApiResponse("success", response.code || 200, response.message || "Checkpoints fetched successfully", { kml_path: kmlPath, checkpoints });
+        return new ApiResponse("success", response.code || 200, response.message || "Checkpoints fetched successfully", { kml_path: kmlPath, checkpoints, event_organizer_no: organizerNo });
       } else {
-        return new ApiResponse("error", response.code || 500, response.message || "Failed to fetch checkpoints", { kml_path: null, checkpoints: [] });
+        return new ApiResponse("error", response.code || 500, response.message || "Failed to fetch checkpoints", { kml_path: null, checkpoints: [], event_organizer_no: null });
       }
     } catch (err) {
-      return new ApiResponse("error", 500, err.message || "Fetching checkpoints failed", { kml_path: null, checkpoints: [] });
+      return new ApiResponse("error", 500, err.message || "Fetching checkpoints failed", { kml_path: null, checkpoints: [], event_organizer_no: null });
     }
   }
 

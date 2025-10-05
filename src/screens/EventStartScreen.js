@@ -78,6 +78,7 @@ export default function EventStartScreen({ navigation, route }) {
         checkpoints: res.data.checkpoints,
         kml_path: res.data.kml_path,
         color: res.data.color || '#0000FF',
+        event_organizer_no: res.data.event_organizer_no || 'N/A',
       });
     } else {
       Alert.alert('Error', 'Failed to fetch checkpoints. Please try again.');

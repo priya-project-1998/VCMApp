@@ -13,6 +13,7 @@ import {
   BackHandler,
   ActivityIndicator,
   ToastAndroid,
+  TextInput,
 } from "react-native";
 import MapView, { PROVIDER_GOOGLE, Marker, Polyline } from "react-native-maps";
 import Geolocation from "@react-native-community/geolocation";
@@ -36,7 +37,7 @@ const MapScreen = ({ route, navigation }) => {
   const [lastUserLocation, setLastUserLocation] = useState(null);
   const [userCoords, setUserCoords] = useState(null);
   const [mapType, setMapType] = useState("standard"); // For Center Map dropdown
-  const [centerDropdownVisible, setCenterDropdownVisible] = useState(false);
+  const [layerDropdownVisible, setLayerDropdownVisible] = useState(false);
   const [actionDropdownVisible, setActionDropdownVisible] = useState(false);
   const [elapsedSeconds, setElapsedSeconds] = useState(2 * 60 * 60); // 2 hours in seconds
   const [currentSpeed, setCurrentSpeed] = useState(0);
@@ -52,17 +53,17 @@ const MapScreen = ({ route, navigation }) => {
   const [currentLocationMarkerCoords, setCurrentLocationMarkerCoords] = useState(null);
   const currentLocationTimeoutRef = useRef(null);
   const [shouldCenterOnUser, setShouldCenterOnUser] = useState(false); // Flag to center map on user
+  const [abortPasswordModal, setAbortPasswordModal] = useState(false);
+  const [abortPassword, setAbortPassword] = useState("");
+  const [isFollowingUser, setIsFollowingUser] = useState(false); // Track if following user location
+  const [watchId, setWatchId] = useState(null); // Store watch position ID
 
   // Get checkpoints from route.params (API response)
-  const { checkpoints: paramCheckpoints, category_id,event_id, kml_path, color } = route.params || {};
+  const { checkpoints: paramCheckpoints, category_id,event_id, kml_path, color, event_organizer_no } = route.params || {};
   // Use paramCheckpoints only (no static fallback)
   const checkpoints = Array.isArray(paramCheckpoints) ? paramCheckpoints : [];
 
   // Debug logs for all received data
-  // console.log('MapScreen event_id:', event_id);
-  // console.log('MapScreen kml_path:', kml_path);
-  // console.log('MapScreen checkpoints:', checkpoints);
-  // console.log('MapScreen color:', color);
 
   // ✅ Table create
   useEffect(() => {
@@ -94,15 +95,15 @@ const MapScreen = ({ route, navigation }) => {
               try {
                 data = await res.json();
               } catch (jsonErr) {
-                console.log("JSON parse error", jsonErr);
+                // JSON parse error occurred
               }
-              // console.log("Sync response:", data);
+              // Sync response received
 
               if (data && data.status === "success") {
                 markSynced(item.id);
               }
             } catch (err) {
-              console.log("Sync failed", err);
+              // Sync failed
             }
           }
         });
@@ -143,15 +144,19 @@ const MapScreen = ({ route, navigation }) => {
           setUserCoords({ latitude, longitude });
 
           if (mapRef && mapRef.current) {
-            mapRef.current.animateToRegion(
-              {
-                latitude,
-                longitude,
-                latitudeDelta: 0.01,
-                longitudeDelta: 0.01,
-              },
-              1000
-            );
+            try {
+              mapRef.current.animateToRegion(
+                {
+                  latitude,
+                  longitude,
+                  latitudeDelta: 0.01,
+                  longitudeDelta: 0.01,
+                },
+                1000
+              );
+            } catch (error) {
+              // Error animating to region
+            }
           }
 
           // ✅ Check if near any checkpoint
@@ -306,22 +311,48 @@ const MapScreen = ({ route, navigation }) => {
     };
   };
 
-  const centerMapOptions = [
+  const layerOptions = [
     { key: "standard", label: "Normal View" },
     { key: "satellite", label: "Satellite View" },
     { key: "hybrid", label: "Hybrid View" },
     { key: "terrain", label: "Terrain View", androidOnly: true },
   ];
 
-  // Handler for Center Map type change
+  // Handler for Layers type change
   const handleMapTypeChange = (type) => {
     if (type === "terrain" && Platform.OS !== "android") {
       Alert.alert("Not Supported", "Terrain view is only available on Android.");
-      setCenterDropdownVisible(false);
+      setLayerDropdownVisible(false);
       return;
     }
     setMapType(type);
-    setCenterDropdownVisible(false);
+    setLayerDropdownVisible(false);
+  };
+
+  // Handler for Abort Event password verification
+  const handleAbortEventPassword = () => {
+    if (abortPassword.trim() === "") {
+      if (Platform.OS === 'android') {
+        ToastAndroid.show('Please enter password', ToastAndroid.SHORT);
+      } else {
+        Alert.alert('Error', 'Please enter password');
+      }
+      return;
+    }
+    
+    // For now, accepting any non-empty password
+    // You can add actual password verification here
+    setAbortPasswordModal(false);
+    setAbortPassword("");
+    
+    if (Platform.OS === 'android') {
+      ToastAndroid.show('Event aborted successfully', ToastAndroid.SHORT);
+    } else {
+      Alert.alert('Success', 'Event aborted successfully');
+    }
+    
+    // Navigate to homepage/back
+    navigation.navigate('HomeScreen'); // or navigation.goBack() if you want to go back
   };
 
   // Handler for Action Menu actions
@@ -355,15 +386,24 @@ const MapScreen = ({ route, navigation }) => {
       case 'My Location':
         setShouldCenterOnUser(true); // set flag to center on user
         if (mapRef.current) {
+          // Show immediate feedback
+          if (Platform.OS === 'android') {
+            ToastAndroid.show('Getting your location...', ToastAndroid.SHORT);
+          }
+          
           Geolocation.getCurrentPosition(
             (pos) => {
               const { latitude, longitude } = pos.coords;
-              mapRef.current.animateToRegion({
-                latitude,
-                longitude,
-                latitudeDelta: 0.01,
-                longitudeDelta: 0.01,
-              }, 1000);
+              try {
+                mapRef.current.animateToRegion({
+                  latitude,
+                  longitude,
+                  latitudeDelta: 0.0008, // ✅ Maximum zoom level everywhere
+                  longitudeDelta: 0.0008, // ✅ Maximum zoom level everywhere
+                }, 1000); // ✅ Consistent animation timing
+              } catch (error) {
+                // Error animating to region in handleTimeStampMenu
+              }
               setUserCoords({ latitude, longitude });
               setLastUserLocation({ latitude, longitude });
               setCurrentLocationMarkerCoords({ latitude, longitude });
@@ -375,20 +415,37 @@ const MapScreen = ({ route, navigation }) => {
                 setShowCurrentLocationMarker(false);
                 currentLocationTimeoutRef.current = null;
               }, 15000);
+              
+              // Success feedback
+              if (Platform.OS === 'android') {
+                ToastAndroid.show('Location found!', ToastAndroid.SHORT);
+              }
             },
             (error) => {
               let msg = 'Location error';
               if (error && error.message) msg += ': ' + error.message;
               if (error && error.code) msg += ` (code: ${error.code})`;
-              //Alert.alert(msg);
+              if (Platform.OS === 'android') {
+                ToastAndroid.show(msg, ToastAndroid.SHORT);
+              } else {
+                Alert.alert('Location Error', msg);
+              }
             },
-            { enableHighAccuracy: true, timeout: 30000, maximumAge: 0 }
+            { 
+              enableHighAccuracy: false, // Faster response
+              timeout: 10000, // Reduced timeout
+              maximumAge: 60000 // Allow cached location
+            }
           );
         }
         break;
       case 'Checkpoint Location':
         if (checkpoints.length && mapRef.current) {
-          mapRef.current.animateToRegion(getBoundingRegion(checkpoints), 1000);
+          try {
+            mapRef.current.animateToRegion(getBoundingRegion(checkpoints), 1000);
+          } catch (error) {
+            // Error animating to checkpoint location
+          }
         }
         break;
       default:
@@ -426,12 +483,16 @@ const MapScreen = ({ route, navigation }) => {
       }
       // Center map if flag is set
       if (shouldCenterOnUser && mapRef.current) {
-        mapRef.current.animateToRegion({
-          latitude,
-          longitude,
-          latitudeDelta: 0.01,
-          longitudeDelta: 0.01,
-        }, 1000);
+        try {
+          mapRef.current.animateToRegion({
+            latitude,
+            longitude,
+            latitudeDelta: 0.01,
+            longitudeDelta: 0.01,
+          }, 1000);
+        } catch (error) {
+          // Error animating to region in handleUserLocationChange
+        }
         setShouldCenterOnUser(false);
       }
     } catch (err) {
@@ -476,13 +537,133 @@ const MapScreen = ({ route, navigation }) => {
     }
   }, [checkpointStatus, checkpoints]);
 
+  // Cleanup watch position on unmount
   useEffect(() => {
     return () => {
       if (currentLocationTimeoutRef.current) {
         clearTimeout(currentLocationTimeoutRef.current);
       }
+      if (watchId) {
+        Geolocation.clearWatch(watchId);
+      }
     };
-  }, []);
+  }, [watchId]);
+
+  // Function to start following user location
+  const startFollowingUserLocation = () => {
+    // Stop any existing watch
+    if (watchId) {
+      Geolocation.clearWatch(watchId);
+    }
+
+    // Show immediate feedback
+    if (Platform.OS === 'android') {
+      ToastAndroid.show('Getting your location...', ToastAndroid.SHORT);
+    }
+
+    // Request location permission first
+    const requestLocationPermission = async () => {
+      if (Platform.OS === "android") {
+        const granted = await PermissionsAndroid.request(
+          PermissionsAndroid.PERMISSIONS.ACCESS_FINE_LOCATION,
+          {
+            title: "Location Permission",
+            message: "This app needs access to your location to show it on the map.",
+            buttonNeutral: "Ask Me Later",
+            buttonNegative: "Cancel",
+            buttonPositive: "OK",
+          }
+        );
+        return granted === PermissionsAndroid.RESULTS.GRANTED;
+      }
+      return true;
+    };
+
+    requestLocationPermission().then((hasPermission) => {
+      if (!hasPermission) {
+        if (Platform.OS === 'android') {
+          ToastAndroid.show('Location permission denied', ToastAndroid.SHORT);
+        } else {
+          Alert.alert("Permission denied", "Location permission was denied");
+        }
+        return;
+      }
+
+      // Start watching user location
+      const id = Geolocation.watchPosition(
+        (position) => {
+          const { latitude, longitude } = position.coords;
+          
+          // Update user coordinates
+          setUserCoords({ latitude, longitude });
+          setLastUserLocation({ latitude, longitude });
+          
+          // If first time or user wants to center, animate to location
+          if (!isFollowingUser || shouldCenterOnUser) {
+              try {
+                if (mapRef.current) {
+                  mapRef.current.animateToRegion({
+                    latitude,
+                    longitude,
+                    latitudeDelta: 0.0008, // ✅ Street-level zoom detail
+                    longitudeDelta: 0.0008, // ✅ Street-level zoom detail  
+                  }, 1000); // ✅ Smooth animation
+                }
+              } catch (error) {
+              // Error animating to region
+            }
+            
+            // Success feedback only on first location
+            if (!isFollowingUser) {
+              if (Platform.OS === 'android') {
+                ToastAndroid.show('Location found! Following your location...', ToastAndroid.SHORT);
+              }
+            }
+            
+            setIsFollowingUser(true);
+            setShouldCenterOnUser(false);
+          }
+          
+          // Check proximity to checkpoints
+          checkProximityToCheckpoints(latitude, longitude);
+        },
+        (error) => {
+          let msg = 'Location error';
+          if (error && error.message) msg += ': ' + error.message;
+          if (error && error.code) msg += ` (code: ${error.code})`;
+          
+          if (Platform.OS === 'android') {
+            ToastAndroid.show(msg, ToastAndroid.SHORT);
+          } else {
+            Alert.alert('Location Error', msg);
+          }
+          
+          setIsFollowingUser(false);
+        },
+        {
+          enableHighAccuracy: true,
+          timeout: 15000,
+          maximumAge: 5000,
+          distanceFilter: 10, // Only update if user moves 10 meters
+        }
+      );
+
+      setWatchId(id);
+    });
+  };
+
+  // Function to stop following user location
+  const stopFollowingUserLocation = () => {
+    if (watchId) {
+      Geolocation.clearWatch(watchId);
+      setWatchId(null);
+    }
+    setIsFollowingUser(false);
+    
+    if (Platform.OS === 'android') {
+      ToastAndroid.show('Stopped following location', ToastAndroid.SHORT);
+    }
+  };
 
   // --- MOVE EVENT SIMULATION STATE ---
   const [markerPosition, setMarkerPosition] = useState(null); // Simulation marker
@@ -551,13 +732,7 @@ const MapScreen = ({ route, navigation }) => {
               setLoadingCheckpointId(null);
               return;
             }
-            // Log API details
-            console.log("API Endpoint:", "https://e-pickup.randomsoftsolution.in/api/events/checkpoints/update");
-            console.log("API Params:", {
-              event_id: event_id,
-              category_id: category_id,
-              checkpoint_id: cp.checkpoint_id,
-            });
+            // API call details removed
             
             const res = await fetch(
               "https://e-pickup.randomsoftsolution.in/api/events/checkpoints/update",
@@ -722,26 +897,113 @@ const MapScreen = ({ route, navigation }) => {
           Current Speed: {isSimulating ? simulatedSpeed : currentSpeed} km/h
         </Text>
       </View>
-      {/* --- MOVE EVENT TEST BUTTON --- */}
-      {isTestMode && !isSimulating && (
+      {/* Top Right Layers Button */}
+      <View style={styles.topRightContainer}>
+        {/* Abort Event Button */}
         <TouchableOpacity
-          style={{
-            position: 'absolute',
-            bottom: 80,
-            right: 20,
-            backgroundColor: '#ff9800',
-            paddingVertical: 14,
-            paddingHorizontal: 20,
-            borderRadius: 25,
-            elevation: 6,
-            zIndex: 50,
+          style={[styles.iconBtn, { backgroundColor: '#FF5722', marginBottom: 15, marginRight: 0 }]}
+          onLongPress={() => {
+            // Long press detected, opening abort modal
+            Alert.alert(
+              "⚠️ Abort Event",
+              "Are you sure you want to abort this event?",
+              [
+                {
+                  text: "Cancel",
+                  style: "cancel",
+                  onPress: () => {
+                    // Abort cancelled
+                  }
+                },
+                {
+                  text: "Yes, Abort",
+                  style: "destructive",
+                  onPress: () => setAbortPasswordModal(true)
+                }
+              ]
+            );
           }}
-          onPress={startUserMovementSimulation}
+          delayLongPress={300}
+          onPress={() => {
+            if (Platform.OS === 'android') {
+              ToastAndroid.show('Long press to abort event', ToastAndroid.SHORT);
+            } else {
+              Alert.alert('Info', 'Long press to abort event');
+            }
+          }}
         >
-          <Text style={{ color: '#fff', fontSize: 16, fontWeight: 'bold' }}>
-            Start Move-Event
-          </Text>
+        <Text style={styles.iconBtnText}>⚠️</Text>
         </TouchableOpacity>
+        
+        <View style={styles.topDropdownContainer}>
+          <TouchableOpacity
+            style={styles.topLayersBtn}
+            onPress={() => setLayerDropdownVisible(!layerDropdownVisible)}
+          >
+            <Text style={styles.topLayersBtnText}>Layers</Text>
+          </TouchableOpacity>
+          {layerDropdownVisible && (
+            <View style={styles.topDropdownMenu}>
+              {layerOptions.map((opt) => (
+                <TouchableOpacity
+                  key={opt.key}
+                  style={[styles.dropdownItem, opt.androidOnly && Platform.OS !== "android" && { opacity: 0.5 }]} 
+                  onPress={() => !opt.androidOnly || Platform.OS === "android" ? handleMapTypeChange(opt.key) : null}
+                  disabled={opt.androidOnly && Platform.OS !== "android"}
+                >
+                  <Text style={styles.dropdownItemText}>
+                    {opt.label + (mapType === opt.key ? " ✓" : "")}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+          )}
+        </View>
+      </View>
+      {isTestMode && !isSimulating && (
+        <View>
+          <TouchableOpacity
+            style={{
+              position: 'absolute',
+              bottom: 80,
+              right: 20,
+              backgroundColor: '#ff9800',
+              paddingVertical: 14,
+              paddingHorizontal: 20,
+              borderRadius: 25,
+              elevation: 6,
+              zIndex: 50,
+            }}
+            onPress={startUserMovementSimulation}
+          >
+            <Text style={{ color: '#fff', fontSize: 16, fontWeight: 'bold' }}>
+              Start Move-Event
+            </Text>
+          </TouchableOpacity>
+          
+          {/* Test Abort Modal Button */}
+          <TouchableOpacity
+            style={{
+              position: 'absolute',
+              bottom: 140,
+              right: 20,
+              backgroundColor: '#FF5722',
+              paddingVertical: 10,
+              paddingHorizontal: 15,
+              borderRadius: 20,
+              elevation: 6,
+              zIndex: 50,
+            }}
+            onPress={() => {
+              // Test button pressed, opening modal
+              setAbortPasswordModal(true);
+            }}
+          >
+            <Text style={{ color: '#fff', fontSize: 14, fontWeight: 'bold' }}>
+              Test Modal
+            </Text>
+          </TouchableOpacity>
+        </View>
       )}
       <MapView
         ref={mapRef}
@@ -749,16 +1011,20 @@ const MapScreen = ({ route, navigation }) => {
         style={styles.map}
         initialRegion={getBoundingRegion(checkpoints)}
         mapType={mapType}
-        showsMyLocationButton={true}
-        showsCompass={true}
-        showsScale={true}
+        showsUserLocation={false} // Hide built-in user location button
+        followsUserLocation={isFollowingUser} // Follow user location when tracking
+        onUserLocationChange={handleUserLocationChange}
+        userLocationAnnotationTitle="My Current Location" // ✅ Custom title
+        userLocationCalloutEnabled={true} // ✅ Enable callout on tap
+        loadingEnabled={true} // ✅ Show loading indicator
+        loadingIndicatorColor="#2196F3" // ✅ Blue loading color
+        loadingBackgroundColor="rgba(255,255,255,0.8)" // ✅ Semi-transparent background
         zoomEnabled={true}
         scrollEnabled={true}
         pitchEnabled={true}
         rotateEnabled={true}
-        showsUserLocation={!isSimulating} // Hide default user location during simulation
-        followsUserLocation={!isSimulating} // Don't follow user location during simulation
-        onUserLocationChange={handleUserLocationChange}
+        showsCompass={true}
+        showsScale={true}
       >
         {/* --- Simulated Polyline and Marker --- */}
         {userRoute && userRoute.length > 1 && (
@@ -774,12 +1040,69 @@ const MapScreen = ({ route, navigation }) => {
           <Marker coordinate={markerPosition} title="Sim User" pinColor="blue" />
         )}
         {/* Show current location marker if requested */}
-        {!isSimulating && showCurrentLocationMarker && currentLocationMarkerCoords && false && (
+        {!isSimulating && showCurrentLocationMarker && currentLocationMarkerCoords && (
           <Marker
             coordinate={currentLocationMarkerCoords}
-            title="My Current Location"
+            title="📍 My Current Location"
+            description="You are here"
             pinColor="#2196F3"
-          />
+          >
+            <View style={{
+              backgroundColor: '#2196F3',
+              borderRadius: 20,
+              width: 40, // ✅ Bigger marker
+              height: 40, // ✅ Bigger marker
+              justifyContent: 'center',
+              alignItems: 'center',
+              borderWidth: 3,
+              borderColor: '#fff',
+              shadowColor: '#000',
+              shadowOpacity: 0.3,
+              shadowOffset: { width: 0, height: 2 },
+              shadowRadius: 4,
+              elevation: 5,
+            }}>
+              <Text style={{ fontSize: 18, color: '#fff' }}>📍</Text>
+            </View>
+          </Marker>
+        )}
+        
+        {/* ✅ Enhanced User Location Marker - Always visible when following */}
+        {isFollowingUser && lastUserLocation && (
+          <Marker
+            coordinate={lastUserLocation}
+            title="📍 My Live Location"
+            description="Real-time tracking active"
+            anchor={{ x: 0.5, y: 0.5 }}
+          >
+            <View style={{
+              backgroundColor: '#2196F3',
+              borderRadius: 25,
+              width: 50, // ✅ Even bigger for live tracking
+              height: 50, // ✅ Even bigger for live tracking
+              justifyContent: 'center',
+              alignItems: 'center',
+              borderWidth: 4,
+              borderColor: '#fff',
+              shadowColor: '#2196F3',
+              shadowOpacity: 0.5,
+              shadowOffset: { width: 0, height: 3 },
+              shadowRadius: 6,
+              elevation: 8,
+            }}>
+              <Text style={{ fontSize: 22, color: '#fff' }}>📍</Text>
+              {/* ✅ Pulsing ring effect */}
+              <View style={{
+                position: 'absolute',
+                backgroundColor: 'rgba(33, 150, 243, 0.3)',
+                borderRadius: 35,
+                width: 70,
+                height: 70,
+                top: -10,
+                left: -10,
+              }} />
+            </View>
+          </Marker>
         )}
         {checkpoints.map((cp, idx) => (
           <Marker
@@ -822,8 +1145,7 @@ const MapScreen = ({ route, navigation }) => {
                 setSelectedCheckpointId(null);
                 return;
               }
-              // Log for debug
-              console.log('Button pressed, event_id:', event_id, 'category_id:', category_id, 'checkpoint_id:', selectedCheckpointId);
+              // Debug log removed
               const res = await fetch(
                 "https://e-pickup.randomsoftsolution.in/api/events/checkpoints/update",
                 {
@@ -869,9 +1191,9 @@ const MapScreen = ({ route, navigation }) => {
                 // Print local DB log for this checkpoint after saving
                 setTimeout(() => {
                   getCheckpointById(selectedCheckpointId, (checkpointData) => {
-                    console.log('Local DB checkpoint log:', checkpointData);
+                    // Local DB checkpoint log removed
                     if (!checkpointData) {
-                      console.log('No checkpoint found in local DB for id:', selectedCheckpointId);
+                      // No checkpoint found in local DB
                     }
                   });
                 }, 300); // slight delay to ensure save
@@ -882,7 +1204,7 @@ const MapScreen = ({ route, navigation }) => {
                 else Alert.alert('Server error', data.message || 'Failed');
               }
             } catch (err) {
-              console.log('API call error:', err);
+              // API call error occurred
               if (Platform.OS === 'android') ToastAndroid.show('Network/API error', ToastAndroid.SHORT);
               else Alert.alert('Network/API error');
             }
@@ -899,78 +1221,90 @@ const MapScreen = ({ route, navigation }) => {
       )}
       {/* Bottom Floating Menu */}
       <View style={styles.bottomFloatingMenu}>
-        {/* Time Stamp Dropdown */}
-        <View style={styles.bottomDropdownContainer}>
-          <TouchableOpacity
-            style={styles.bottomMenuBtn}
-            onPress={() => setTimeStampDropdownVisible(!timeStampDropdownVisible)}
-          >
-            <Text style={styles.bottomMenuBtnText}>Time Stamp</Text>
-          </TouchableOpacity>
-          {timeStampDropdownVisible && (
-            <View style={styles.bottomDropdownMenu}>
-              {['Checkpoint History', 'My Location', 'Checkpoint Location'].map((action) => (
-                <TouchableOpacity
-                  key={action}
-                  style={styles.dropdownItem}
-                  onPress={() => handleTimeStampMenu(action)}
-                >
-                  <Text style={styles.dropdownItemText}>{action}</Text>
-                </TouchableOpacity>
-              ))}
-            </View>
-          )}
-        </View>
-        
-        {/* Center Map Dropdown */}
-        <View style={styles.bottomDropdownContainer}>
-          <TouchableOpacity
-            style={styles.bottomMenuBtn}
-            onPress={() => setCenterDropdownVisible(!centerDropdownVisible)}
-          >
-            <Text style={styles.bottomMenuBtnText}>Center Map</Text>
-          </TouchableOpacity>
-          {centerDropdownVisible && (
-            <View style={styles.bottomDropdownMenu}>
-              {centerMapOptions.map((opt) => (
-                <TouchableOpacity
-                  key={opt.key}
-                  style={[styles.dropdownItem, opt.androidOnly && Platform.OS !== "android" && { opacity: 0.5 }]} 
-                  onPress={() => !opt.androidOnly || Platform.OS === "android" ? handleMapTypeChange(opt.key) : null}
-                  disabled={opt.androidOnly && Platform.OS !== "android"}
-                >
-                  <Text style={styles.dropdownItemText}>
-                    {opt.label + (mapType === opt.key ? " ✓" : "")}
-                  </Text>
-                </TouchableOpacity>
-              ))}
-            </View>
-          )}
-        </View>
+        {/* Checkpoint History Button */}
+        <TouchableOpacity
+          style={styles.iconBtn}
+          onPress={() => setModalVisible(false)}
+        >
+          <Text style={styles.iconBtnText}>📋</Text>
+        </TouchableOpacity>
 
-        {/* Action Menu Dropdown */}
-        <View style={styles.bottomDropdownContainer}>
-          <TouchableOpacity
-            style={styles.bottomMenuBtn}
-            onPress={() => setActionDropdownVisible(!actionDropdownVisible)}
-          >
-            <Text style={styles.bottomMenuBtnText}>Action Menu</Text>
-          </TouchableOpacity>
-          {actionDropdownVisible && (
-            <View style={styles.bottomDropdownMenu}>
-              {["Map Layer", "Distance Tool", "Abort Event", "Call Organizer"].map((action) => (
-                <TouchableOpacity
-                  key={action}
-                  style={styles.dropdownItem}
-                  onPress={() => handleActionMenu(action)}
-                >
-                  <Text style={styles.dropdownItemText}>{action}</Text>
-                </TouchableOpacity>
-              ))}
-            </View>
-          )}
-        </View>
-      </View>
+        {/* My Location Button */}
+        <TouchableOpacity
+          style={[
+            styles.myLocationBtn, // ✅ Special style for My Location
+            { backgroundColor: isFollowingUser ? '#2196F3' : '#4CAF50' } // Blue when following, green when not
+          ]}
+          onPress={() => {
+            if (isFollowingUser) {
+              stopFollowingUserLocation();
+            } else {
+              // ✅ Show immediate feedback
+              if (Platform.OS === 'android') {
+                ToastAndroid.show('Getting your location...', ToastAndroid.SHORT);
+              }
+              
+              // ✅ Get current location and zoom immediately
+              Geolocation.getCurrentPosition(
+                (position) => {
+                  const { latitude, longitude } = position.coords;
+                  
+                  // ✅ Immediate zoom to current location
+                  if (mapRef.current) {
+                    try {
+                      mapRef.current.animateToRegion({
+                        latitude,
+                        longitude,
+                        latitudeDelta: 0.0008, // ✅ MUCH closer zoom (was 0.002)
+                        longitudeDelta: 0.0008, // ✅ MUCH closer zoom (was 0.002)
+                      }, 1000); // ✅ Longer animation for smoother transition
+                    } catch (error) {
+                      // Error zooming to My Location
+                    }
+                  }
+                  
+                  // ✅ Update coordinates
+                  setUserCoords({ latitude, longitude });
+                  setLastUserLocation({ latitude, longitude });
+                  
+                  // ✅ Success feedback
+                  if (Platform.OS === 'android') {
+                    ToastAndroid.show('Location found and zoomed!', ToastAndroid.SHORT);
+                  }
+                  
+                  // ✅ Start following after finding location
+                  startFollowingUserLocation();
+                },
+                (error) => {
+                  let msg = 'Location error';
+                  if (error && error.message) msg += ': ' + error.message;
+                  if (Platform.OS === 'android') {
+                    ToastAndroid.show(msg, ToastAndroid.SHORT);
+                  } else {
+                    Alert.alert('Location Error', msg);
+                  }
+                },
+                {
+                  enableHighAccuracy: true,
+                  timeout: 10000,
+                  maximumAge: 5000,
+                }
+              );
+            }
+          }}
+        >
+          <Text style={styles.myLocationBtnText}>
+            {isFollowingUser ? '📍' : '📍'}
+          </Text>
+        </TouchableOpacity>
+
+        {/* Call Organizer Button (SOS) */}
+        <TouchableOpacity
+          style={[styles.iconBtn, { backgroundColor: '#F44336', marginRight: 0 }]}
+          onPress={() => Alert.alert("Call Organizer", "Calling organizer...")}
+        >
+          <Text style={styles.iconBtnText}>🆘</Text>
+        </TouchableOpacity></View>
 
       {/* Checklist Details Modal */}
       <Modal
@@ -1042,6 +1376,126 @@ const MapScreen = ({ route, navigation }) => {
         </View>
       </Modal>
 
+      {/* Abort Event Password Modal */}
+      <Modal
+        visible={abortPasswordModal}
+        transparent={true}
+        animationType="slide"
+        onRequestClose={() => setAbortPasswordModal(false)}
+      >
+        <View style={{ 
+          flex: 1, 
+          justifyContent: 'center', 
+          alignItems: 'center', 
+          backgroundColor: 'rgba(0,0,0,0.8)',
+          zIndex: 9999
+        }}>
+          <View style={{ 
+            backgroundColor: '#fff', 
+            borderRadius: 20, 
+            padding: 30, 
+            alignItems: 'center', 
+            width: '90%', 
+            maxWidth: 400,
+            elevation: 50,
+            shadowColor: '#000',
+            shadowOpacity: 0.5,
+            shadowOffset: { width: 0, height: 10 },
+            shadowRadius: 20,
+            zIndex: 10000
+          }}>
+            <Text style={{ 
+              fontSize: 24, 
+              fontWeight: 'bold', 
+              color: '#FF5722', 
+              marginBottom: 15, 
+              textAlign: 'center' 
+            }}>
+              ⚠️ Abort Event
+            </Text>
+            <Text style={{ 
+              fontSize: 18, 
+              color: '#333', 
+              marginBottom: 25, 
+              textAlign: 'center',
+              lineHeight: 24
+            }}>
+              Enter your password to abort the event
+            </Text>
+            <TextInput
+              style={{
+                width: '100%',
+                borderWidth: 2,
+                borderColor: '#FF5722',
+                borderRadius: 15,
+                paddingVertical: 15,
+                paddingHorizontal: 20,
+                fontSize: 18,
+                marginBottom: 25,
+                backgroundColor: '#fff',
+                textAlign: 'center'
+              }}
+              placeholder="Enter password"
+              placeholderTextColor="#999"
+              secureTextEntry={true}
+              value={abortPassword}
+              onChangeText={setAbortPassword}
+              autoFocus={true}
+            />
+            <View style={{ 
+              flexDirection: 'row', 
+              justifyContent: 'space-between', 
+              width: '100%',
+              gap: 15
+            }}>
+              <TouchableOpacity
+                style={{ 
+                  backgroundColor: '#6c757d', 
+                  paddingVertical: 15, 
+                  paddingHorizontal: 25, 
+                  borderRadius: 25,
+                  flex: 1,
+                  elevation: 3
+                }}
+                onPress={() => {
+                  setAbortPasswordModal(false);
+                  setAbortPassword("");
+                }}
+              >
+                <Text style={{ 
+                  color: '#fff', 
+                  fontWeight: 'bold', 
+                  fontSize: 18, 
+                  textAlign: 'center' 
+                }}>
+                  Cancel
+                </Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={{ 
+                  backgroundColor: '#FF5722', 
+                  paddingVertical: 15, 
+                  paddingHorizontal: 25, 
+                  borderRadius: 25,
+                  flex: 1,
+                  elevation: 3
+                }}
+                onPress={handleAbortEventPassword}
+              >
+                <Text style={{ 
+                  color: '#fff', 
+                  fontWeight: 'bold', 
+                  fontSize: 18, 
+                  textAlign: 'center' 
+                }}>
+                  Abort
+                </Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
       {/* My Location Button - bottom right */}
       {/* <TouchableOpacity
         style={styles.locationButton}
@@ -1068,6 +1522,47 @@ const styles = StyleSheet.create({
     zIndex: 10,
   },
   buttonText: { color: "#fff", fontWeight: "bold", fontSize: 16 },
+  topRightContainer: {
+    position: "absolute",
+    top: 10,
+    right: 15,
+    zIndex: 30,
+    alignItems: "flex-end",
+  },
+  topDropdownContainer: {
+    alignItems: "flex-end",
+  },
+  topLayersBtn: {
+    backgroundColor: "#2196F3",
+    paddingVertical: 8,
+    paddingHorizontal: 18,
+    borderRadius: 18,
+    elevation: 4,
+    shadowColor: "#000",
+    shadowOpacity: 0.12,
+    shadowOffset: { width: 0, height: 2 },
+    shadowRadius: 4,
+    minWidth: 80,
+    alignItems: "center",
+  },
+  topLayersBtnText: {
+    color: "#fff",
+    fontWeight: "bold",
+    fontSize: 14,
+  },
+  topDropdownMenu: {
+    backgroundColor: "#fff",
+    borderRadius: 12,
+    paddingVertical: 6,
+    paddingHorizontal: 10,
+    marginTop: 8,
+    elevation: 6,
+    shadowColor: "#2196F3",
+    shadowOpacity: 0.18,
+    shadowOffset: { width: 0, height: 2 },
+    shadowRadius: 6,
+    minWidth: 140,
+  },
   floatingMenu: {
     position: "absolute",
     top: 10, // move to top
@@ -1079,12 +1574,58 @@ const styles = StyleSheet.create({
   bottomFloatingMenu: {
     position: "absolute",
     bottom: 20,
-    left: 10,
-    right: 10,
+    left: 0,
+    right: 0,
     flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "flex-end",
+    justifyContent: "center",
+    alignItems: "center",
     zIndex: 30,
+  },
+  iconBtn: {
+    backgroundColor: "#4CAF50",
+    width: 55,
+    height: 55,
+    borderRadius: 27.5,
+    justifyContent: "center",
+    alignItems: "center",
+    elevation: 4,
+    shadowColor: "#000",
+    shadowOpacity: 0.12,
+    shadowOffset: { width: 0, height: 2 },
+    shadowRadius: 4,
+    marginRight: 12,
+    zIndex: 999,       // ✅ सबसे ऊपर
+    elevation: 10,     // ✅ Android
+
+  },
+  iconBtnText: {
+    fontSize: 20,
+    color: "#fff",
+  },
+  // ✅ Special style for My Location Button
+  myLocationBtn: {
+    backgroundColor: "#4CAF50",
+    width: 65, // ✅ Bigger than normal icons (was 55)
+    height: 65, // ✅ Bigger than normal icons (was 55)
+    borderRadius: 32.5, // ✅ Half of width/height
+    justifyContent: "center",
+    alignItems: "center",
+    elevation: 6, // ✅ Higher elevation for prominence
+    shadowColor: "#000",
+    shadowOpacity: 0.18, // ✅ More shadow
+    shadowOffset: { width: 0, height: 3 }, // ✅ Bigger shadow
+    shadowRadius: 6,
+    marginRight: 12,
+    zIndex: 999,
+    borderWidth: 2, // ✅ Border for better visibility
+    borderColor: "#fff", // ✅ White border
+  },
+  myLocationBtnText: {
+    fontSize: 26, // ✅ Bigger icon (was 20)
+    color: "#fff",
+    textShadowColor: "#000", // ✅ Text shadow for better visibility
+    textShadowOffset: { width: 1, height: 1 },
+    textShadowRadius: 2,
   },
   bottomDropdownContainer: {
     flex: 1,
