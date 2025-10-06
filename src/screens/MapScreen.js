@@ -268,7 +268,7 @@ const MapScreen = ({ route, navigation }) => {
     return false;
   };
 
-  // ✅ Checkpoint reach detection (within ~10 meters)
+  // ✅ Checkpoint reach detection (using dynamic accuracy radius)
   const checkProximityToCheckpoints = (lat, lng) => {
     checkpoints.forEach((cp) => {
       const distance = getDistanceFromLatLonInMeters(
@@ -277,7 +277,12 @@ const MapScreen = ({ route, navigation }) => {
         parseFloat(cp.latitude),
         parseFloat(cp.longitude)
       );
-      if (distance < 10) {
+      // ✅ Use dynamic radius based on checkpoint accuracy, fallback to 10 meters
+      const checkpointRadius = (cp.accuracy && !isNaN(parseFloat(cp.accuracy)) && parseFloat(cp.accuracy) > 0) 
+        ? parseFloat(cp.accuracy) 
+        : 10;
+      
+      if (distance < checkpointRadius) {
         if (!checkpointStatus[cp.checkpoint_id]?.completed) {
           const reachedTime = new Date().toLocaleTimeString();
           setCheckpointStatus((prev) => ({
@@ -908,7 +913,12 @@ const MapScreen = ({ route, navigation }) => {
         parseFloat(cp.latitude),
         parseFloat(cp.longitude)
       );
-      if (dist < 10 && !checkpointStatus[cp.checkpoint_id]?.completed) {
+      // ✅ Use dynamic radius based on checkpoint accuracy, fallback to 10 meters
+      const checkpointRadius = (cp.accuracy && !isNaN(parseFloat(cp.accuracy)) && parseFloat(cp.accuracy) > 0) 
+        ? parseFloat(cp.accuracy) 
+        : 10;
+      
+      if (dist < checkpointRadius && !checkpointStatus[cp.checkpoint_id]?.completed) {
         (async () => {
           setLoadingCheckpointId(cp.checkpoint_id);
           try {
@@ -996,7 +1006,7 @@ const MapScreen = ({ route, navigation }) => {
       setUserRoute(prev => [...prev, newPoint]);
       current = newPoint;
       steps++;
-      // Check if reached any checkpoint (within 10m)
+      // Check if reached any checkpoint (using dynamic accuracy radius)
       for (let cp of checkpoints) {
         const dist = getDistanceFromLatLonInMeters(
           current.latitude,
@@ -1004,7 +1014,12 @@ const MapScreen = ({ route, navigation }) => {
           parseFloat(cp.latitude),
           parseFloat(cp.longitude)
         );
-        if (dist < 10 && !checkpointStatus[cp.checkpoint_id]?.completed) {
+        // ✅ Use dynamic radius based on checkpoint accuracy, fallback to 10 meters
+        const checkpointRadius = (cp.accuracy && !isNaN(parseFloat(cp.accuracy)) && parseFloat(cp.accuracy) > 0) 
+          ? parseFloat(cp.accuracy) 
+          : 10;
+        
+        if (dist < checkpointRadius && !checkpointStatus[cp.checkpoint_id]?.completed) {
           // Call the same API as 'Mark as Completed (Test)' for this checkpoint
           (async () => {
             setLoadingCheckpointId(cp.checkpoint_id);
