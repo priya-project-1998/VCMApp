@@ -1372,7 +1372,10 @@ const MapScreen = ({ route, navigation }) => {
             pinColor={
               checkpointStatus[cp.checkpoint_id]?.completed
                 ? '#4caf50' // green for completed
-                : (color || 'red') // use passed color or fallback to red for pending
+                : (() => {
+                    console.log(`🎨 Checkpoint ${cp.checkpoint_id} (${cp.checkpoint_name}) - Received color: "${cp.color}", Using: "${cp.color || 'green'}", Status: ${checkpointStatus[cp.checkpoint_id]?.completed ? 'completed' : 'pending'}`);
+                    return (cp.color || 'red'); // use passed color or fallback to red for pending
+                  })()
             }
             onPress={() => setSelectedCheckpointId(cp.checkpoint_id)}
           />
