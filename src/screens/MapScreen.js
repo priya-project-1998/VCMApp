@@ -1396,8 +1396,8 @@ const MapScreen = ({ route, navigation }) => {
           />
         ))}
       </MapView>
-      {/* TEST BUTTON: Mark selected checkpoint as completed */}
-      {selectedCheckpointId && (
+      {/* TEST BUTTON: Mark selected checkpoint as completed - Only show on simulator/emulator */}
+      {isTestMode && selectedCheckpointId && (
         <TouchableOpacity
           style={{ position: 'absolute', bottom: 20, right: 20, backgroundColor: '#4caf50', padding: 14, borderRadius: 28, zIndex: 100, elevation: 8 }}
           onPress={async () => {
