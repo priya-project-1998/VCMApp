@@ -803,7 +803,7 @@ const MapScreen = ({ route, navigation }) => {
             // Success feedback only on first location
             if (!isFollowingUser) {
               if (Platform.OS === 'android') {
-                ToastAndroid.show('Location found! Following your location...', ToastAndroid.SHORT);
+                //ToastAndroid.show('Location found! Following your location...', ToastAndroid.SHORT);
               }
             }
             
