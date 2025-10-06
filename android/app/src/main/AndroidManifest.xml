@@ -87,7 +87,24 @@
         android:configChanges="keyboard|keyboardHidden|orientation|screenLayout|screenSize|smallestScreenSize|uiMode"
         android:launchMode="singleTask"
         android:windowSoftInputMode="adjustResize"
-        android:exported="false">
+        android:exported="true">
+        
+        <!-- Deep Link Intent Filters -->
+        <intent-filter android:autoVerify="true">
+          <action android:name="android.intent.action.VIEW" />
+          <category android:name="android.intent.category.DEFAULT" />
+          <category android:name="android.intent.category.BROWSABLE" />
+          <data android:scheme="vcmapp" android:host="event" />
+        </intent-filter>
+        
+        <!-- HTTP/HTTPS Intent Filters for web links -->
+        <intent-filter android:autoVerify="true">
+          <action android:name="android.intent.action.VIEW" />
+          <category android:name="android.intent.category.DEFAULT" />
+          <category android:name="android.intent.category.BROWSABLE" />
+          <data android:scheme="https" android:host="vcmapp.com" />
+        </intent-filter>
+        
       </activity>
     </application>
 </manifest>

@@ -3,6 +3,7 @@ import { View, Text, StyleSheet, TouchableOpacity, Dimensions, ScrollView, Share
 import LinearGradient from "react-native-linear-gradient";
 import NotificationBell from '../components/NotificationBell';
 import EventService from "../services/apiService/event_service";
+import { generateShareMessage } from '../utils/deepLinkUtils';
 
 const { width } = Dimensions.get("window");
 
@@ -163,10 +164,24 @@ export default function EventStartScreen({ navigation, route }) {
           <View style={styles.infoRow}><Text style={styles.detailIcon}>📍</Text><Text style={styles.label}>GPS Accuracy</Text><Text style={[styles.value, styles.success]}>{gpsAccuracyDisplay}</Text></View>
           {/* Buttons */}
           <View style={styles.featureBtnRow}>
-            <TouchableOpacity style={styles.featureBtn} onPress={() => {
-              const shareMsg = `${event.name}\nDate: ${event.date}\nFlag Off: ${event.flagOff}\nSpeed Limit: ${event.speedLimit}`;
-              if (typeof Share !== "undefined") {
-                Share.share({ message: shareMsg });
+            <TouchableOpacity style={styles.featureBtn} onPress={async () => {
+              try {
+                // Generate share message using deep link utility
+                const shareData = generateShareMessage({
+                  event_id: eventId,
+                  event_name: eventName,
+                  event_venue: eventVenue,
+                  event_start_date: eventStartDate
+                });
+                
+                await Share.share({
+                  message: shareData.message,
+                  url: shareData.url, // For iOS
+                  title: shareData.title,
+                });
+              } catch (error) {
+                console.log('Error sharing event:', error);
+                Alert.alert('Error', 'Failed to share event');
               }
             }}>
               <LinearGradient colors={["#43cea2", "#185a9d"]} style={styles.featureBtnGradient}>

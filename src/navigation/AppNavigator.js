@@ -1,7 +1,8 @@
-import React from 'react';
+import React, { forwardRef } from 'react';
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { createDrawerNavigator } from '@react-navigation/drawer';
+import { Linking } from 'react-native';
 import LinearGradient from 'react-native-linear-gradient';
 
 import HomeScreen from '../screens/HomeScreen';
@@ -28,7 +29,8 @@ import MyEventsScreen from '../screens/MyEventsScreen';
 import NotificationsScreen from '../screens/Notifications';
 import EventStartScreen from '../screens/EventStartScreen';
 import EventDetailsScreen from '../screens/EventDetailsScreen';
-import MapScreen from '../screens/MapScreen'
+import MapScreen from '../screens/MapScreen';
+import JoinEventScreen from '../screens/JoinEventScreen';
 const Stack = createNativeStackNavigator();
 const Drawer = createDrawerNavigator();
 
@@ -171,9 +173,39 @@ function DrawerNavigator() {
   );
 }
 
-export default function AppNavigator() {
+const AppNavigator = forwardRef((props, ref) => {
+  // Deep link configuration
+  const linking = {
+    prefixes: ['vcmapp://', 'https://vcmapp.com'],
+    config: {
+      screens: {
+        JoinEventScreen: {
+          path: '/event/:eventId',
+          parse: {
+            eventId: (eventId) => eventId,
+          },
+        },
+        'Join Event': {
+          path: '/join/:eventId',
+          parse: {
+            eventId: (eventId) => eventId,
+          },
+        },
+        Drawer: {
+          screens: {
+            Dashboard: 'dashboard',
+            Event: 'events',
+            Profile: 'profile',
+          },
+        },
+        LoginScreen: 'login',
+        Signup: 'signup',
+      },
+    },
+  };
+
   return (
-    <NavigationContainer>
+    <NavigationContainer ref={ref} linking={linking}>
       <Stack.Navigator screenOptions={{ headerShown: false }}>
         <Stack.Screen name="SplashScreen" component={SplashScreen} />
         <Stack.Screen name="LoginScreen" component={LoginScreen} />
@@ -185,7 +217,10 @@ export default function AppNavigator() {
         <Stack.Screen name="EventDetails" component={EventDetailsScreen} />
         <Stack.Screen name="MapScreen" component={MapScreen} />
         <Stack.Screen name="ResultsScreen" component={ResultsScreen} />
+        <Stack.Screen name="JoinEventScreen" component={JoinEventScreen} />
       </Stack.Navigator>
     </NavigationContainer>
   );
-}
+});
+
+export default AppNavigator;
