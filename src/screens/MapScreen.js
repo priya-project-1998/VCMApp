@@ -1493,22 +1493,23 @@ const MapScreen = ({ route, navigation }) => {
           )}
         </TouchableOpacity>
       )}
-      {/* Bottom Floating Menu */}
-      <View style={styles.bottomFloatingMenu}>
-        {/* Checkpoint History Button */}
+      
+      {/* ✅ Bottom Tab Bar */}
+      <View style={styles.bottomTabBar}>
+        {/* Checkpoint History Tab */}
         <TouchableOpacity
-          style={styles.iconBtn}
+          style={styles.tabItem}
           onPress={() => setModalVisible(true)}
         >
-          <Text style={styles.iconBtnText}>📋</Text>
+          <View style={styles.tabIconContainer}>
+            <Text style={styles.tabIcon}>📋</Text>
+          </View>
+          <Text style={styles.tabLabel}>History</Text>
         </TouchableOpacity>
 
-        {/* My Location Button */}
+        {/* My Location Tab */}
         <TouchableOpacity
-          style={[
-            styles.myLocationBtn, // ✅ Special style for My Location
-            { backgroundColor: isFollowingUser ? '#2196F3' : '#4CAF50' } // Blue when following, green when not
-          ]}
+          style={styles.tabItem}
           onPress={() => {
             if (isFollowingUser) {
               stopFollowingUserLocation();
@@ -1567,18 +1568,28 @@ const MapScreen = ({ route, navigation }) => {
             }
           }}
         >
-          <Text style={styles.myLocationBtnText}>
-            {isFollowingUser ? '📍' : '📍'}
+          <View style={[
+            styles.tabIconContainer,
+            { backgroundColor: isFollowingUser ? '#2196F3' : '#4CAF50' }
+          ]}>
+            <Text style={styles.tabIcon}>📍</Text>
+          </View>
+          <Text style={styles.tabLabel}>
+            {isFollowingUser ? 'Following' : 'Location'}
           </Text>
         </TouchableOpacity>
 
-        {/* Call Organizer Button (SOS) */}
+        {/* SOS Call Tab */}
         <TouchableOpacity
-          style={[styles.iconBtn, { backgroundColor: '#F44336', marginRight: 0 }]}
+          style={[styles.tabItem, styles.tabItemLast]}
           onPress={handleSOSCall}
         >
-          <Text style={styles.iconBtnText}>🆘</Text>
-        </TouchableOpacity></View>
+          <View style={[styles.tabIconContainer, { backgroundColor: '#F44336' }]}>
+            <Text style={styles.tabIcon}>🆘</Text>
+          </View>
+          <Text style={styles.tabLabel}>SOS</Text>
+        </TouchableOpacity>
+      </View>
 
       {/* Checklist Details Modal */}
       <Modal
@@ -2194,6 +2205,70 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     color: '#185a9d',
     textAlign: 'center',
+  },
+  
+  // ✅ Bottom Tab Bar Styles
+  bottomTabBar: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    backgroundColor: '#fff',
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    alignItems: 'center',
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+    borderTopWidth: 1,
+    borderTopColor: '#e0e0e0',
+    elevation: 8,
+    shadowColor: '#000',
+    shadowOpacity: 0.1,
+    shadowOffset: { width: 0, height: -2 },
+    shadowRadius: 8,
+    zIndex: 100,
+    height: 65,
+  },
+  
+  tabItem: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 4,
+    borderRightWidth: 1,
+    borderRightColor: '#e0e0e0',
+  },
+  
+  tabItemLast: {
+    borderRightWidth: 0,
+  },
+  
+  tabIconContainer: {
+    backgroundColor: '#4CAF50',
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 2,
+    elevation: 3,
+    shadowColor: '#000',
+    shadowOpacity: 0.1,
+    shadowOffset: { width: 0, height: 2 },
+    shadowRadius: 4,
+  },
+  
+  tabIcon: {
+    fontSize: 16,
+    color: '#fff',
+  },
+  
+  tabLabel: {
+    fontSize: 10,
+    color: '#666',
+    fontWeight: '600',
+    textAlign: 'center',
+    marginTop: 1,
   },
 });
 
