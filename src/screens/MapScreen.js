@@ -15,6 +15,7 @@ import {
   ToastAndroid,
   TextInput,
   Linking,
+  Vibration,
 } from "react-native";
 import MapView, { PROVIDER_GOOGLE, Marker, Polyline } from "react-native-maps";
 import Geolocation from "@react-native-community/geolocation";
@@ -30,6 +31,11 @@ import {
   markSynced,
   getCheckpointById, // <-- import the new function
 } from "../services/dbService";
+
+// ✅ Import Sound and Vibration Utils
+import SoundUtils from '../utils/SoundUtils';
+import VibrationSoundUtils from '../utils/VibrationSoundUtils';
+import SystemSoundUtils from '../utils/SystemSoundUtils';
 
 const { width, height } = Dimensions.get("window");
 
@@ -143,12 +149,46 @@ const MapScreen = ({ route, navigation }) => {
       if (!isOverspeedAlertShown || now - lastOverspeedAlert > 1500) {
         setLastOverspeedAlert(now);
         setIsOverspeedAlertShown(true);
+        
+        // ✅ Play sound and vibration whenever speed limit is exceeded
+        try {
+          // Layer 1: Advanced sound (if available)
+          SoundUtils.playSpeedAlert();
+          
+          // Layer 2: Vibration patterns (backup/enhancement) 
+          setTimeout(() => {
+            VibrationSoundUtils.playSpeedAlert();
+          }, 150);
+          
+          // Layer 3: System sounds with escalating urgency
+          setTimeout(() => {
+            SystemSoundUtils.playSpeedAlert();
+          }, 300);
+          
+        } catch (error) {
+          console.log('Error playing speed alert:', error);
+          // Ultimate fallback: basic vibration
+          try {
+            Vibration.vibrate([0, 400, 150, 400, 150, 400]); // Strong urgent pattern
+          } catch (vibError) {
+            console.log('Error with vibration:', vibError);
+          }
+        }
       }
     } else {
       // Reset overspeed alert when speed is back under limit
       if (isOverspeedAlertShown) {
         setIsOverspeedAlertShown(false);
         setLastOverspeedAlert(0);
+        
+        // ✅ Reset sound alert count when speed normalizes
+        try {
+          SoundUtils.resetAlertCount();
+          VibrationSoundUtils.release(); // Stop any ongoing vibrations
+          SystemSoundUtils.resetAlertCount(); // Reset system sound alerts
+        } catch (error) {
+          console.log('Error resetting alert systems:', error);
+        }
       }
     }
   }, [speedLimit, lastOverspeedAlert, isOverspeedAlertShown]);
@@ -742,6 +782,14 @@ const MapScreen = ({ route, navigation }) => {
       }
       if (watchId) {
         Geolocation.clearWatch(watchId);
+      }
+      // ✅ Clean up sound resources
+      try {
+        SoundUtils.release();
+        VibrationSoundUtils.release();
+        SystemSoundUtils.release();
+      } catch (error) {
+        console.log('Error releasing sound resources:', error);
       }
     };
   }, [watchId]);
