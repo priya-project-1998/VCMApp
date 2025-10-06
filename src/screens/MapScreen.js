@@ -252,8 +252,20 @@ const MapScreen = ({ route, navigation }) => {
         setMarkerColors((prev) => ({ ...prev, [checkpointId]: '#185a9d' })); // blue
         const cpObj = checkpoints.find(c => c.checkpoint_id === checkpointId);
         const cpName = cpObj?.checkpoint_name || checkpointId;
-        if (Platform.OS === 'android') ToastAndroid.show(`Checkpoint "${cpName}" synced successfully`, ToastAndroid.SHORT);
-        else Alert.alert('Checkpoint Synced', `Checkpoint "${cpName}" synced successfully`);
+        // ✅ Enhanced toast message with time and center positioning
+        const syncTime = new Date().toLocaleTimeString();
+        const successMessage = `✅ Checkpoint "${cpName}" synced successfully at ${syncTime}`;
+        
+        if (Platform.OS === 'android') {
+          // Show toast for 5 seconds (LONG duration) at center
+          ToastAndroid.showWithGravity(
+            successMessage,
+            ToastAndroid.LONG, // 5 seconds
+            ToastAndroid.CENTER // Center position
+          );
+        } else {
+          Alert.alert('Checkpoint Synced', `Checkpoint "${cpName}" synced successfully at ${syncTime}`);
+        }
         setLoadingCheckpointId(null);
         return true;
       } else {
@@ -955,8 +967,20 @@ const MapScreen = ({ route, navigation }) => {
                 [cp.checkpoint_id]: { time: new Date().toLocaleTimeString(), completed: true },
               }));
               const cpName = cp.checkpoint_name || cp.checkpoint_id;
-              if (Platform.OS === 'android') ToastAndroid.show(`Checkpoint "${cpName}" synced successfully`, ToastAndroid.SHORT);
-              else Alert.alert('Checkpoint Synced', `Checkpoint "${cpName}" synced successfully`);
+              // ✅ Enhanced toast message with time and center positioning
+              const syncTime = new Date().toLocaleTimeString();
+              const successMessage = `✅ Checkpoint "${cpName}" synced successfully at ${syncTime}`;
+              
+              if (Platform.OS === 'android') {
+                // Show toast for 5 seconds (LONG duration) at center
+                ToastAndroid.showWithGravity(
+                  successMessage,
+                  ToastAndroid.LONG, // 5 seconds
+                  ToastAndroid.CENTER // Center position
+                );
+              } else {
+                Alert.alert('Checkpoint Synced', `Checkpoint "${cpName}" synced successfully at ${syncTime}`);
+              }
             } else {
               if (Platform.OS === 'android') ToastAndroid.show('Server error: ' + (data.message || 'Failed'), ToastAndroid.SHORT);
               else Alert.alert('Server error', data.message || 'Failed');
@@ -1055,8 +1079,20 @@ const MapScreen = ({ route, navigation }) => {
                   [cp.checkpoint_id]: { time: new Date().toLocaleTimeString(), completed: true },
                 }));
                 const cpName = cp.checkpoint_name || cp.checkpoint_id;
-                if (Platform.OS === 'android') ToastAndroid.show(`Checkpoint "${cpName}" synced successfully`, ToastAndroid.SHORT);
-                else Alert.alert('Checkpoint Synced', `Checkpoint "${cpName}" synced successfully`);
+                // ✅ Enhanced toast message with time and center positioning
+                const syncTime = new Date().toLocaleTimeString();
+                const successMessage = `✅ Checkpoint "${cpName}" synced successfully at ${syncTime}`;
+                
+                if (Platform.OS === 'android') {
+                  // Show toast for 5 seconds (LONG duration) at center
+                  ToastAndroid.showWithGravity(
+                    successMessage,
+                    ToastAndroid.LONG, // 5 seconds
+                    ToastAndroid.CENTER // Center position
+                  );
+                } else {
+                  Alert.alert('Checkpoint Synced', `Checkpoint "${cpName}" synced successfully at ${syncTime}`);
+                }
               } else {
                 if (Platform.OS === 'android') ToastAndroid.show('Server error: ' + (data.message || 'Failed'), ToastAndroid.SHORT);
                 else Alert.alert('Server error', data.message || 'Failed');
@@ -1399,7 +1435,7 @@ const MapScreen = ({ route, navigation }) => {
       {/* TEST BUTTON: Mark selected checkpoint as completed - Only show on simulator/emulator */}
       {isTestMode && selectedCheckpointId && (
         <TouchableOpacity
-          style={{ position: 'absolute', bottom: 20, right: 20, backgroundColor: '#4caf50', padding: 14, borderRadius: 28, zIndex: 100, elevation: 8 }}
+          style={{ position: 'absolute', bottom: 75, right: 20, backgroundColor: '#4caf50', padding: 14, borderRadius: 28, zIndex: 100, elevation: 8 }}
           onPress={async () => {
             // Check internet
             const netState = await NetInfo.fetch();
@@ -1471,8 +1507,21 @@ const MapScreen = ({ route, navigation }) => {
                     }
                   });
                 }, 300); // slight delay to ensure save
-                if (Platform.OS === 'android') ToastAndroid.show(`Checkpoint "${cpName}" synced successfully`, ToastAndroid.SHORT);
-                else Alert.alert('Checkpoint Synced', `Checkpoint "${cpName}" synced successfully`);
+                
+                // ✅ Enhanced toast message with time and center positioning
+                const syncTime = new Date().toLocaleTimeString();
+                const successMessage = `✅ Checkpoint "${cpName}" synced successfully at ${syncTime}`;
+                
+                if (Platform.OS === 'android') {
+                  // Show toast for 5 seconds (LONG duration)
+                  ToastAndroid.showWithGravity(
+                    successMessage,
+                    ToastAndroid.LONG, // 5 seconds
+                    ToastAndroid.CENTER // Center position
+                  );
+                } else {
+                  Alert.alert('Checkpoint Synced', `Checkpoint "${cpName}" synced successfully at ${syncTime}`);
+                }
               } else {
                 if (Platform.OS === 'android') ToastAndroid.show('Server error: ' + (data.message || 'Failed'), ToastAndroid.SHORT);
                 else Alert.alert('Server error', data.message || 'Failed');
@@ -2217,6 +2266,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-around',
     alignItems: 'center',
+    padding: 0,
     paddingVertical: 8,
     paddingHorizontal: 16,
     borderTopWidth: 1,
