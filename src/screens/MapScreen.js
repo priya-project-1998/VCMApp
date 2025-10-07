@@ -46,7 +46,8 @@ const MapScreen = ({ route, navigation }) => {
   const [mapType, setMapType] = useState("standard"); // For Center Map dropdown
   const [layerDropdownVisible, setLayerDropdownVisible] = useState(false);
   const [actionDropdownVisible, setActionDropdownVisible] = useState(false);
-  const [elapsedSeconds, setElapsedSeconds] = useState(2 * 60 * 60); // 2 hours in seconds
+  const [elapsedSeconds, setElapsedSeconds] = useState(0); // Will be calculated from event dates
+  const [totalEventDuration, setTotalEventDuration] = useState(0); // Total duration in seconds
   const [currentSpeed, setCurrentSpeed] = useState(0);
   const [modalVisible, setModalVisible] = useState(false);
   const [userRoute, setUserRoute] = useState([]); // Track user route
@@ -75,7 +76,7 @@ const MapScreen = ({ route, navigation }) => {
   const [enteredAbortCode, setEnteredAbortCode] = useState("");
 
   // Get checkpoints from route.params (API response)
-  const { checkpoints: paramCheckpoints, category_id, event_id, kml_path, color, event_organizer_no, speed_limit } = route.params || {};
+  const { checkpoints: paramCheckpoints, category_id, event_id, kml_path, color, event_organizer_no, speed_limit, event_start_date, event_end_date } = route.params || {};
   // Use paramCheckpoints only (no static fallback)
   const checkpoints = Array.isArray(paramCheckpoints) ? paramCheckpoints : [];
 
@@ -85,6 +86,68 @@ const MapScreen = ({ route, navigation }) => {
   useEffect(() => {
     createTables();
   }, []);
+
+  // ✅ Calculate countdown timer based on event start and end dates
+  useEffect(() => {
+    if (event_start_date && event_end_date) {
+      try {
+        const startDate = new Date(event_start_date);
+        const endDate = new Date(event_end_date);
+        const currentTime = new Date();
+        
+        console.log('🕐 Timer Calculation:', {
+          event_start_date,
+          event_end_date,
+          startDate: startDate.toString(),
+          endDate: endDate.toString(),
+          currentTime: currentTime.toString(),
+        });
+        
+        // Calculate total duration in seconds
+        const totalDuration = Math.floor((endDate.getTime() - startDate.getTime()) / 1000);
+        setTotalEventDuration(totalDuration);
+        
+        // Calculate remaining time from current time to end date
+        const remainingTime = Math.floor((endDate.getTime() - currentTime.getTime()) / 1000);
+        
+        console.log('🕐 Duration Calculation:', {
+          totalDuration,
+          remainingTime,
+          totalDurationHours: Math.floor(totalDuration / 3600),
+          remainingTimeHours: Math.floor(Math.max(0, remainingTime) / 3600),
+        });
+        
+        // If event hasn't started yet, show full duration
+        // If event is in progress, show remaining time
+        // If event has ended, show 0
+        if (currentTime < startDate) {
+          // Event hasn't started yet - show full duration
+          setElapsedSeconds(Math.max(0, totalDuration));
+          console.log('🕐 Event Status: Not started yet - showing full duration');
+        } else if (currentTime >= startDate && currentTime <= endDate) {
+          // Event is in progress - show remaining time
+          setElapsedSeconds(Math.max(0, remainingTime));
+          console.log('🕐 Event Status: In progress - showing remaining time');
+        } else {
+          // Event has ended
+          setElapsedSeconds(0);
+          console.log('🕐 Event Status: Ended - showing 0');
+        }
+      } catch (error) {
+        console.error('🕐 Error calculating timer:', error);
+        // Fallback to 2 hours if there's an error
+        const fallbackDuration = 2 * 60 * 60; // 2 hours in seconds
+        setTotalEventDuration(fallbackDuration);
+        setElapsedSeconds(fallbackDuration);
+      }
+    } else {
+      console.log('🕐 No event dates provided, using fallback duration');
+      // Fallback to 2 hours if dates are not provided
+      const fallbackDuration = 2 * 60 * 60; // 2 hours in seconds
+      setTotalEventDuration(fallbackDuration);
+      setElapsedSeconds(fallbackDuration);
+    }
+  }, [event_start_date, event_end_date]);
 
   // ✅ Update speed limit when route param changes
   useEffect(() => {

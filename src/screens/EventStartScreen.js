@@ -83,6 +83,9 @@ export default function EventStartScreen({ navigation, route }) {
         color: res.data.color || '#0000FF',
         event_organizer_no: res.data.event_organizer_no || 'N/A',
         speed_limit: speedLimit, // Pass speed limit to MapScreen
+        event_start_date: eventStartDate, // Pass start date
+        event_end_date: eventEndDate, // Pass end date
+        event_name: eventName, // Pass event name for reference
       });
     } else {
       Alert.alert('Error', 'Failed to fetch checkpoints. Please try again.');
