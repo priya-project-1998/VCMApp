@@ -1256,7 +1256,7 @@ const MapScreen = ({ route, navigation }) => {
       </View>
 
       {/* ✅ Centered Overspeed Warning - Only show when actually overspeeding */}
-      {isOverspeedAlertShown && (isSimulating ? simulatedSpeed : currentSpeed) > speedLimit && (
+      {/* {isOverspeedAlertShown && (isSimulating ? simulatedSpeed : currentSpeed) > speedLimit && (
         <View style={{
           position: 'absolute',
           top: '40%', // ✅ Center vertically on screen
@@ -1291,7 +1291,7 @@ const MapScreen = ({ route, navigation }) => {
             {isSimulating ? simulatedSpeed : currentSpeed} km/h | Limit: {speedLimit} km/h
           </Text>
         </View>
-      )}
+      )} */}
 
       {/* Top Right Layers Button */}
       <View style={styles.topRightContainer}>
