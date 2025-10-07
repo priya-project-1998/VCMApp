@@ -1806,13 +1806,17 @@ const MapScreen = ({ route, navigation }) => {
               Event is completed!
             </Text>
             <Text style={{ fontSize: 16, color: '#333', marginBottom: 28, textAlign: 'center' }}>
-              You can go back to the event page.
+              You can go back to the home page.
             </Text>
             <TouchableOpacity
               style={{ backgroundColor: '#2196F3', paddingVertical: 12, paddingHorizontal: 38, borderRadius: 22 }}
               onPress={() => {
                 setEventCompletedModal(false);
-                navigation.goBack();
+                // Reset navigation stack to prevent going back to map
+                navigation.reset({
+                  index: 0,
+                  routes: [{ name: 'Drawer', params: { screen: 'Dashboard' } }],
+                });
               }}
             >
               <Text style={{ color: '#fff', fontWeight: 'bold', fontSize: 18 }}>Okay</Text>
