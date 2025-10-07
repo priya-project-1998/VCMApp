@@ -255,6 +255,12 @@ const MapScreen = ({ route, navigation }) => {
   };
 
   const syncCheckpointToServer = async (checkpointId) => {
+    // ✅ Check if checkpoint is already synced before proceeding
+    if (checkpointStatus[checkpointId]?.completed) {
+      console.log(`🔄 [syncCheckpointToServer] Checkpoint "${checkpointId}" already synced - skipping toast message`);
+      return true; // Already synced, no need to show message again
+    }
+
     const netState = await NetInfo.fetch();
     if (!netState.isConnected) {
       if (Platform.OS === 'android') ToastAndroid.show('No internet connection', ToastAndroid.SHORT);
@@ -296,6 +302,9 @@ const MapScreen = ({ route, navigation }) => {
         const syncTime = new Date().toLocaleTimeString();
         const successMessage = `✅ Checkpoint "${cpName}" synced successfully at ${syncTime}`;
         
+        // ✅ Console log for tracking sync toast display
+        console.log(`🎯 [syncCheckpointToServer] Showing sync success toast for checkpoint "${cpName}" (ID: ${checkpointId}) at ${syncTime}`);
+        
         if (Platform.OS === 'android') {
           // Show toast for 5 seconds (LONG duration) at center
           ToastAndroid.showWithGravity(
@@ -336,6 +345,8 @@ const MapScreen = ({ route, navigation }) => {
       
       if (distance < checkpointRadius) {
         if (!checkpointStatus[cp.checkpoint_id]?.completed) {
+          console.log(`📍 [checkProximityToCheckpoints] User reached checkpoint "${cp.checkpoint_name}" (ID: ${cp.checkpoint_id}) - distance: ${distance.toFixed(2)}m`);
+          
           const reachedTime = new Date().toLocaleTimeString();
           setCheckpointStatus((prev) => ({
             ...prev,
@@ -356,6 +367,8 @@ const MapScreen = ({ route, navigation }) => {
           });
           // Only sync if not already completed
           syncCheckpointToServer(cp.checkpoint_id);
+        } else {
+          console.log(`🔄 [checkProximityToCheckpoints] User in range of already synced checkpoint "${cp.checkpoint_name}" (ID: ${cp.checkpoint_id}) - skipping sync`);
         }
       }
     });
@@ -958,6 +971,10 @@ const MapScreen = ({ route, navigation }) => {
       Alert.alert("No Checkpoints", "There are no checkpoints to simulate.");
       return;
     }
+    
+    // ✅ Local tracking to prevent duplicate syncs during simulation
+    const syncedCheckpoints = new Set();
+    
     const startPoint = {
       latitude: parseFloat(checkpoints[0].latitude),
       longitude: parseFloat(checkpoints[0].longitude),
@@ -965,6 +982,7 @@ const MapScreen = ({ route, navigation }) => {
     setMarkerPosition(startPoint);
     setUserRoute([startPoint]);
     setIsSimulating(true);
+    
     // Immediately check and sync if at a checkpoint (for first point)
     for (let cp of checkpoints) {
       const dist = getDistanceFromLatLonInMeters(
@@ -978,7 +996,18 @@ const MapScreen = ({ route, navigation }) => {
         ? parseFloat(cp.accuracy) 
         : 10;
       
-      if (dist < checkpointRadius && !checkpointStatus[cp.checkpoint_id]?.completed) {
+      if (dist < checkpointRadius && !checkpointStatus[cp.checkpoint_id]?.completed && !syncedCheckpoints.has(cp.checkpoint_id)) {
+        console.log(`🎮 [startUserMovementSimulation] Initial position reached checkpoint "${cp.checkpoint_name}" (ID: ${cp.checkpoint_id}) - distance: ${dist.toFixed(2)}m`);
+        
+        // ✅ Add to local tracking immediately
+        syncedCheckpoints.add(cp.checkpoint_id);
+        
+        // ✅ Immediately mark as completed to prevent duplicate API calls
+        setCheckpointStatus((prev) => ({
+          ...prev,
+          [cp.checkpoint_id]: { time: new Date().toLocaleTimeString(), completed: true },
+        }));
+        
         (async () => {
           setLoadingCheckpointId(cp.checkpoint_id);
           try {
@@ -1010,14 +1039,13 @@ const MapScreen = ({ route, navigation }) => {
             let data = {};
             try { data = await res.json(); } catch {}
             if ((res.status === 200 && data.status === "success") || data.status === "success") {
-              setCheckpointStatus((prev) => ({
-                ...prev,
-                [cp.checkpoint_id]: { time: new Date().toLocaleTimeString(), completed: true },
-              }));
               const cpName = cp.checkpoint_name || cp.checkpoint_id;
               // ✅ Enhanced toast message with time and center positioning
               const syncTime = new Date().toLocaleTimeString();
               const successMessage = `✅ Checkpoint "${cpName}" synced successfully at ${syncTime}`;
+              
+              // ✅ Console log for tracking initial simulation sync toast display
+              console.log(`🎯 [startUserMovementSimulation-Initial] Showing sync success toast for checkpoint "${cpName}" (ID: ${cp.checkpoint_id}) at ${syncTime}`);
               
               if (Platform.OS === 'android') {
                 // Show toast for 5 seconds (LONG duration) at center
@@ -1040,8 +1068,12 @@ const MapScreen = ({ route, navigation }) => {
           setLoadingCheckpointId(null);
         })();
         break;
+      } else if (dist < checkpointRadius && (checkpointStatus[cp.checkpoint_id]?.completed || syncedCheckpoints.has(cp.checkpoint_id))) {
+        // ✅ Log when initial position is in range of already synced checkpoint
+        console.log(`🔄 [startUserMovementSimulation-Initial] Initial position in range of already synced checkpoint "${cp.checkpoint_name}" (ID: ${cp.checkpoint_id}) - skipping sync`);
       }
     }
+    
     let current = startPoint;
     let steps = 0;
     simulationIntervalRef.current = setInterval(() => {
@@ -1078,6 +1110,7 @@ const MapScreen = ({ route, navigation }) => {
       setUserRoute(prev => [...prev, newPoint]);
       current = newPoint;
       steps++;
+      
       // Check if reached any checkpoint (using dynamic accuracy radius)
       for (let cp of checkpoints) {
         const dist = getDistanceFromLatLonInMeters(
@@ -1091,7 +1124,18 @@ const MapScreen = ({ route, navigation }) => {
           ? parseFloat(cp.accuracy) 
           : 10;
         
-        if (dist < checkpointRadius && !checkpointStatus[cp.checkpoint_id]?.completed) {
+        if (dist < checkpointRadius && !checkpointStatus[cp.checkpoint_id]?.completed && !syncedCheckpoints.has(cp.checkpoint_id)) {
+          console.log(`🎮 [startUserMovementSimulation] Simulation reached checkpoint "${cp.checkpoint_name}" (ID: ${cp.checkpoint_id}) - distance: ${dist.toFixed(2)}m`);
+          
+          // ✅ Add to local tracking immediately to prevent duplicates
+          syncedCheckpoints.add(cp.checkpoint_id);
+          
+          // ✅ Immediately mark as completed to prevent duplicate API calls
+          setCheckpointStatus((prev) => ({
+            ...prev,
+            [cp.checkpoint_id]: { time: new Date().toLocaleTimeString(), completed: true },
+          }));
+          
           // Call the same API as 'Mark as Completed (Test)' for this checkpoint
           (async () => {
             setLoadingCheckpointId(cp.checkpoint_id);
@@ -1122,14 +1166,13 @@ const MapScreen = ({ route, navigation }) => {
               let data = {};
               try { data = await res.json(); } catch {}
               if ((res.status === 200 && data.status === "success") || data.status === "success") {
-                setCheckpointStatus((prev) => ({
-                  ...prev,
-                  [cp.checkpoint_id]: { time: new Date().toLocaleTimeString(), completed: true },
-                }));
                 const cpName = cp.checkpoint_name || cp.checkpoint_id;
                 // ✅ Enhanced toast message with time and center positioning
                 const syncTime = new Date().toLocaleTimeString();
                 const successMessage = `✅ Checkpoint "${cpName}" synced successfully at ${syncTime}`;
+                
+                // ✅ Console log for tracking simulation sync toast display
+                console.log(`🎯 [startUserMovementSimulation] Showing sync success toast for checkpoint "${cpName}" (ID: ${cp.checkpoint_id}) at ${syncTime}`);
                 
                 if (Platform.OS === 'android') {
                   // Show toast for 5 seconds (LONG duration) at center
@@ -1152,6 +1195,9 @@ const MapScreen = ({ route, navigation }) => {
             setLoadingCheckpointId(null);
           })();
           break;
+        } else if (dist < checkpointRadius && (checkpointStatus[cp.checkpoint_id]?.completed || syncedCheckpoints.has(cp.checkpoint_id))) {
+          // ✅ Log when simulation is in range of already synced checkpoint
+          console.log(`🔄 [startUserMovementSimulation] Simulation in range of already synced checkpoint "${cp.checkpoint_name}" (ID: ${cp.checkpoint_id}) - skipping sync`);
         }
       }
       if (steps >= 30) { // 30 steps = 1 min (2s interval)
@@ -1485,6 +1531,20 @@ const MapScreen = ({ route, navigation }) => {
         <TouchableOpacity
           style={{ position: 'absolute', bottom: 75, right: 20, backgroundColor: '#4caf50', padding: 14, borderRadius: 28, zIndex: 100, elevation: 8 }}
           onPress={async () => {
+            // ✅ Check if checkpoint is already synced before proceeding
+            if (checkpointStatus[selectedCheckpointId]?.completed) {
+              console.log(`🔄 [TestButton] Checkpoint "${selectedCheckpointId}" already synced - skipping toast message`);
+              const cpObj = checkpoints.find(c => c.checkpoint_id === selectedCheckpointId);
+              const cpName = cpObj?.checkpoint_name || selectedCheckpointId;
+              if (Platform.OS === 'android') {
+                ToastAndroid.show(`Checkpoint "${cpName}" is already synced`, ToastAndroid.SHORT);
+              } else {
+                Alert.alert('Already Synced', `Checkpoint "${cpName}" is already synced`);
+              }
+              setSelectedCheckpointId(null);
+              return;
+            }
+
             // Check internet
             const netState = await NetInfo.fetch();
             if (!netState.isConnected) {
@@ -1559,6 +1619,9 @@ const MapScreen = ({ route, navigation }) => {
                 // ✅ Enhanced toast message with time and center positioning
                 const syncTime = new Date().toLocaleTimeString();
                 const successMessage = `✅ Checkpoint "${cpName}" synced successfully at ${syncTime}`;
+                
+                // ✅ Console log for tracking test button sync toast display
+                console.log(`🎯 [TestButton] Showing sync success toast for checkpoint "${cpName}" (ID: ${selectedCheckpointId}) at ${syncTime}`);
                 
                 if (Platform.OS === 'android') {
                   // Show toast for 5 seconds (LONG duration)
