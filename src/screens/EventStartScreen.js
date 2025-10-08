@@ -75,6 +75,8 @@ export default function EventStartScreen({ navigation, route }) {
     if (res.status === 'success' && res.data) {
       // Get speed limit from config or fallback to event data
       const speedLimit = eventConfig?.speed_limit || event.speedLimit || 60; // Default 60 kmph
+      // Get duration from config or fallback to event data
+      const duration = eventConfig?.duration || event.duration || 'N/A';
       navigation.navigate('MapScreen', {
         event_id: eventId,
         category_id: eventCategoryId,
@@ -86,6 +88,8 @@ export default function EventStartScreen({ navigation, route }) {
         event_start_date: eventStartDate, // Pass start date
         event_end_date: eventEndDate, // Pass end date
         event_name: eventName, // Pass event name for reference
+        duration: duration // Pass duration from config to MapScreen
+
       });
     } else {
       Alert.alert('Error', 'Failed to fetch checkpoints. Please try again.');
@@ -119,7 +123,8 @@ export default function EventStartScreen({ navigation, route }) {
 
   // Use config values if available, else fallback to event
   const flagOffDisplay = eventConfig?.flag_off_time || event.flagOff || 'N/A';
-  const durationDisplay = eventConfig?.speed_limit ? `${eventConfig.speed_limit} kmph` : (event.duration || 'N/A');
+  const durationDisplay = eventConfig?.duration || event.duration || 'N/A';
+  const speedLimitDisplay = eventConfig?.speed_limit ? `${eventConfig.speed_limit} kmph` : (event.speedLimit || 'N/A');
   const gpsAccuracyDisplay = eventConfig?.gps_accuracy ? `${eventConfig.gps_accuracy} Meters` : (event.gpsAccuracy || 'N/A');
 
   return (
@@ -163,7 +168,8 @@ export default function EventStartScreen({ navigation, route }) {
           <Text style={styles.eventTitle}>{eventName}</Text>
           <View style={styles.divider} />
           <View style={styles.infoRow}><Text style={styles.detailIcon}>⏰</Text><Text style={styles.label}>Flag Off</Text><Text style={styles.value}>{flagOffDisplay}</Text></View>
-          <View style={styles.infoRow}><Text style={styles.detailIcon}>⏳</Text><Text style={styles.label}>Speed Limit</Text><Text style={[styles.value, styles.danger]}>{durationDisplay}</Text></View>
+          <View style={styles.infoRow}><Text style={styles.detailIcon}>⏳</Text><Text style={styles.label}>Duration</Text><Text style={[styles.value, styles.success]}>{durationDisplay}</Text></View>
+          <View style={styles.infoRow}><Text style={styles.detailIcon}>🚗</Text><Text style={styles.label}>Speed Limit</Text><Text style={[styles.value, styles.danger]}>{speedLimitDisplay}</Text></View>
           <View style={styles.infoRow}><Text style={styles.detailIcon}>📍</Text><Text style={styles.label}>GPS Accuracy</Text><Text style={[styles.value, styles.success]}>{gpsAccuracyDisplay}</Text></View>
           {/* Buttons */}
           <View style={styles.featureBtnRow}>
@@ -183,7 +189,6 @@ export default function EventStartScreen({ navigation, route }) {
                   title: shareData.title,
                 });
               } catch (error) {
-                console.log('Error sharing event:', error);
                 Alert.alert('Error', 'Failed to share event');
               }
             }}>

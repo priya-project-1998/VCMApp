@@ -34,6 +34,8 @@ const JoinEventForm = ({ event, onClose }) => {
     event_id: event?.id || '',
     category_id: '',
     class_id: '',
+    vehicle_model: '',
+    vehicle_rc_no: '',
     crew_members: [] // Start with empty array - no default members
   });
   const [loading, setLoading] = useState(false);
@@ -179,6 +181,8 @@ const JoinEventForm = ({ event, onClose }) => {
       event_id: eventId,
       category_id: categoryId,
       class_id: classId,
+      vehicle_model: formData.vehicle_model.trim(),
+      vehicle_rc_no: formData.vehicle_rc_no.trim(),
       crew_members: formData.crew_members.map((member) => ({
         name: member.name.trim(),
         mobile: member.mobile.trim(),
@@ -208,6 +212,16 @@ const JoinEventForm = ({ event, onClose }) => {
     
     if (!formData.class_id) {
       Alert.alert('Error', 'Please select a class');
+      return;
+    }
+
+    if (!formData.vehicle_model.trim()) {
+      Alert.alert('Error', 'Please enter vehicle model');
+      return;
+    }
+
+    if (!formData.vehicle_rc_no.trim()) {
+      Alert.alert('Error', 'Please enter vehicle RC number');
       return;
     }
 
@@ -356,6 +370,34 @@ const JoinEventForm = ({ event, onClose }) => {
                 </Picker>
               </View>
             )}
+          </View>
+        </View>
+
+        {/* Vehicle Details */}
+        <View style={styles.formSection}>
+          <Text style={styles.sectionTitle}>Vehicle Details</Text>
+          
+          <View style={styles.inputGroup}>
+            <Text style={styles.inputLabel}>Vehicle Model *</Text>
+            <TextInput
+              style={styles.input}
+              value={formData.vehicle_model}
+              onChangeText={(text) => setFormData(prev => ({ ...prev, vehicle_model: text }))}
+              placeholder="Enter vehicle model (e.g., Honda City, Maruti Swift)"
+              placeholderTextColor="rgba(255,255,255,0.5)"
+            />
+          </View>
+
+          <View style={styles.inputGroup}>
+            <Text style={styles.inputLabel}>Vehicle RC Number *</Text>
+            <TextInput
+              style={styles.input}
+              value={formData.vehicle_rc_no}
+              onChangeText={(text) => setFormData(prev => ({ ...prev, vehicle_rc_no: text }))}
+              placeholder="Enter vehicle RC number"
+              placeholderTextColor="rgba(255,255,255,0.5)"
+              autoCapitalize="characters"
+            />
           </View>
         </View>
 
