@@ -22,8 +22,6 @@ import Geolocation from "@react-native-community/geolocation";
 import NetInfo from "@react-native-community/netinfo";
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import DeviceInfo from 'react-native-device-info';
-
-// ✅ Import SQLite services
 import {
   createTables,
   saveCheckpoint,
@@ -31,14 +29,11 @@ import {
   markSynced,
   getCheckpointById, // <-- import the new function
 } from "../services/dbService";
-
-// ✅ Import Sound and Vibration Utils
 import SoundUtils from '../utils/SoundUtils';
 import VibrationSoundUtils from '../utils/VibrationSoundUtils';
 import SystemSoundUtils from '../utils/SystemSoundUtils';
 
 const { width, height } = Dimensions.get("window");
-
 const MapScreen = ({ route, navigation }) => {
   const mapRef = useRef(null);
   const [lastUserLocation, setLastUserLocation] = useState(null);
@@ -65,8 +60,6 @@ const MapScreen = ({ route, navigation }) => {
   const [abortPassword, setAbortPassword] = useState("");
   const [isFollowingUser, setIsFollowingUser] = useState(false); // Track if following user location
   const [watchId, setWatchId] = useState(null); // Store watch position ID
-  
-  // ✅ Speed Limit States
   const [speedLimit, setSpeedLimit] = useState(60); // Default speed limit
   const [isOverspeedAlertShown, setIsOverspeedAlertShown] = useState(false);
   const [overspeedCount, setOverspeedCount] = useState(0);
@@ -74,80 +67,75 @@ const MapScreen = ({ route, navigation }) => {
   const [abortLoading, setAbortLoading] = useState(false);
   const [randomAbortCode, setRandomAbortCode] = useState("");
   const [enteredAbortCode, setEnteredAbortCode] = useState("");
-
-  // Get checkpoints from route.params (API response)
   const { checkpoints: paramCheckpoints, category_id, event_id, kml_path, color, event_organizer_no, speed_limit, event_start_date, event_end_date,duration } = route.params || {};
-  // Use paramCheckpoints only (no static fallback)
   const checkpoints = Array.isArray(paramCheckpoints) ? paramCheckpoints : [];
-
-  // Debug logs for all received data
 
   // ✅ Table create
   useEffect(() => {
     createTables();
   }, []);
 
-  // ✅ Calculate countdown timer based on event start and end dates
-  useEffect(() => {
-    if (event_start_date && event_end_date) {
-      try {
-        const startDate = new Date(event_start_date);
-        const endDate = new Date(event_end_date);
-        const currentTime = new Date();
+  // // ✅ Calculate countdown timer based on event start and end dates
+  // useEffect(() => {
+  //   if (event_start_date && event_end_date) {
+  //     try {
+  //       const startDate = new Date(event_start_date);
+  //       const endDate = new Date(event_end_date);
+  //       const currentTime = new Date();
         
-        console.log('🕐 Timer Calculation:', {
-          event_start_date,
-          event_end_date,
-          startDate: startDate.toString(),
-          endDate: endDate.toString(),
-          currentTime: currentTime.toString(),
-        });
+  //       console.log('🕐 Timer Calculation:', {
+  //         event_start_date,
+  //         event_end_date,
+  //         startDate: startDate.toString(),
+  //         endDate: endDate.toString(),
+  //         currentTime: currentTime.toString(),
+  //       });
         
-        // Calculate total duration in seconds
-        const totalDuration = Math.floor((endDate.getTime() - startDate.getTime()) / 1000);
-        setTotalEventDuration(totalDuration);
+  //       // Calculate total duration in seconds
+  //       const totalDuration = Math.floor((endDate.getTime() - startDate.getTime()) / 1000);
+  //       setTotalEventDuration(totalDuration);
         
-        // Calculate remaining time from current time to end date
-        const remainingTime = Math.floor((endDate.getTime() - currentTime.getTime()) / 1000);
+  //       // Calculate remaining time from current time to end date
+  //       const remainingTime = Math.floor((endDate.getTime() - currentTime.getTime()) / 1000);
         
-        console.log('🕐 Duration Calculation:', {
-          totalDuration,
-          remainingTime,
-          totalDurationHours: Math.floor(totalDuration / 3600),
-          remainingTimeHours: Math.floor(Math.max(0, remainingTime) / 3600),
-        });
+  //       console.log('🕐 Duration Calculation:', {
+  //         totalDuration,
+  //         remainingTime,
+  //         totalDurationHours: Math.floor(totalDuration / 3600),
+  //         remainingTimeHours: Math.floor(Math.max(0, remainingTime) / 3600),
+  //       });
         
-        // If event hasn't started yet, show full duration
-        // If event is in progress, show remaining time
-        // If event has ended, show 0
-        if (currentTime < startDate) {
-          // Event hasn't started yet - show full duration
-          setElapsedSeconds(Math.max(0, totalDuration));
-          console.log('🕐 Event Status: Not started yet - showing full duration');
-        } else if (currentTime >= startDate && currentTime <= endDate) {
-          // Event is in progress - show remaining time
-          setElapsedSeconds(Math.max(0, remainingTime));
-          console.log('🕐 Event Status: In progress - showing remaining time');
-        } else {
-          // Event has ended
-          setElapsedSeconds(0);
-          console.log('🕐 Event Status: Ended - showing 0');
-        }
-      } catch (error) {
-        console.error('🕐 Error calculating timer:', error);
-        // Fallback to 2 hours if there's an error
-        const fallbackDuration = 2 * 60 * 60; // 2 hours in seconds
-        setTotalEventDuration(fallbackDuration);
-        setElapsedSeconds(fallbackDuration);
-      }
-    } else {
-      console.log('🕐 No event dates provided, using fallback duration');
-      // Fallback to 2 hours if dates are not provided
-      const fallbackDuration = 2 * 60 * 60; // 2 hours in seconds
-      setTotalEventDuration(fallbackDuration);
-      setElapsedSeconds(fallbackDuration);
-    }
-  }, [event_start_date, event_end_date]);
+  //       // If event hasn't started yet, show full duration
+  //       // If event is in progress, show remaining time
+  //       // If event has ended, show 0
+  //       if (currentTime < startDate) {
+  //         // Event hasn't started yet - show full duration
+  //         setElapsedSeconds(Math.max(0, totalDuration));
+  //         console.log('🕐 Event Status: Not started yet - showing full duration');
+  //       } else if (currentTime >= startDate && currentTime <= endDate) {
+  //         // Event is in progress - show remaining time
+  //         setElapsedSeconds(Math.max(0, remainingTime));
+  //         console.log('🕐 Event Status: In progress - showing remaining time');
+  //       } else {
+  //         // Event has ended
+  //         setElapsedSeconds(0);
+  //         console.log('🕐 Event Status: Ended - showing 0');
+  //       }
+  //     } catch (error) {
+  //       console.error('🕐 Error calculating timer:', error);
+  //       // Fallback to 2 hours if there's an error
+  //       const fallbackDuration = 2 * 60 * 60; // 2 hours in seconds
+  //       setTotalEventDuration(fallbackDuration);
+  //       setElapsedSeconds(fallbackDuration);
+  //     }
+  //   } else {
+  //     console.log('🕐 No event dates provided, using fallback duration');
+  //     // Fallback to 2 hours if dates are not provided
+  //     const fallbackDuration = 2 * 60 * 60; // 2 hours in seconds
+  //     setTotalEventDuration(fallbackDuration);
+  //     setElapsedSeconds(fallbackDuration);
+  //   }
+  // }, [event_start_date, event_end_date]);
 
   // ✅ Update speed limit when route param changes
   useEffect(() => {
@@ -177,12 +165,15 @@ const MapScreen = ({ route, navigation }) => {
                     event_id: item.event_id,
                     category_id: item.category_id,
                     checkpoint_id: item.checkpoint_id,
+                    over_speed:overspeedCount
                   }),
                 }
               );
               let data = {};
               try {
                 data = await res.json();
+                setOverspeedCount(0);
+
               } catch (jsonErr) {
                 // JSON parse error occurred
               }
@@ -351,7 +342,7 @@ const MapScreen = ({ route, navigation }) => {
             event_id: event_id,
             category_id: category_id,
             checkpoint_id: checkpointId,
-            over_speed: 14
+            over_speed: overspeedCount
           }),
         }
       );
@@ -359,6 +350,7 @@ const MapScreen = ({ route, navigation }) => {
       let data = {};
       try { data = await res.json(); } catch {}
       if ((res.status === 200 && data.status === "success") || data.status === "success") {
+        setOverspeedCount(0);
         setMarkerColors((prev) => ({ ...prev, [checkpointId]: '#185a9d' })); // blue
         const cpObj = checkpoints.find(c => c.checkpoint_id === checkpointId);
         const cpName = cpObj?.checkpoint_name || checkpointId;
@@ -544,90 +536,6 @@ const MapScreen = ({ route, navigation }) => {
       } else {
         Alert.alert('Error', 'Failed to make SOS call');
       }
-    }
-  };
-
-  // ✅ Enhanced Action Menu handler with Speed Limit Settings
-  const handleActionMenu = (action) => {
-    setActionDropdownVisible(false);
-    switch (action) {
-      case "Map Layer":
-        setLayerDropdownVisible(true);
-        break;
-      case "Distance Tool":
-        Alert.alert("Distance Tool", "Distance measurement tool coming soon...");
-        break;
-      case "Speed Limit":
-        Alert.alert(
-          "⚡ Speed Limit Settings",
-          `Current Speed Limit: ${speedLimit} km/h (${speed_limit ? 'from event data' : 'default'})\nOverspeed Count: ${overspeedCount}`,
-          [
-            { text: "Cancel", style: "cancel" },
-            {
-              text: "Set to 40 km/h",
-              onPress: () => {
-                setSpeedLimit(40);
-                setOverspeedCount(0);
-                if (Platform.OS === 'android') {
-                  ToastAndroid.show('Speed limit manually set to 40 km/h', ToastAndroid.SHORT);
-                }
-              }
-            },
-            {
-              text: "Set to 60 km/h",
-              onPress: () => {
-                setSpeedLimit(60);
-                setOverspeedCount(0);
-                if (Platform.OS === 'android') {
-                  ToastAndroid.show('Speed limit manually set to 60 km/h', ToastAndroid.SHORT);
-                }
-              }
-            },
-            {
-              text: "Set to 80 km/h",
-              onPress: () => {
-                setSpeedLimit(80);
-                setOverspeedCount(0);
-                if (Platform.OS === 'android') {
-                  ToastAndroid.show('Speed limit manually set to 80 km/h', ToastAndroid.SHORT);
-                }
-              }
-            },
-            speed_limit ? {
-              text: `Reset to Event Limit (${speed_limit})`,
-              onPress: () => {
-                setSpeedLimit(speed_limit);
-                setOverspeedCount(0);
-                if (Platform.OS === 'android') {
-                  ToastAndroid.show(`Speed limit reset to event data: ${speed_limit} km/h`, ToastAndroid.SHORT);
-                }
-              }
-            } : null
-          ].filter(Boolean)
-        );
-        break;
-      case "Abort Event":
-        Alert.alert(
-          "⚠️ Abort Event",
-          "Are you sure you want to abort this event?",
-          [
-            { text: "Cancel", style: "cancel" },
-            {
-              text: "Yes, Abort",
-              style: "destructive",
-              onPress: () => {
-                generateRandomAbortCode();
-                setAbortPasswordModal(true);
-              }
-            }
-          ]
-        );
-        break;
-      case "Call Organizer":
-        handleSOSCall();
-        break;
-      default:
-        break;
     }
   };
 
@@ -1096,7 +1004,7 @@ const MapScreen = ({ route, navigation }) => {
                   event_id: event_id,
                   category_id: category_id,
                   checkpoint_id: cp.checkpoint_id,
-                  over_speed: 14
+                  over_speed: overspeedCount
                 }),
               }
             );
@@ -1104,6 +1012,7 @@ const MapScreen = ({ route, navigation }) => {
             let data = {};
             try { data = await res.json(); } catch {}
             if ((res.status === 200 && data.status === "success") || data.status === "success") {
+              setOverspeedCount(0);
               const cpName = cp.checkpoint_name || cp.checkpoint_id;
               // ✅ Enhanced toast message with time and center positioning
               const syncTime = new Date().toLocaleTimeString();
@@ -1224,7 +1133,7 @@ const MapScreen = ({ route, navigation }) => {
                     event_id: event_id,
                     category_id: category_id,
                     checkpoint_id: cp.checkpoint_id,
-                    over_speed: 14
+                    over_speed: overspeedCount
                   }),
                 }
               );
@@ -1232,6 +1141,7 @@ const MapScreen = ({ route, navigation }) => {
               let data = {};
               try { data = await res.json(); } catch {}
               if ((res.status === 200 && data.status === "success") || data.status === "success") {
+                setOverspeedCount(0);
                 const cpName = cp.checkpoint_name || cp.checkpoint_id;
                 // ✅ Enhanced toast message with time and center positioning
                 const syncTime = new Date().toLocaleTimeString();
@@ -1318,6 +1228,7 @@ const MapScreen = ({ route, navigation }) => {
             textAlign: 'center'
           }]}>
             🚨 REDUCE SPEED! 🚨
+            <Text style={{ fontWeight: 'normal' }}> (Overspeed Count: {overspeedCount})</Text>
           </Text>
         )}
       </View>
@@ -1643,7 +1554,7 @@ const MapScreen = ({ route, navigation }) => {
                     event_id: event_id,
                     category_id: category_id,
                     checkpoint_id: selectedCheckpointId,
-                    over_speed: 14
+                    over_speed: overspeedCount
                   }),
                 }
               );
@@ -1652,6 +1563,7 @@ const MapScreen = ({ route, navigation }) => {
               try { data = await res.json(); } catch {}
               if ((res.status === 200 && data.status === "success") || data.status === "success") {
                 // Mark as completed
+                setOverspeedCount(0);
                 const reachedTime = new Date().toLocaleTimeString();
                 setCheckpointStatus((prev) => ({
                   ...prev,
