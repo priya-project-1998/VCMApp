@@ -45,11 +45,12 @@ const MapScreen = ({ route, navigation }) => {
   const [totalEventDuration, setTotalEventDuration] = useState(0); // Total duration in seconds
   const [currentSpeed, setCurrentSpeed] = useState(0);
   const [modalVisible, setModalVisible] = useState(false);
-  const [userRoute, setUserRoute] = useState([]); // Track user route
+  const [userRoute, setUserRoute] = useState([]); // Track user route - real user movement path
   const [checkpointStatus, setCheckpointStatus] = useState({}); // { checkpoint_id: { time, completed } }
   const [selectedCheckpointId, setSelectedCheckpointId] = useState(null); // For testing button
   const [eventCompletedModal, setEventCompletedModal] = useState(false);
   const [loadingCheckpointId, setLoadingCheckpointId] = useState(null); // For loader on marker
+  const [userHeading, setUserHeading] = useState(0); // Track user direction for car rotation - starts north
   const [markerColors, setMarkerColors] = useState({}); // checkpoint_id: color
   const [timeStampDropdownVisible, setTimeStampDropdownVisible] = useState(false); // Dropdown for Time Stamp
   const [showCurrentLocationMarker, setShowCurrentLocationMarker] = useState(false);
@@ -254,6 +255,10 @@ const MapScreen = ({ route, navigation }) => {
         (pos) => {
           const { latitude, longitude } = pos.coords;
           setUserCoords({ latitude, longitude });
+          setLastUserLocation({ latitude, longitude });
+          
+          // ✅ Initialize route with starting position
+          setUserRoute([{ latitude, longitude }]);
 
           if (mapRef && mapRef.current) {
             try {
@@ -411,6 +416,29 @@ const MapScreen = ({ route, navigation }) => {
     const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
     const d = R * c;
     return d;
+  };
+
+  // ✅ Utility: Calculate bearing/heading between two points
+  const calculateBearing = (lat1, lon1, lat2, lon2) => {
+    function deg2rad(deg) {
+      return deg * (Math.PI / 180);
+    }
+    function rad2deg(rad) {
+      return rad * (180 / Math.PI);
+    }
+    
+    const dLon = deg2rad(lon2 - lon1);
+    const lat1Rad = deg2rad(lat1);
+    const lat2Rad = deg2rad(lat2);
+    
+    const y = Math.sin(dLon) * Math.cos(lat2Rad);
+    const x = Math.cos(lat1Rad) * Math.sin(lat2Rad) - 
+              Math.sin(lat1Rad) * Math.cos(lat2Rad) * Math.cos(dLon);
+    
+    let bearing = rad2deg(Math.atan2(y, x));
+    bearing = (bearing + 360) % 360; // Normalize to 0-360
+    
+    return bearing;
   };
 
   // Utility to get bounding region for all checkpoints
@@ -623,9 +651,30 @@ const MapScreen = ({ route, navigation }) => {
   // Update speed and route on user location change
   const handleUserLocationChange = (e) => {
     try {
-      const { latitude, longitude, speed } = e.nativeEvent.coordinate;
+      const { latitude, longitude, speed, heading } = e.nativeEvent.coordinate;
+      
+      // ✅ Always add to route - instant tracking (no 5m filter)
+      setUserRoute((prev) => [...prev, { latitude, longitude }]);
+      
       setLastUserLocation({ latitude, longitude });
-      setUserRoute((prev) => [...prev, { latitude, longitude }]); // Add to route
+      
+      // Update heading/direction for car icon rotation
+      if (typeof heading === 'number' && !isNaN(heading)) {
+        setUserHeading(heading);
+      } else {
+        // Calculate heading from previous position if GPS heading not available
+        const lastLocation = userRoute[userRoute.length - 1];
+        if (lastLocation) {
+          const calculatedHeading = calculateBearing(
+            lastLocation.latitude,
+            lastLocation.longitude,
+            latitude,
+            longitude
+          );
+          setUserHeading(calculatedHeading);
+        }
+      }
+      
       checkProximityToCheckpoints(latitude, longitude);
       if (typeof speed === 'number' && !isNaN(speed)) {
         // speed in m/s, convert to km/h
@@ -745,23 +794,42 @@ const MapScreen = ({ route, navigation }) => {
         return;
       }
 
-      // Start watching user location
-      const id = Geolocation.watchPosition(
-        (position) => {
-          const { latitude, longitude } = position.coords;
-          
-          // Update user coordinates
-          setUserCoords({ latitude, longitude });
-          setLastUserLocation({ latitude, longitude });
-          
-          // ✅ Check speed and speed limit
-          if (typeof position.coords.speed === 'number' && !isNaN(position.coords.speed)) {
-            const speedKmh = Math.round(position.coords.speed * 3.6);
-            setCurrentSpeed(speedKmh);
-            checkSpeedLimit(speedKmh);
-          }
-          
-          // If first time or user wants to center, animate to location
+        // Start watching user location
+        const id = Geolocation.watchPosition(
+          (position) => {
+            const { latitude, longitude, heading } = position.coords;
+            
+            // Update user coordinates
+            setUserCoords({ latitude, longitude });
+            
+            // ✅ Always add to route - instant tracking (no 5m filter)
+            setUserRoute((prev) => [...prev, { latitude, longitude }]);
+            
+            setLastUserLocation({ latitude, longitude });
+            
+            // Update heading/direction for car icon rotation
+            if (typeof heading === 'number' && !isNaN(heading)) {
+              setUserHeading(heading);
+            } else {
+              // Calculate heading from previous position if GPS heading not available
+              const lastLocation = userRoute[userRoute.length - 1];
+              if (lastLocation) {
+                const calculatedHeading = calculateBearing(
+                  lastLocation.latitude,
+                  lastLocation.longitude,
+                  latitude,
+                  longitude
+                );
+                setUserHeading(calculatedHeading);
+              }
+            }
+            
+            // ✅ Check speed and speed limit
+            if (typeof position.coords.speed === 'number' && !isNaN(position.coords.speed)) {
+              const speedKmh = Math.round(position.coords.speed * 3.6);
+              setCurrentSpeed(speedKmh);
+              checkSpeedLimit(speedKmh);
+            }          // If first time or user wants to center, animate to location
           if (!isFollowingUser || shouldCenterOnUser) {
               try {
                 if (mapRef.current) {
@@ -802,7 +870,7 @@ const MapScreen = ({ route, navigation }) => {
           enableHighAccuracy: true,
           timeout: 15000,
           maximumAge: 5000,
-          distanceFilter: 10, // Only update if user moves 10 meters
+          distanceFilter: 1, // ✅ Very small distance filter for smoother route
         }
       );
 
@@ -817,6 +885,9 @@ const MapScreen = ({ route, navigation }) => {
       setWatchId(null);
     }
     setIsFollowingUser(false);
+    
+    // Optional: Clear the route when stopping tracking
+    // setUserRoute([]);
     
     showCenterToast('Stopped following location', 'info');
   };
@@ -871,7 +942,7 @@ const MapScreen = ({ route, navigation }) => {
       longitude: parseFloat(checkpoints[0].longitude),
     };
     setMarkerPosition(startPoint);
-    setUserRoute([startPoint]);
+    setUserRoute([startPoint]); // Initialize simulation route
     setIsSimulating(true);
     
     // Immediately check and sync if at a checkpoint (for first point)
@@ -981,6 +1052,16 @@ const MapScreen = ({ route, navigation }) => {
         latitude: current.latitude + stepLat,
         longitude: current.longitude + stepLng,
       };
+      
+      // ✅ Calculate heading for car rotation in simulation
+      const simulatedHeading = calculateBearing(
+        current.latitude,
+        current.longitude,
+        newPoint.latitude,
+        newPoint.longitude
+      );
+      setUserHeading(simulatedHeading);
+      
       // Calculate simulated speed (distance/2s * 3.6)
       const distMoved = getDistanceFromLatLonInMeters(current.latitude, current.longitude, newPoint.latitude, newPoint.longitude);
       const calculatedSpeed = Math.round((distMoved / 2) * 3.6);
@@ -1090,7 +1171,10 @@ const MapScreen = ({ route, navigation }) => {
   // Only auto-start simulation on emulator/test mode
   useEffect(() => {
     if (isTestMode) {
-      startUserMovementSimulation();
+      // Auto-start checkpoint simulation for easy testing
+      setTimeout(() => {
+        startUserMovementSimulation();
+      }, 2000); // 2 second delay for initialization
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isTestMode]);
@@ -1296,22 +1380,272 @@ const MapScreen = ({ route, navigation }) => {
         rotateEnabled={true}
         showsCompass={true}
         showsScale={true}
+        mapPadding={{top: 0, right: 0, bottom: 0, left: 0}}
+        compassOffset={{x: -10, y: 10}}
+        toolbarEnabled={false}
       >
-        {/* --- Simulated Polyline and Marker --- */}
+        {/* --- User Movement Route Polyline (Exact Google Maps Style) --- */}
         {userRoute && userRoute.length > 1 && (
           <Polyline
             coordinates={userRoute}
-            strokeColor={isSimulating ? "blue" : "#185a9d"}
+            strokeColor="#4285F4"
             strokeWidth={5}
             linecap={'round'}
             linejoin={'round'}
+            geodesic={true}
+            strokePattern={[1, 0]} // Solid line like Google Maps
+          />
+        )}
+        
+        {/* --- Simulated Movement Route (Test Mode Only) --- */}
+        {isSimulating && userRoute && userRoute.length > 1 && (
+          <Polyline
+            coordinates={userRoute}
+            strokeColor="#4285F4"
+            strokeWidth={5}
+            linecap={'round'}
+            linejoin={'round'}
+            geodesic={true}
+            strokePattern={[1, 0]} // Solid line like Google Maps
           />
         )}
         {isSimulating && markerPosition && (
-          <Marker coordinate={markerPosition} title="Sim User" pinColor="blue" />
+          <Marker 
+            coordinate={markerPosition} 
+            title="🚗 Sim User" 
+            description="Test simulation"
+            anchor={{ x: 0.5, y: 0.5 }}
+            flat={false}
+          >
+            {/* Perfect Google Maps Style Car Icon */}
+            <View style={{
+              width: 24,
+              height: 32,
+              justifyContent: 'center',
+              alignItems: 'center',
+              transform: [{ rotate: `${userHeading}deg` }] // Direct rotation like Google Maps
+            }}>
+              {/* Car Icon with SVG-like design */}
+              <View style={{
+                width: 18,
+                height: 28,
+                backgroundColor: '#4285F4',
+                borderRadius: 8,
+                borderWidth: 2,
+                borderColor: '#fff',
+                shadowColor: '#000',
+                shadowOpacity: 0.5,
+                shadowOffset: { width: 0, height: 3 },
+                elevation: 6,
+                overflow: 'hidden',
+              }}>
+                {/* Front bumper - Clear indication of front */}
+                <View style={{
+                  position: 'absolute',
+                  top: 0,
+                  left: 2,
+                  right: 2,
+                  height: 4,
+                  backgroundColor: '#fff',
+                  borderTopLeftRadius: 6,
+                  borderTopRightRadius: 6,
+                }} />
+                
+                {/* Front windshield */}
+                <View style={{
+                  position: 'absolute',
+                  top: 4,
+                  left: 3,
+                  right: 3,
+                  height: 6,
+                  backgroundColor: 'rgba(255,255,255,0.8)',
+                  borderRadius: 2,
+                }} />
+                
+                {/* Side mirrors */}
+                <View style={{
+                  position: 'absolute',
+                  top: 8,
+                  left: -1,
+                  width: 3,
+                  height: 4,
+                  backgroundColor: '#2563EB',
+                  borderRadius: 1,
+                }} />
+                <View style={{
+                  position: 'absolute',
+                  top: 8,
+                  right: -1,
+                  width: 3,
+                  height: 4,
+                  backgroundColor: '#2563EB',
+                  borderRadius: 1,
+                }} />
+                
+                {/* Main body */}
+                <View style={{
+                  position: 'absolute',
+                  top: 10,
+                  left: 1,
+                  right: 1,
+                  height: 12,
+                  backgroundColor: '#4285F4',
+                }} />
+                
+                {/* Rear windshield */}
+                <View style={{
+                  position: 'absolute',
+                  bottom: 4,
+                  left: 4,
+                  right: 4,
+                  height: 4,
+                  backgroundColor: 'rgba(255,255,255,0.7)',
+                  borderRadius: 1,
+                }} />
+                
+                {/* Rear bumper */}
+                <View style={{
+                  position: 'absolute',
+                  bottom: 0,
+                  left: 3,
+                  right: 3,
+                  height: 3,
+                  backgroundColor: '#1E40AF',
+                  borderBottomLeftRadius: 4,
+                  borderBottomRightRadius: 4,
+                }} />
+              </View>
+            </View>
+          </Marker>
         )}
-        {/* Show current location marker if requested */}
-        {!isSimulating && showCurrentLocationMarker && currentLocationMarkerCoords && (
+        
+        {/* ✅ Enhanced User Location Marker with Car Icon - Always visible when following */}
+        {isFollowingUser && lastUserLocation && (
+          <Marker
+            coordinate={lastUserLocation}
+            title="📍 My Live Location"
+            description="Real-time tracking active"
+            anchor={{ x: 0.5, y: 0.5 }}
+            flat={false}
+          >
+            {/* Perfect Google Maps Style Car Icon */}
+            <View style={{
+              width: 24,
+              height: 32,
+              justifyContent: 'center',
+              alignItems: 'center',
+              transform: [{ rotate: `${userHeading}deg` }] // Direct rotation like Google Maps
+            }}>
+              {/* Car Icon with SVG-like design */}
+              <View style={{
+                width: 18,
+                height: 28,
+                backgroundColor: '#4285F4',
+                borderRadius: 8,
+                borderWidth: 2,
+                borderColor: '#fff',
+                shadowColor: '#000',
+                shadowOpacity: 0.5,
+                shadowOffset: { width: 0, height: 3 },
+                elevation: 6,
+                overflow: 'hidden',
+              }}>
+                {/* Front bumper - Clear indication of front */}
+                <View style={{
+                  position: 'absolute',
+                  top: 0,
+                  left: 2,
+                  right: 2,
+                  height: 4,
+                  backgroundColor: '#fff',
+                  borderTopLeftRadius: 6,
+                  borderTopRightRadius: 6,
+                }} />
+                
+                {/* Front windshield */}
+                <View style={{
+                  position: 'absolute',
+                  top: 4,
+                  left: 3,
+                  right: 3,
+                  height: 6,
+                  backgroundColor: 'rgba(255,255,255,0.8)',
+                  borderRadius: 2,
+                }} />
+                
+                {/* Side mirrors */}
+                <View style={{
+                  position: 'absolute',
+                  top: 8,
+                  left: -1,
+                  width: 3,
+                  height: 4,
+                  backgroundColor: '#2563EB',
+                  borderRadius: 1,
+                }} />
+                <View style={{
+                  position: 'absolute',
+                  top: 8,
+                  right: -1,
+                  width: 3,
+                  height: 4,
+                  backgroundColor: '#2563EB',
+                  borderRadius: 1,
+                }} />
+                
+                {/* Main body */}
+                <View style={{
+                  position: 'absolute',
+                  top: 10,
+                  left: 1,
+                  right: 1,
+                  height: 12,
+                  backgroundColor: '#4285F4',
+                }} />
+                
+                {/* Rear windshield */}
+                <View style={{
+                  position: 'absolute',
+                  bottom: 4,
+                  left: 4,
+                  right: 4,
+                  height: 4,
+                  backgroundColor: 'rgba(255,255,255,0.7)',
+                  borderRadius: 1,
+                }} />
+                
+                {/* Rear bumper */}
+                <View style={{
+                  position: 'absolute',
+                  bottom: 0,
+                  left: 3,
+                  right: 3,
+                  height: 3,
+                  backgroundColor: '#1E40AF',
+                  borderBottomLeftRadius: 4,
+                  borderBottomRightRadius: 4,
+                }} />
+              </View>
+              
+              {/* Location accuracy circle (like Google Maps) */}
+              <View style={{
+                position: 'absolute',
+                width: 36,
+                height: 36,
+                borderRadius: 18,
+                backgroundColor: 'rgba(66, 133, 244, 0.1)',
+                borderWidth: 1,
+                borderColor: 'rgba(66, 133, 244, 0.3)',
+                top: -2,
+                left: -6,
+                zIndex: -1,
+              }} />
+            </View>
+          </Marker>
+        )}
+        
+        {/* Show current location marker if requested (when not following) */}
+        {!isSimulating && !isFollowingUser && showCurrentLocationMarker && currentLocationMarkerCoords && (
           <Marker
             coordinate={currentLocationMarkerCoords}
             title="📍 My Current Location"
@@ -1321,8 +1655,8 @@ const MapScreen = ({ route, navigation }) => {
             <View style={{
               backgroundColor: '#2196F3',
               borderRadius: 20,
-              width: 40, // ✅ Bigger marker
-              height: 40, // ✅ Bigger marker
+              width: 40,
+              height: 40,
               justifyContent: 'center',
               alignItems: 'center',
               borderWidth: 3,
@@ -1334,44 +1668,6 @@ const MapScreen = ({ route, navigation }) => {
               elevation: 5,
             }}>
               <Text style={{ fontSize: 18, color: '#fff' }}>📍</Text>
-            </View>
-          </Marker>
-        )}
-        
-        {/* ✅ Enhanced User Location Marker - Always visible when following */}
-        {isFollowingUser && lastUserLocation && (
-          <Marker
-            coordinate={lastUserLocation}
-            title="📍 My Live Location"
-            description="Real-time tracking active"
-            anchor={{ x: 0.5, y: 0.5 }}
-          >
-            <View style={{
-              backgroundColor: '#2196F3',
-              borderRadius: 25,
-              width: 50, // ✅ Even bigger for live tracking
-              height: 50, // ✅ Even bigger for live tracking
-              justifyContent: 'center',
-              alignItems: 'center',
-              borderWidth: 4,
-              borderColor: '#fff',
-              shadowColor: '#2196F3',
-              shadowOpacity: 0.5,
-              shadowOffset: { width: 0, height: 3 },
-              shadowRadius: 6,
-              elevation: 8,
-            }}>
-              <Text style={{ fontSize: 22, color: '#fff' }}>📍</Text>
-              {/* ✅ Pulsing ring effect */}
-              <View style={{
-                position: 'absolute',
-                backgroundColor: 'rgba(33, 150, 243, 0.3)',
-                borderRadius: 35,
-                width: 70,
-                height: 70,
-                top: -10,
-                left: -10,
-              }} />
             </View>
           </Marker>
         )}
@@ -1551,12 +1847,15 @@ const MapScreen = ({ route, navigation }) => {
                     }
                   }
                   
-                  // ✅ Update coordinates
+                  // ✅ Update coordinates and start route tracking
                   setUserCoords({ latitude, longitude });
                   setLastUserLocation({ latitude, longitude });
                   
+                  // ✅ Initialize route with starting position
+                  setUserRoute([{ latitude, longitude }]);
+                  
                   // ✅ Success feedback
-                  showCenterToast('Location found and zoomed!', 'success');
+                  showCenterToast('Location found and tracking started!', 'success');
                   
                   // ✅ Start following after finding location
                   startFollowingUserLocation();
@@ -1588,13 +1887,31 @@ const MapScreen = ({ route, navigation }) => {
 
         {/* SOS Call Tab */}
         <TouchableOpacity
-          style={[styles.tabItem, styles.tabItemLast]}
+          style={styles.tabItem}
           onPress={handleSOSCall}
         >
           <View style={[styles.tabIconContainer, { backgroundColor: '#F44336' }]}>
             <Text style={styles.tabIcon}>🆘</Text>
           </View>
           <Text style={styles.tabLabel}>SOS</Text>
+        </TouchableOpacity>
+
+        {/* Clear Route Tab */}
+        <TouchableOpacity
+          style={[styles.tabItem, styles.tabItemLast]}
+          onPress={() => {
+            if (userRoute.length > 0) {
+              setUserRoute([]);
+              showCenterToast('Route cleared', 'info');
+            } else {
+              showCenterToast('No route to clear', 'warning');
+            }
+          }}
+        >
+          <View style={[styles.tabIconContainer, { backgroundColor: '#FF9800' }]}>
+            <Text style={styles.tabIcon}>🧹</Text>
+          </View>
+          <Text style={styles.tabLabel}>Clear</Text>
         </TouchableOpacity>
       </View>
 
