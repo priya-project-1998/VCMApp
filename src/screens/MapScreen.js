@@ -69,83 +69,60 @@ const MapScreen = ({ route, navigation }) => {
   const [enteredAbortCode, setEnteredAbortCode] = useState("");
   const { checkpoints: paramCheckpoints, category_id, event_id, kml_path, color, event_organizer_no, speed_limit, event_start_date, event_end_date,duration } = route.params || {};
   const checkpoints = Array.isArray(paramCheckpoints) ? paramCheckpoints : [];
+ 
+  const [showToast, setShowToast] = useState(false);
+  const [toastMessage, setToastMessage] = useState("");
+  const [toastType, setToastType] = useState("success"); // success, error, info, warning
+
+  // ✅ Get toast icon and color based on type
+  const getToastIcon = (type) => {
+    switch(type) {
+      case "success": return "✓";
+      case "error": return "✗";
+      case "warning": return "⚠";
+      case "info": return "ℹ";
+      default: return "✓";
+    }
+  };
+
+  const getToastColor = (type) => {
+    switch(type) {
+      case "success": return "#4CAF50";
+      case "error": return "#F44336";
+      case "warning": return "#FF9800";
+      case "info": return "#2196F3";
+      default: return "#4CAF50";
+    }
+  };
+
+  // ✅ Show Center Toast Function with Duration
+  const showCenterToast = (message, type = "success") => {
+    setToastMessage(message);
+    setToastType(type);
+    setShowToast(true);
+    
+    // Set duration based on type
+    const duration = type === "success" ? 10000 : 5000; // success: 10sec, others: 5sec
+    
+    setTimeout(() => {
+      setShowToast(false);
+    }, duration);
+  };
+ 
 
   // ✅ Table create
   useEffect(() => {
     createTables();
   }, []);
 
-  // // ✅ Calculate countdown timer based on event start and end dates
-  // useEffect(() => {
-  //   if (event_start_date && event_end_date) {
-  //     try {
-  //       const startDate = new Date(event_start_date);
-  //       const endDate = new Date(event_end_date);
-  //       const currentTime = new Date();
-        
-  //       console.log('🕐 Timer Calculation:', {
-  //         event_start_date,
-  //         event_end_date,
-  //         startDate: startDate.toString(),
-  //         endDate: endDate.toString(),
-  //         currentTime: currentTime.toString(),
-  //       });
-        
-  //       // Calculate total duration in seconds
-  //       const totalDuration = Math.floor((endDate.getTime() - startDate.getTime()) / 1000);
-  //       setTotalEventDuration(totalDuration);
-        
-  //       // Calculate remaining time from current time to end date
-  //       const remainingTime = Math.floor((endDate.getTime() - currentTime.getTime()) / 1000);
-        
-  //       console.log('🕐 Duration Calculation:', {
-  //         totalDuration,
-  //         remainingTime,
-  //         totalDurationHours: Math.floor(totalDuration / 3600),
-  //         remainingTimeHours: Math.floor(Math.max(0, remainingTime) / 3600),
-  //       });
-        
-  //       // If event hasn't started yet, show full duration
-  //       // If event is in progress, show remaining time
-  //       // If event has ended, show 0
-  //       if (currentTime < startDate) {
-  //         // Event hasn't started yet - show full duration
-  //         setElapsedSeconds(Math.max(0, totalDuration));
-  //         console.log('🕐 Event Status: Not started yet - showing full duration');
-  //       } else if (currentTime >= startDate && currentTime <= endDate) {
-  //         // Event is in progress - show remaining time
-  //         setElapsedSeconds(Math.max(0, remainingTime));
-  //         console.log('🕐 Event Status: In progress - showing remaining time');
-  //       } else {
-  //         // Event has ended
-  //         setElapsedSeconds(0);
-  //         console.log('🕐 Event Status: Ended - showing 0');
-  //       }
-  //     } catch (error) {
-  //       console.error('🕐 Error calculating timer:', error);
-  //       // Fallback to 2 hours if there's an error
-  //       const fallbackDuration = 2 * 60 * 60; // 2 hours in seconds
-  //       setTotalEventDuration(fallbackDuration);
-  //       setElapsedSeconds(fallbackDuration);
-  //     }
-  //   } else {
-  //     console.log('🕐 No event dates provided, using fallback duration');
-  //     // Fallback to 2 hours if dates are not provided
-  //     const fallbackDuration = 2 * 60 * 60; // 2 hours in seconds
-  //     setTotalEventDuration(fallbackDuration);
-  //     setElapsedSeconds(fallbackDuration);
-  //   }
-  // }, [event_start_date, event_end_date]);
-
-  // ✅ Update speed limit when route param changes
   useEffect(() => {
-    if (speed_limit && speed_limit !== speedLimit) {
-      setSpeedLimit(speed_limit);
-      if (Platform.OS === 'android') {
-        ToastAndroid.show(`Speed limit set to ${speed_limit} km/h from event data`, ToastAndroid.SHORT);
-      }
-    }
-  }, [speed_limit]);
+  if (speed_limit && speed_limit !== speedLimit) {
+    setSpeedLimit(speed_limit);
+    //showCenterToast(`Speed limit set to ${speed_limit} km/h for this event.`);
+  }
+}, [speed_limit]);
+
+ 
 
   // ✅ Internet change listener → sync pending checkpoints
   useEffect(() => {
@@ -163,7 +140,7 @@ const MapScreen = ({ route, navigation }) => {
                   headers: { "Content-Type": "application/json" },
                   body: JSON.stringify({
                     event_id: item.event_id,
-                    category_id: item.category_id,
+                    //category_id: item.category_id,
                     checkpoint_id: item.checkpoint_id,
                     over_speed:overspeedCount
                   }),
@@ -317,16 +294,14 @@ const MapScreen = ({ route, navigation }) => {
 
     const netState = await NetInfo.fetch();
     if (!netState.isConnected) {
-      if (Platform.OS === 'android') ToastAndroid.show('No internet connection', ToastAndroid.SHORT);
-      else Alert.alert('No internet connection');
+      showCenterToast('No internet connection', 'error');
       return false;
     }
     setLoadingCheckpointId(checkpointId);
     try {
       const token = await AsyncStorage.getItem('authToken');
       if (!token) {
-        if (Platform.OS === 'android') ToastAndroid.show('No auth token found', ToastAndroid.SHORT);
-        else Alert.alert('No auth token found');
+        showCenterToast('No auth token found', 'error');
         setLoadingCheckpointId(null);
         return false;
       }
@@ -340,13 +315,13 @@ const MapScreen = ({ route, navigation }) => {
           },
           body: JSON.stringify({
             event_id: event_id,
-            category_id: category_id,
+           // category_id: category_id,
             checkpoint_id: checkpointId,
             over_speed: overspeedCount
           }),
         }
       );
-      console.log(`🎯 [event_id "${event_id}" 🎯 [category_id "${category_id}" 🎯 [checkpoint_id "${checkpointId}" 🎯 [over_speed "${14}" `);
+     // console.log(`🎯 [event_id "${event_id}" 🎯 [category_id "${category_id}" 🎯 [checkpoint_id "${checkpointId}" 🎯 [over_speed "${14}" `);
       let data = {};
       try { data = await res.json(); } catch {}
       if ((res.status === 200 && data.status === "success") || data.status === "success") {
@@ -356,30 +331,19 @@ const MapScreen = ({ route, navigation }) => {
         const cpName = cpObj?.checkpoint_name || checkpointId;
         // ✅ Enhanced toast message with time and center positioning
         const syncTime = new Date().toLocaleTimeString();
-        const successMessage = `✅ Checkpoint "${cpName}" synced successfully at ${syncTime}`;
+        const successMessage = `Checkpoint "${cpName}" synced successfully at ${syncTime}`;
         
         // ✅ Console log for tracking sync toast display
         console.log(`🎯 [syncCheckpointToServer] Showing sync success toast for checkpoint "${cpName}" (ID: ${checkpointId}) at ${syncTime}`);
         
-        if (Platform.OS === 'android') {
-          // Show toast for 5 seconds (LONG duration) at center
-          ToastAndroid.showWithGravity(
-            successMessage,
-            ToastAndroid.LONG, // 5 seconds
-            ToastAndroid.CENTER // Center position
-          );
-        } else {
-          Alert.alert('Checkpoint Synced', `Checkpoint "${cpName}" synced successfully at ${syncTime}`);
-        }
+        showCenterToast(successMessage, 'success');
         setLoadingCheckpointId(null);
         return true;
       } else {
-        if (Platform.OS === 'android') ToastAndroid.show('Server error: ' + (data.message || 'Failed'), ToastAndroid.SHORT);
-        else Alert.alert('Server error', data.message || 'Failed');
+        showCenterToast('Server error: ' + (data.message || 'Failed'), 'error');
       }
     } catch (err) {
-      if (Platform.OS === 'android') ToastAndroid.show('Network/API error', ToastAndroid.SHORT);
-      else Alert.alert('Network/API error');
+      showCenterToast('Network/API error', 'error');
     }
     setLoadingCheckpointId(null);
     return false;
@@ -507,11 +471,7 @@ const MapScreen = ({ route, navigation }) => {
   const handleSOSCall = async () => {
     try {
       if (!event_organizer_no) {
-        if (Platform.OS === 'android') {
-          ToastAndroid.show('Organizer contact not available', ToastAndroid.SHORT);
-        } else {
-          Alert.alert('Error', 'Organizer contact not available');
-        }
+        showCenterToast('Organizer contact not available', 'error');
         return;
       }
 
@@ -531,31 +491,19 @@ const MapScreen = ({ route, navigation }) => {
       );
     } catch (error) {
       console.log('SOS call error:', error);
-      if (Platform.OS === 'android') {
-        ToastAndroid.show('Error making SOS call', ToastAndroid.SHORT);
-      } else {
-        Alert.alert('Error', 'Failed to make SOS call');
-      }
+      showCenterToast('Error making SOS call', 'error');
     }
   };
 
   // ✅ Improved Abort Event Handler
   const handleAbortEventPassword = async () => {
     if (enteredAbortCode.trim() === "") {
-      if (Platform.OS === 'android') {
-        ToastAndroid.show('Please enter the abort code', ToastAndroid.SHORT);
-      } else {
-        Alert.alert('Error', 'Please enter the abort code');
-      }
+      showCenterToast('Please enter the abort code', 'warning');
       return;
     }
 
     if (enteredAbortCode.trim() !== randomAbortCode) {
-      if (Platform.OS === 'android') {
-        ToastAndroid.show('Invalid abort code. Please try again.', ToastAndroid.SHORT);
-      } else {
-        Alert.alert('Error', 'Invalid abort code. Please try again.');
-      }
+      showCenterToast('Invalid abort code. Please try again.', 'error');
       return;
     }
 
@@ -572,21 +520,13 @@ const MapScreen = ({ route, navigation }) => {
         setWatchId(null);
       }
 
-      if (Platform.OS === 'android') {
-        ToastAndroid.show('Event aborted successfully', ToastAndroid.LONG);
-      } else {
-        Alert.alert('Success', 'Event aborted successfully');
-      }
+      showCenterToast('Event aborted successfully', 'success');
 
       // Navigate directly to Home screen (no details alert)
       navigation.navigate('Drawer', { screen: 'Dashboard' });
     } catch (error) {
       console.log('Abort error:', error);
-      if (Platform.OS === 'android') {
-        ToastAndroid.show('Error aborting event', ToastAndroid.SHORT);
-      } else {
-        Alert.alert('Error', 'Failed to abort event');
-      }
+      showCenterToast('Error aborting event', 'error');
     }
 
     setAbortLoading(false);
@@ -605,9 +545,7 @@ const MapScreen = ({ route, navigation }) => {
         setShouldCenterOnUser(true); // set flag to center on user
         if (mapRef.current) {
           // Show immediate feedback
-          if (Platform.OS === 'android') {
-            ToastAndroid.show('Getting your location...', ToastAndroid.SHORT);
-          }
+          showCenterToast('Getting your location...', 'info');
           
           Geolocation.getCurrentPosition(
             (pos) => {
@@ -635,19 +573,13 @@ const MapScreen = ({ route, navigation }) => {
               }, 15000);
               
               // Success feedback
-              if (Platform.OS === 'android') {
-                ToastAndroid.show('Location found!', ToastAndroid.SHORT);
-              }
+              showCenterToast('Location found!', 'success');
             },
             (error) => {
               let msg = 'Location error';
               if (error && error.message) msg += ': ' + error.message;
               if (error && error.code) msg += ` (code: ${error.code})`;
-              if (Platform.OS === 'android') {
-                ToastAndroid.show(msg, ToastAndroid.SHORT);
-              } else {
-                Alert.alert('Location Error', msg);
-              }
+              showCenterToast(msg, 'error');
             },
             { 
               enableHighAccuracy: false, // Faster response
@@ -787,9 +719,7 @@ const MapScreen = ({ route, navigation }) => {
     }
 
     // Show immediate feedback
-    if (Platform.OS === 'android') {
-      ToastAndroid.show('Getting your location...', ToastAndroid.SHORT);
-    }
+    showCenterToast('Getting your location...', 'info');
 
     // Request location permission first
     const requestLocationPermission = async () => {
@@ -811,11 +741,7 @@ const MapScreen = ({ route, navigation }) => {
 
     requestLocationPermission().then((hasPermission) => {
       if (!hasPermission) {
-        if (Platform.OS === 'android') {
-          ToastAndroid.show('Location permission denied', ToastAndroid.SHORT);
-        } else {
-          Alert.alert("Permission denied", "Location permission was denied");
-        }
+        showCenterToast('Location permission denied', 'error');
         return;
       }
 
@@ -869,12 +795,7 @@ const MapScreen = ({ route, navigation }) => {
           if (error && error.message) msg += ': ' + error.message;
           if (error && error.code) msg += ` (code: ${error.code})`;
           
-          if (Platform.OS === 'android') {
-            ToastAndroid.show(msg, ToastAndroid.SHORT);
-          } else {
-            Alert.alert('Location Error', msg);
-          }
-          
+          showCenterToast(msg, 'error');
           setIsFollowingUser(false);
         },
         {
@@ -897,9 +818,7 @@ const MapScreen = ({ route, navigation }) => {
     }
     setIsFollowingUser(false);
     
-    if (Platform.OS === 'android') {
-      ToastAndroid.show('Stopped following location', ToastAndroid.SHORT);
-    }
+    showCenterToast('Stopped following location', 'info');
   };
 
   // --- MOVE EVENT SIMULATION STATE ---
@@ -985,8 +904,7 @@ const MapScreen = ({ route, navigation }) => {
           try {
             const token = await AsyncStorage.getItem('authToken');
             if (!token) {
-              if (Platform.OS === 'android') ToastAndroid.show('No auth token found', ToastAndroid.SHORT);
-              else Alert.alert('No auth token found');
+              showCenterToast('No auth token found', 'error');
               setLoadingCheckpointId(null);
               return;
             }
@@ -1002,15 +920,16 @@ const MapScreen = ({ route, navigation }) => {
                 },
                 body: JSON.stringify({
                   event_id: event_id,
-                  category_id: category_id,
+                 // category_id: category_id,
                   checkpoint_id: cp.checkpoint_id,
                   over_speed: overspeedCount
                 }),
               }
             );
-            console.log(`🎯 [event_id "${event_id}" 🎯 [category_id "${category_id}" 🎯 [checkpoint_id "${cp.checkpoint_id}" 🎯 [over_speed "${14}" `);
+         //   console.log(`🎯 [event_id "${event_id}" 🎯 [category_id "${category_id}" 🎯 [checkpoint_id "${cp.checkpoint_id}" 🎯 [over_speed "${14}" `);
             let data = {};
             try { data = await res.json(); } catch {}
+            console.log('Simulation Data Response check', data);
             if ((res.status === 200 && data.status === "success") || data.status === "success") {
               setOverspeedCount(0);
               const cpName = cp.checkpoint_name || cp.checkpoint_id;
@@ -1021,23 +940,12 @@ const MapScreen = ({ route, navigation }) => {
               // ✅ Console log for tracking initial simulation sync toast display
               console.log(`🎯 [startUserMovementSimulation-Initial] Showing sync success toast for checkpoint "${cpName}" (ID: ${cp.checkpoint_id}) at ${syncTime}`);
               
-              if (Platform.OS === 'android') {
-                // Show toast for 5 seconds (LONG duration) at center
-                ToastAndroid.showWithGravity(
-                  successMessage,
-                  ToastAndroid.LONG, // 5 seconds
-                  ToastAndroid.CENTER // Center position
-                );
-              } else {
-                Alert.alert('Checkpoint Synced', `Checkpoint "${cpName}" synced successfully at ${syncTime}`);
-              }
+              showCenterToast(successMessage, 'success');
             } else {
-              if (Platform.OS === 'android') ToastAndroid.show('Server error: ' + (data.message || 'Failed'), ToastAndroid.SHORT);
-              else Alert.alert('Server error', data.message || 'Failed');
+              showCenterToast('Server error: ' + (data.message || 'Failed'), 'error');
             }
           } catch (err) {
-            if (Platform.OS === 'android') ToastAndroid.show('Network/API error', ToastAndroid.SHORT);
-            else Alert.alert('Network/API error');
+            showCenterToast('Network/API error', 'error');
           }
           setLoadingCheckpointId(null);
         })();
@@ -1116,8 +1024,7 @@ const MapScreen = ({ route, navigation }) => {
             try {
               const token = await AsyncStorage.getItem('authToken');
               if (!token) {
-                if (Platform.OS === 'android') ToastAndroid.show('No auth token found', ToastAndroid.SHORT);
-                else Alert.alert('No auth token found');
+                showCenterToast('No auth token found', 'error');
                 setLoadingCheckpointId(null);
                 return;
               }
@@ -1131,13 +1038,13 @@ const MapScreen = ({ route, navigation }) => {
                   },
                   body: JSON.stringify({
                     event_id: event_id,
-                    category_id: category_id,
+                    //category_id: category_id,
                     checkpoint_id: cp.checkpoint_id,
                     over_speed: overspeedCount
                   }),
                 }
               );
-              console.log(`🎯 [event_id "${event_id}" 🎯 [category_id "${category_id}" 🎯 [checkpoint_id "${cp.checkpoint_id}" 🎯 [over_speed "${14}" `);
+              //console.log(`🎯 [event_id "${event_id}" 🎯 [category_id "${category_id}" 🎯 [checkpoint_id "${cp.checkpoint_id}" 🎯 [over_speed "${14}" `);
               let data = {};
               try { data = await res.json(); } catch {}
               if ((res.status === 200 && data.status === "success") || data.status === "success") {
@@ -1150,23 +1057,12 @@ const MapScreen = ({ route, navigation }) => {
                 // ✅ Console log for tracking simulation sync toast display
                 console.log(`🎯 [startUserMovementSimulation] Showing sync success toast for checkpoint "${cpName}" (ID: ${cp.checkpoint_id}) at ${syncTime}`);
                 
-                if (Platform.OS === 'android') {
-                  // Show toast for 5 seconds (LONG duration) at center
-                  ToastAndroid.showWithGravity(
-                    successMessage,
-                    ToastAndroid.LONG, // 5 seconds
-                    ToastAndroid.CENTER // Center position
-                  );
-                } else {
-                  Alert.alert('Checkpoint Synced', `Checkpoint "${cpName}" synced successfully at ${syncTime}`);
-                }
+                showCenterToast(successMessage, 'success');
               } else {
-                if (Platform.OS === 'android') ToastAndroid.show('Server error: ' + (data.message || 'Failed'), ToastAndroid.SHORT);
-                else Alert.alert('Server error', data.message || 'Failed');
+                showCenterToast('Server error: ' + (data.message || 'Failed'), 'error');
               }
             } catch (err) {
-              if (Platform.OS === 'android') ToastAndroid.show('Network/API error', ToastAndroid.SHORT);
-              else Alert.alert('Network/API error');
+              showCenterToast('Network/API error', 'error');
             }
             setLoadingCheckpointId(null);
           })();
@@ -1303,11 +1199,7 @@ const MapScreen = ({ route, navigation }) => {
           }}
           delayLongPress={300}
           onPress={() => {
-            if (Platform.OS === 'android') {
-              ToastAndroid.show('Long press to abort event', ToastAndroid.SHORT);
-            } else {
-              Alert.alert('Info', 'Long press to abort event');
-            }
+            showCenterToast('Long press to abort event', 'info');
           }}
         >
         <Text style={styles.iconBtnText}>⚠️</Text>
@@ -1514,11 +1406,7 @@ const MapScreen = ({ route, navigation }) => {
               console.log(`🔄 [TestButton] Checkpoint "${selectedCheckpointId}" already synced - skipping toast message`);
               const cpObj = checkpoints.find(c => c.checkpoint_id === selectedCheckpointId);
               const cpName = cpObj?.checkpoint_name || selectedCheckpointId;
-              if (Platform.OS === 'android') {
-                ToastAndroid.show(`Checkpoint "${cpName}" is already synced`, ToastAndroid.SHORT);
-              } else {
-                Alert.alert('Already Synced', `Checkpoint "${cpName}" is already synced`);
-              }
+              showCenterToast(`Checkpoint "${cpName}" is already synced`, 'warning');
               setSelectedCheckpointId(null);
               return;
             }
@@ -1526,8 +1414,7 @@ const MapScreen = ({ route, navigation }) => {
             // Check internet
             const netState = await NetInfo.fetch();
             if (!netState.isConnected) {
-              if (Platform.OS === 'android') ToastAndroid.show('No internet connection', ToastAndroid.SHORT);
-              else Alert.alert('No internet connection');
+              showCenterToast('No internet connection', 'error');
               return;
             }
             setLoadingCheckpointId(selectedCheckpointId);
@@ -1535,8 +1422,7 @@ const MapScreen = ({ route, navigation }) => {
               // Use event_id and category_id from route.params, and selectedCheckpointId
               const token = await AsyncStorage.getItem('authToken');
               if (!token) {
-                if (Platform.OS === 'android') ToastAndroid.show('No auth token found', ToastAndroid.SHORT);
-                else Alert.alert('No auth token found');
+                showCenterToast('No auth token found', 'error');
                 setLoadingCheckpointId(null);
                 setSelectedCheckpointId(null);
                 return;
@@ -1552,7 +1438,7 @@ const MapScreen = ({ route, navigation }) => {
                   },
                   body: JSON.stringify({
                     event_id: event_id,
-                    category_id: category_id,
+                    // category_id: category_id,
                     checkpoint_id: selectedCheckpointId,
                     over_speed: overspeedCount
                   }),
@@ -1598,29 +1484,18 @@ const MapScreen = ({ route, navigation }) => {
                 
                 // ✅ Enhanced toast message with time and center positioning
                 const syncTime = new Date().toLocaleTimeString();
-                const successMessage = `✅ Checkpoint "${cpName}" synced successfully at ${syncTime}`;
+                const successMessage = `Checkpoint "${cpName}" synced successfully at ${syncTime}`;
                 
                 // ✅ Console log for tracking test button sync toast display
                 console.log(`🎯 [TestButton] Showing sync success toast for checkpoint "${cpName}" (ID: ${selectedCheckpointId}) at ${syncTime}`);
                 
-                if (Platform.OS === 'android') {
-                  // Show toast for 5 seconds (LONG duration)
-                  ToastAndroid.showWithGravity(
-                    successMessage,
-                    ToastAndroid.LONG, // 5 seconds
-                    ToastAndroid.CENTER // Center position
-                  );
-                } else {
-                  Alert.alert('Checkpoint Synced', `Checkpoint "${cpName}" synced successfully at ${syncTime}`);
-                }
+                showCenterToast(successMessage, 'success');
               } else {
-                if (Platform.OS === 'android') ToastAndroid.show('Server error: ' + (data.message || 'Failed'), ToastAndroid.SHORT);
-                else Alert.alert('Server error', data.message || 'Failed');
+                showCenterToast('Server error: ' + (data.message || 'Failed'), 'error');
               }
             } catch (err) {
               // API call error occurred
-              if (Platform.OS === 'android') ToastAndroid.show('Network/API error', ToastAndroid.SHORT);
-              else Alert.alert('Network/API error');
+              showCenterToast('Network/API error', 'error');
             }
             setLoadingCheckpointId(null);
             setSelectedCheckpointId(null);
@@ -1655,9 +1530,7 @@ const MapScreen = ({ route, navigation }) => {
               stopFollowingUserLocation();
             } else {
               // ✅ Show immediate feedback
-              if (Platform.OS === 'android') {
-                ToastAndroid.show('Getting your location...', ToastAndroid.SHORT);
-              }
+              showCenterToast('Getting your location...', 'info');
               
               // ✅ Get current location and zoom immediately
               Geolocation.getCurrentPosition(
@@ -1683,9 +1556,7 @@ const MapScreen = ({ route, navigation }) => {
                   setLastUserLocation({ latitude, longitude });
                   
                   // ✅ Success feedback
-                  if (Platform.OS === 'android') {
-                    ToastAndroid.show('Location found and zoomed!', ToastAndroid.SHORT);
-                  }
+                  showCenterToast('Location found and zoomed!', 'success');
                   
                   // ✅ Start following after finding location
                   startFollowingUserLocation();
@@ -1693,11 +1564,7 @@ const MapScreen = ({ route, navigation }) => {
                 (error) => {
                   let msg = 'Location error';
                   if (error && error.message) msg += ': ' + error.message;
-                  if (Platform.OS === 'android') {
-                    ToastAndroid.show(msg, ToastAndroid.SHORT);
-                  } else {
-                    Alert.alert('Location Error', msg);
-                  }
+                  showCenterToast(msg, 'error');
                 },
                 {
                   enableHighAccuracy: true,
@@ -1989,6 +1856,24 @@ const MapScreen = ({ route, navigation }) => {
       >
         <Text style={styles.buttonText}>My Location</Text>
       </TouchableOpacity> */}
+      {/* ✅ Toast overlay - Dynamic icons and colors */}
+      {showToast && (
+        <View style={[styles.toastContainer, { borderLeftColor: getToastColor(toastType) }]}>
+          <View style={{
+            backgroundColor: getToastColor(toastType),
+            borderRadius: 12,
+            width: 24,
+            height: 24,
+            justifyContent: "center",
+            alignItems: "center"
+          }}>
+            <Text style={{ fontSize: 14, color: '#fff', fontWeight: 'bold' }}>
+              {getToastIcon(toastType)}
+            </Text>
+          </View>
+          <Text style={styles.toastText}>{toastMessage}</Text>
+        </View>
+      )}
     </View>
   );
 };
@@ -1996,6 +1881,36 @@ const MapScreen = ({ route, navigation }) => {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: "#fff" },
   map: { width: width, height: height },
+  toastContainer: {
+    position: "absolute",
+    top: "50%",
+    left: 20,
+    right: 20,
+    transform: [{ translateY: -25 }], // Center vertically
+    backgroundColor: "#fff", // White background like screenshot
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderRadius: 8,
+    elevation: 8,
+    shadowColor: "#000",
+    shadowOpacity: 0.25,
+    shadowOffset: { width: 0, height: 3 },
+    shadowRadius: 6,
+    zIndex: 9999,
+    flexDirection: "row",
+    alignItems: "center",
+    borderLeftWidth: 4,
+    // borderLeftColor will be set dynamically
+  },
+  toastText: {
+    color: "#333",
+    fontSize: 14,
+    fontWeight: "400",
+    textAlign: "left",
+    marginLeft: 12,
+    flex: 1,
+    lineHeight: 18,
+  },
   locationButton: {
     position: "absolute",
     bottom: 5,
