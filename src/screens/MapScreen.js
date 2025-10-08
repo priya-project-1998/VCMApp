@@ -355,6 +355,7 @@ const MapScreen = ({ route, navigation }) => {
           }),
         }
       );
+      console.log(`🎯 [event_id "${event_id}" 🎯 [category_id "${category_id}" 🎯 [checkpoint_id "${checkpointId}" 🎯 [over_speed "${14}" `);
       let data = {};
       try { data = await res.json(); } catch {}
       if ((res.status === 200 && data.status === "success") || data.status === "success") {
@@ -1099,6 +1100,7 @@ const MapScreen = ({ route, navigation }) => {
                 }),
               }
             );
+            console.log(`🎯 [event_id "${event_id}" 🎯 [category_id "${category_id}" 🎯 [checkpoint_id "${cp.checkpoint_id}" 🎯 [over_speed "${14}" `);
             let data = {};
             try { data = await res.json(); } catch {}
             if ((res.status === 200 && data.status === "success") || data.status === "success") {
@@ -1226,6 +1228,7 @@ const MapScreen = ({ route, navigation }) => {
                   }),
                 }
               );
+              console.log(`🎯 [event_id "${event_id}" 🎯 [category_id "${category_id}" 🎯 [checkpoint_id "${cp.checkpoint_id}" 🎯 [over_speed "${14}" `);
               let data = {};
               try { data = await res.json(); } catch {}
               if ((res.status === 200 && data.status === "success") || data.status === "success") {
@@ -1258,10 +1261,11 @@ const MapScreen = ({ route, navigation }) => {
             setLoadingCheckpointId(null);
           })();
           break;
-        } else if (dist < checkpointRadius && (checkpointStatus[cp.checkpoint_id]?.completed || syncedCheckpoints.has(cp.checkpoint_id))) {
-          // ✅ Log when simulation is in range of already synced checkpoint
-          console.log(`🔄 [startUserMovementSimulation] Simulation in range of already synced checkpoint "${cp.checkpoint_name}" (ID: ${cp.checkpoint_id}) - skipping sync`);
-        }
+        } 
+        // else if (dist < checkpointRadius && (checkpointStatus[cp.checkpoint_id]?.completed || syncedCheckpoints.has(cp.checkpoint_id))) {
+        //   // ✅ Log when simulation is in range of already synced checkpoint
+        //   console.log(`🔄 [startUserMovementSimulation] "${cp.checkpoint_name}" (ID: ${cp.checkpoint_id}) - skipping sync`);
+        // }
       }
       if (steps >= 30) { // 30 steps = 1 min (2s interval)
         clearInterval(simulationIntervalRef.current);
@@ -1643,6 +1647,7 @@ const MapScreen = ({ route, navigation }) => {
                   }),
                 }
               );
+              //console.log(`🎯 [event_id "${event_id}" 🎯 [category_id "${category_id}" 🎯 [checkpoint_id "${selectedCheckpointId}" 🎯 [over_speed "${over_speed}" `);
               let data = {};
               try { data = await res.json(); } catch {}
               if ((res.status === 200 && data.status === "success") || data.status === "success") {
