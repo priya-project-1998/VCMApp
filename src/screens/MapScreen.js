@@ -76,7 +76,7 @@ const MapScreen = ({ route, navigation }) => {
   const [enteredAbortCode, setEnteredAbortCode] = useState("");
 
   // Get checkpoints from route.params (API response)
-  const { checkpoints: paramCheckpoints, category_id, event_id, kml_path, color, event_organizer_no, speed_limit, event_start_date, event_end_date } = route.params || {};
+  const { checkpoints: paramCheckpoints, category_id, event_id, kml_path, color, event_organizer_no, speed_limit, event_start_date, event_end_date,duration } = route.params || {};
   // Use paramCheckpoints only (no static fallback)
   const checkpoints = Array.isArray(paramCheckpoints) ? paramCheckpoints : [];
 
@@ -1293,7 +1293,7 @@ const MapScreen = ({ route, navigation }) => {
     <View style={styles.container}>
       {/* Top Left Info Bar */}
       <View style={styles.infoBar}>
-        <Text style={styles.infoText}>Time Elapsed: {formatTime(elapsedSeconds)}</Text>
+        <Text style={styles.infoText}>Time Elapsed: {duration}</Text>
         <Text style={styles.infoText}>Checkpoint: {Object.values(checkpointStatus).filter(s => s.completed).length}/{checkpoints.length}</Text>
         <Text style={[
           styles.infoText,
