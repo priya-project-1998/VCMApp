@@ -1190,7 +1190,7 @@ const MapScreen = ({ route, navigation }) => {
           : 10;
         
         if (dist < checkpointRadius && !checkpointStatus[cp.checkpoint_id]?.completed && !syncedCheckpoints.has(cp.checkpoint_id)) {
-          console.log(`🎮 [startUserMovementSimulation] Simulation reached checkpoint "${cp.checkpoint_name}" (ID: ${cp.checkpoint_id}) - distance: ${dist.toFixed(2)}m`);
+          //console.log(`🎮 [startUserMovementSimulation] Simulation reached checkpoint "${cp.checkpoint_name}" (ID: ${cp.checkpoint_id}) - distance: ${dist.toFixed(2)}m`);
           
           // ✅ Add to local tracking immediately to prevent duplicates
           syncedCheckpoints.add(cp.checkpoint_id);
