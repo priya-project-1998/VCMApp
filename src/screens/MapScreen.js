@@ -1946,16 +1946,17 @@ useEffect(() => {
 
         {/* SOS Call Tab */}
         <TouchableOpacity
-          style={styles.tabItem}
+          style={[styles.tabItem, styles.tabItemLast]}
           onPress={handleSOSCall}
         >
-          <View style={[styles.tabIconContainer, { backgroundColor: '#F44336' }]}>
+          <View style={[styles.tabIconContainer, { backgroundColor: '#F44336' }]}> 
             <Text style={styles.tabIcon}>🆘</Text>
           </View>
           <Text style={styles.tabLabel}>SOS</Text>
         </TouchableOpacity>
 
         {/* Clear Route Tab */}
+        {/*
         <TouchableOpacity
           style={[styles.tabItem, styles.tabItemLast]}
           onPress={() => {
@@ -1967,11 +1968,12 @@ useEffect(() => {
             }
           }}
         >
-          <View style={[styles.tabIconContainer, { backgroundColor: '#FF9800' }]}>
+          <View style={[styles.tabIconContainer, { backgroundColor: '#FF9800' }]}> 
             <Text style={styles.tabIcon}>🧹</Text>
           </View>
           <Text style={styles.tabLabel}>Clear</Text>
         </TouchableOpacity>
+        */}
       </View>
 
       {/* Checklist Details Modal */}
@@ -2707,5 +2709,4 @@ const styles = StyleSheet.create({
     marginTop: 1,
   },
 });
-
 export default MapScreen;
