@@ -124,51 +124,110 @@ const MapScreen = ({ route, navigation }) => {
 }, [speed_limit]);
 
  
+// ✅ Internet change listener → sync pending checkpoints
+useEffect(() => {
+  const unsubscribe = NetInfo.addEventListener(async (state) => {
+    if (state.isConnected) {
+      let pending = await getPendingCheckpoints();
+      // Ensure pending is always an array
+      if (!Array.isArray(pending)) pending = [];
+
+      // Get token from AsyncStorage
+      const token = await AsyncStorage.getItem('authToken');
+      if (!token) {
+        console.log("❌ No auth token found, cannot sync checkpoints");
+        return;
+      }
+
+      for (let item of pending) {
+        try {
+          const requestBody = {
+            event_id: item.event_id,
+            checkpoint_id: item.checkpoint_id,
+            over_speed: overspeedCount
+          };
+
+          console.log("📤 API Request Body for checkpoint:", requestBody);
+
+          const res = await fetch(
+            "https://e-pickup.randomsoftsolution.in/api/events/checkpoints/update",
+            {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+                "Authorization": `Bearer ${token}`, // ✅ Pass token here
+              },
+              body: JSON.stringify(requestBody),
+            }
+          );
+
+          let data = {};
+          try {
+            data = await res.json();
+            setOverspeedCount(0);
+          } catch (jsonErr) {
+            console.log("❌ JSON parse error:", jsonErr);
+          }
+
+          console.log("📤 Sync response:", data);
+
+          if (data && data.status === "success") {
+            markSynced(item.id);
+          }
+        } catch (err) {
+          console.log("❌ Sync failed for checkpoint:", item.checkpoint_id, err);
+        }
+      }
+    }
+  });
+
+  return () => unsubscribe();
+}, []);
 
   // ✅ Internet change listener → sync pending checkpoints
-  useEffect(() => {
-    const unsubscribe = NetInfo.addEventListener((state) => {
-      if (state.isConnected) {
-        getPendingCheckpoints(async (pending) => {
-          // Ensure pending is always an array
-          if (!Array.isArray(pending)) pending = [];
-          for (let item of pending) {
-            try {
-              const res = await fetch(
-                "https://e-pickup.randomsoftsolution.in/api/events/checkpoints/update",
-                {
-                  method: "POST",
-                  headers: { "Content-Type": "application/json" },
-                  body: JSON.stringify({
-                    event_id: item.event_id,
-                    //category_id: item.category_id,
-                    checkpoint_id: item.checkpoint_id,
-                    over_speed:overspeedCount
-                  }),
-                }
-              );
-              let data = {};
-              try {
-                data = await res.json();
-                setOverspeedCount(0);
+  // useEffect(() => {
+  //   const unsubscribe = NetInfo.addEventListener((state) => {
+  //     if (state.isConnected) {
+  //       getPendingCheckpoints(async (pending) => {
+  //         // Ensure pending is always an array
+  //         if (!Array.isArray(pending)) pending = [];
+  //         for (let item of pending) {
+  //           try {
+  //             const res = await fetch(
+  //               "https://e-pickup.randomsoftsolution.in/api/events/checkpoints/update",
+  //               {
+  //                 method: "POST",
+  //                 headers: { "Content-Type": "application/json" },
+  //                 body: JSON.stringify({
+  //                   event_id: item.event_id,
+  //                   //category_id: item.category_id,
+  //                   checkpoint_id: item.checkpoint_id,
+  //                   over_speed:overspeedCount
+  //                 }),
+  //               }
+  //             );
+  //             let data = {};
+  //             try {
+  //               data = await res.json();
+  //               setOverspeedCount(0);
 
-              } catch (jsonErr) {
-                // JSON parse error occurred
-              }
-              // Sync response received
+  //             } catch (jsonErr) {
+  //               // JSON parse error occurred
+  //             }
+  //             // Sync response received
 
-              if (data && data.status === "success") {
-                markSynced(item.id);
-              }
-            } catch (err) {
-              // Sync failed
-            }
-          }
-        });
-      }
-    });
-    return () => unsubscribe();
-  }, []);
+  //             if (data && data.status === "success") {
+  //               markSynced(item.id);
+  //             }
+  //           } catch (err) {
+  //             // Sync failed
+  //           }
+  //         }
+  //       });
+  //     }
+  //   });
+  //   return () => unsubscribe();
+  // }, []);
 
   // ✅ Simple Speed Limit Checking Function
   const checkSpeedLimit = useCallback((currentSpeedKmh) => {
