@@ -32,6 +32,7 @@ import {
 import SoundUtils from '../utils/SoundUtils';
 import VibrationSoundUtils from '../utils/VibrationSoundUtils';
 import SystemSoundUtils from '../utils/SystemSoundUtils';
+import EnhancedVoiceAlertUtils from '../utils/EnhancedVoiceAlertUtils';
 
 const { width, height } = Dimensions.get("window");
 const MapScreen = ({ route, navigation }) => {
@@ -64,12 +65,24 @@ const MapScreen = ({ route, navigation }) => {
   const [speedLimit, setSpeedLimit] = useState(60); // Default speed limit
   const [isOverspeedAlertShown, setIsOverspeedAlertShown] = useState(false);
   const [overspeedCount, setOverspeedCount] = useState(0);
+  const overspeedCountRef = useRef(0); // ✅ Ref to track latest overspeedCount value
   const [lastOverspeedAlert, setLastOverspeedAlert] = useState(0);
   const [abortLoading, setAbortLoading] = useState(false);
   const [randomAbortCode, setRandomAbortCode] = useState("");
   const [enteredAbortCode, setEnteredAbortCode] = useState("");
+  const [voiceAlertsEnabled, setVoiceAlertsEnabled] = useState(true);
+  const [eventStartAnnounced, setEventStartAnnounced] = useState(false);
+  const [lastOverspeedVoiceAlert, setLastOverspeedVoiceAlert] = useState(0);
+  const [timeWarningGiven, setTimeWarningGiven] = useState(false);
+  const [eventEndTime, setEventEndTime] = useState(null);
+  const [useSimpleVoiceAlerts, setUseSimpleVoiceAlerts] = useState(true); // Default to simple alerts
   const { checkpoints: paramCheckpoints, category_id, event_id, kml_path, color, event_organizer_no, speed_limit, event_start_date, event_end_date,duration } = route.params || {};
   const checkpoints = Array.isArray(paramCheckpoints) ? paramCheckpoints : [];
+
+  // ✅ Helper function to get the appropriate voice alert utility
+  const getVoiceAlertUtils = () => {
+    return EnhancedVoiceAlertUtils; // Use enhanced TTS voice alerts
+  };
  
   const [showToast, setShowToast] = useState(false);
   const [toastMessage, setToastMessage] = useState("");
@@ -116,6 +129,58 @@ const MapScreen = ({ route, navigation }) => {
     createTables();
   }, []);
 
+  // ✅ Voice Alert: Event Start Announcement
+  useEffect(() => {
+    if (!eventStartAnnounced && voiceAlertsEnabled) {
+      // Delay to ensure component is fully mounted
+      const timer = setTimeout(() => {
+        getVoiceAlertUtils().announceEventStart(route.params?.event_name || 'Navigation Event');
+        setEventStartAnnounced(true);
+      }, 2000); // 2 second delay for smooth start
+
+      return () => clearTimeout(timer);
+    }
+  }, [eventStartAnnounced, voiceAlertsEnabled]);
+
+  // ✅ Set event end time for time warning alerts
+  useEffect(() => {
+    if (event_end_date && !eventEndTime) {
+      try {
+        const endTime = new Date(event_end_date);
+        setEventEndTime(endTime);
+        console.log('Event end time set:', endTime);
+      } catch (error) {
+        console.log('Error parsing event end date:', error);
+      }
+    }
+  }, [event_end_date, eventEndTime]);
+
+  // ✅ Time Warning Alert - 15 minutes before event end
+  useEffect(() => {
+    if (eventEndTime && voiceAlertsEnabled && !timeWarningGiven) {
+      const checkTimeWarning = () => {
+        const now = new Date();
+        const timeDiff = eventEndTime.getTime() - now.getTime();
+        const minutesRemaining = Math.floor(timeDiff / (1000 * 60));
+        
+        // Alert when 15 minutes remaining (with 1 minute tolerance)
+        if (minutesRemaining <= 15 && minutesRemaining > 0 && !timeWarningGiven) {
+          getVoiceAlertUtils().announceTimeWarning(minutesRemaining);
+          setTimeWarningGiven(true);
+          console.log(`Time warning given: ${minutesRemaining} minutes remaining`);
+        }
+      };
+
+      // Check every minute
+      const timeInterval = setInterval(checkTimeWarning, 60000);
+      
+      // Initial check
+      checkTimeWarning();
+
+      return () => clearInterval(timeInterval);
+    }
+  }, [eventEndTime, voiceAlertsEnabled, timeWarningGiven]);
+
   useEffect(() => {
   if (speed_limit && speed_limit !== speedLimit) {
     setSpeedLimit(speed_limit);
@@ -144,10 +209,11 @@ useEffect(() => {
           const requestBody = {
             event_id: item.event_id,
             checkpoint_id: item.checkpoint_id,
-            over_speed: overspeedCount
+            over_speed: overspeedCountRef.current // ✅ Use ref for latest value
           };
 
           console.log("📤 API Request Body for checkpoint:", requestBody);
+          console.log(`🐛 [NetInfo Sync] Current overspeedCount value: ${overspeedCountRef.current}`);
 
           const res = await fetch(
             "https://e-pickup.randomsoftsolution.in/api/events/checkpoints/update",
@@ -165,6 +231,7 @@ useEffect(() => {
           try {
             data = await res.json();
             setOverspeedCount(0);
+            overspeedCountRef.current = 0; // ✅ Reset ref too
           } catch (jsonErr) {
             console.log("❌ JSON parse error:", jsonErr);
           }
@@ -182,7 +249,7 @@ useEffect(() => {
   });
 
   return () => unsubscribe();
-}, []);
+}, []); // ✅ Remove overspeedCount dependency since we're using ref
 
   // ✅ Internet change listener → sync pending checkpoints
   // useEffect(() => {
@@ -233,46 +300,79 @@ useEffect(() => {
   const checkSpeedLimit = useCallback((currentSpeedKmh) => {
     const now = Date.now();
     
-    // Simple check - if speed exceeds limit, show continuous red alerts
+    // ✅ Immediate alert response - no delay
     if (currentSpeedKmh > speedLimit) {
-      setOverspeedCount(prev => prev + 1);
+      setOverspeedCount(prev => {
+        const newCount = prev + 1;
+        overspeedCountRef.current = newCount; // ✅ Update ref
+        return newCount;
+      });
       
-      if (!isOverspeedAlertShown || now - lastOverspeedAlert > 1500) {
-        setLastOverspeedAlert(now);
+      // ✅ Show alert immediately when overspeeding (removed delay condition)
+      if (!isOverspeedAlertShown) {
         setIsOverspeedAlertShown(true);
+        setLastOverspeedAlert(now);
         
-        // ✅ Play sound and vibration whenever speed limit is exceeded
+        // ✅ Voice Alert for Overspeed (immediate response)
+        if (voiceAlertsEnabled && (lastOverspeedVoiceAlert === 0 || now - lastOverspeedVoiceAlert > 5000)) {
+          getVoiceAlertUtils().announceOverspeed(currentSpeedKmh, speedLimit);
+          setLastOverspeedVoiceAlert(now);
+        }
+      }
+        
+      // ✅ Play sound and vibration whenever speed limit is exceeded
+      try {
+        // Layer 1: Advanced sound (if available)
+        SoundUtils.playSpeedAlert();
+        
+        // Layer 2: Vibration patterns (backup/enhancement) 
+        setTimeout(() => {
+          VibrationSoundUtils.playSpeedAlert();
+        }, 150);
+        
+        // Layer 3: System sounds with escalating urgency
+        setTimeout(() => {
+          SystemSoundUtils.playSpeedAlert();
+        }, 300);
+        
+      } catch (error) {
+        console.log('Error playing speed alert:', error);
+        // Ultimate fallback: basic vibration
         try {
-          // Layer 1: Advanced sound (if available)
-          SoundUtils.playSpeedAlert();
-          
-          // Layer 2: Vibration patterns (backup/enhancement) 
-          setTimeout(() => {
-            VibrationSoundUtils.playSpeedAlert();
-          }, 150);
-          
-          // Layer 3: System sounds with escalating urgency
-          setTimeout(() => {
-            SystemSoundUtils.playSpeedAlert();
-          }, 300);
-          
-        } catch (error) {
-          console.log('Error playing speed alert:', error);
-          // Ultimate fallback: basic vibration
-          try {
-            Vibration.vibrate([0, 400, 150, 400, 150, 400]); // Strong urgent pattern
-          } catch (vibError) {
-            console.log('Error with vibration:', vibError);
-          }
+          Vibration.vibrate([0, 400, 150, 400, 150, 400]); // Strong urgent pattern
+        } catch (vibError) {
+          console.log('Error with vibration:', vibError);
         }
       }
     } else {
-      // Reset overspeed alert when speed is back under limit
+      // ✅ Immediately reset overspeed alert when speed is back under limit
       if (isOverspeedAlertShown) {
         setIsOverspeedAlertShown(false);
         setLastOverspeedAlert(0);
         
-        // ✅ Reset sound alert count when speed normalizes
+        // ✅ Reset voice alert timer immediately when speed normalizes - fresh start for next overspeed
+        setLastOverspeedVoiceAlert(0);
+        
+        // ✅ Stop any ongoing voice alerts immediately when speed comes under limit
+        try {
+          // Stop voice alerts if any TTS is speaking
+          const voiceUtils = getVoiceAlertUtils();
+          if (voiceUtils && typeof voiceUtils.forceStop === 'function') {
+            voiceUtils.forceStop(); // ✅ Force stop immediately
+          }
+          if (voiceUtils && typeof voiceUtils.stopSpeaking === 'function') {
+            voiceUtils.stopSpeaking(); // Stop current voice alert
+          }
+          // Also try to stop with common TTS method names
+          if (voiceUtils && typeof voiceUtils.stop === 'function') {
+            voiceUtils.stop();
+          }
+          console.log('✅ Voice alerts force stopped immediately - speed back to normal');
+        } catch (error) {
+          console.log('Error stopping voice alerts:', error);
+        }
+        
+        // ✅ Reset sound alert count and stop any ongoing sounds/vibrations when speed normalizes
         try {
           SoundUtils.resetAlertCount();
           VibrationSoundUtils.release(); // Stop any ongoing vibrations
@@ -282,7 +382,7 @@ useEffect(() => {
         }
       }
     }
-  }, [speedLimit, lastOverspeedAlert, isOverspeedAlertShown]);
+  }, [speedLimit, lastOverspeedAlert, isOverspeedAlertShown, voiceAlertsEnabled, lastOverspeedVoiceAlert]); // ✅ Remove overspeedCount dependency since we're using ref
 
   // ✅ Permission aur location fetch
   const getCurrentLocation = () => {
@@ -369,6 +469,16 @@ useEffect(() => {
         setLoadingCheckpointId(null);
         return false;
       }
+      const requestBody = {
+        event_id: event_id,
+       // category_id: category_id,
+        checkpoint_id: checkpointId,
+        over_speed: overspeedCountRef.current // ✅ Use ref for latest value
+      };
+      
+      // ✅ Debug log to check overspeedCount value being sent
+      console.log(`🐛 [syncCheckpointToServer] Sending API request with overspeedCount: ${overspeedCountRef.current}`, requestBody);
+      
       const res = await fetch(
         "https://e-pickup.randomsoftsolution.in/api/events/checkpoints/update",
         {
@@ -377,12 +487,7 @@ useEffect(() => {
             "Content-Type": "application/json",
             "Authorization": `Bearer ${token}`,
           },
-          body: JSON.stringify({
-            event_id: event_id,
-           // category_id: category_id,
-            checkpoint_id: checkpointId,
-            over_speed: overspeedCount
-          }),
+          body: JSON.stringify(requestBody),
         }
       );
      // console.log(`🎯 [event_id "${event_id}" 🎯 [category_id "${category_id}" 🎯 [checkpoint_id "${checkpointId}" 🎯 [over_speed "${14}" `);
@@ -390,6 +495,7 @@ useEffect(() => {
       try { data = await res.json(); } catch {}
       if ((res.status === 200 && data.status === "success") || data.status === "success") {
         setOverspeedCount(0);
+        overspeedCountRef.current = 0; // ✅ Reset ref too
         setMarkerColors((prev) => ({ ...prev, [checkpointId]: '#185a9d' })); // blue
         const cpObj = checkpoints.find(c => c.checkpoint_id === checkpointId);
         const cpName = cpObj?.checkpoint_name || checkpointId;
@@ -399,6 +505,12 @@ useEffect(() => {
         
         // ✅ Console log for tracking sync toast display
         console.log(`🎯 [syncCheckpointToServer] Showing sync success toast for checkpoint "${cpName}" (ID: ${checkpointId}) at ${syncTime}`);
+        
+        // ✅ Voice Alert for Checkpoint Completion
+        if (voiceAlertsEnabled) {
+          const completedCount = Object.values(checkpointStatus).filter(s => s.completed).length + 1; // +1 for current
+          getVoiceAlertUtils().announceCheckpointComplete(cpName, completedCount, checkpoints.length);
+        }
         
         showCenterToast(successMessage, 'success');
         setLoadingCheckpointId(null);
@@ -562,6 +674,11 @@ useEffect(() => {
         return;
       }
 
+      // ✅ Voice Alert for SOS Activation
+      if (voiceAlertsEnabled) {
+        getVoiceAlertUtils().announceSOSActivated();
+      }
+
       Alert.alert(
         "🆘 Emergency Call",
         `Do you want to call the event organizer?\n\nNumber: ${event_organizer_no}`,
@@ -605,6 +722,11 @@ useEffect(() => {
       if (watchId) {
         Geolocation.clearWatch(watchId);
         setWatchId(null);
+      }
+
+      // ✅ Voice Alert for Event Abort
+      if (voiceAlertsEnabled) {
+        getVoiceAlertUtils().announceEventAborted();
       }
 
       showCenterToast('Event aborted successfully', 'success');
@@ -661,12 +783,22 @@ useEffect(() => {
               
               // Success feedback
               showCenterToast('Location found!', 'success');
+              
+              // ✅ Voice Alert for Location Found
+              if (voiceAlertsEnabled) {
+                getVoiceAlertUtils().announceLocationFound();
+              }
             },
             (error) => {
               let msg = 'Location error';
               if (error && error.message) msg += ': ' + error.message;
               if (error && error.code) msg += ` (code: ${error.code})`;
               showCenterToast(msg, 'error');
+              
+              // ✅ Voice Alert for Location Error
+              if (voiceAlertsEnabled) {
+                getVoiceAlertUtils().announceLocationError();
+              }
             },
             { 
               enableHighAccuracy: false, // Faster response
@@ -795,9 +927,14 @@ useEffect(() => {
       checkpoints.length > 0 &&
       checkpoints.every(cp => checkpointStatus[cp.checkpoint_id]?.completed)
     ) {
+      // ✅ Voice Alert for Event Completion
+      if (voiceAlertsEnabled) {
+        getVoiceAlertUtils().announceEventFinish(checkpoints.length, duration || 'unknown duration');
+      }
+      
       setEventCompletedModal(true);
     }
-  }, [checkpointStatus, checkpoints]);
+  }, [checkpointStatus, checkpoints, voiceAlertsEnabled, duration]);
 
   // Cleanup watch position on unmount
   useEffect(() => {
@@ -813,6 +950,7 @@ useEffect(() => {
         SoundUtils.release();
         VibrationSoundUtils.release();
         SystemSoundUtils.release();
+        EnhancedVoiceAlertUtils.cleanup(); // ✅ Cleanup enhanced voice alerts
       } catch (error) {
         console.log('Error releasing sound resources:', error);
       }
@@ -1052,7 +1190,7 @@ useEffect(() => {
                   event_id: event_id,
                  // category_id: category_id,
                   checkpoint_id: cp.checkpoint_id,
-                  over_speed: overspeedCount
+                  over_speed: overspeedCountRef.current // ✅ Use ref for latest value
                 }),
               }
             );
@@ -1062,6 +1200,7 @@ useEffect(() => {
             console.log('Simulation Data Response check', data);
             if ((res.status === 200 && data.status === "success") || data.status === "success") {
               setOverspeedCount(0);
+              overspeedCountRef.current = 0; // ✅ Reset ref too
               const cpName = cp.checkpoint_name || cp.checkpoint_id;
               // ✅ Enhanced toast message with time and center positioning
               const syncTime = new Date().toLocaleTimeString();
@@ -1104,9 +1243,9 @@ useEffect(() => {
         latitude: parseFloat(targetCp.latitude),
         longitude: parseFloat(targetCp.longitude),
       };
-      // Move a small step towards the target
-      const stepLat = (target.latitude - current.latitude) * 0.1;
-      const stepLng = (target.longitude - current.longitude) * 0.1;
+      // Move a small step towards the target (reduced step size for slower movement)
+      const stepLat = (target.latitude - current.latitude) * 0.02; // ✅ Reduced from 0.1 to 0.02 for slower movement
+      const stepLng = (target.longitude - current.longitude) * 0.02; // ✅ Reduced from 0.1 to 0.02 for slower movement
       const newPoint = {
         latitude: current.latitude + stepLat,
         longitude: current.longitude + stepLng,
@@ -1121,9 +1260,9 @@ useEffect(() => {
       );
       setUserHeading(simulatedHeading);
       
-      // Calculate simulated speed (distance/2s * 3.6)
+      // Calculate simulated speed (distance/3s * 3.6) - updated for new interval
       const distMoved = getDistanceFromLatLonInMeters(current.latitude, current.longitude, newPoint.latitude, newPoint.longitude);
-      const calculatedSpeed = Math.round((distMoved / 2) * 3.6);
+      const calculatedSpeed = Math.round((distMoved / 3) * 3.6); // ✅ Updated for 3 second interval
       setSimulatedSpeed(calculatedSpeed);
       
       // ✅ Check speed limit for simulation too
@@ -1180,7 +1319,7 @@ useEffect(() => {
                     event_id: event_id,
                     //category_id: category_id,
                     checkpoint_id: cp.checkpoint_id,
-                    over_speed: overspeedCount
+                    over_speed: overspeedCountRef.current // ✅ Use ref for latest value
                   }),
                 }
               );
@@ -1189,6 +1328,7 @@ useEffect(() => {
               try { data = await res.json(); } catch {}
               if ((res.status === 200 && data.status === "success") || data.status === "success") {
                 setOverspeedCount(0);
+                overspeedCountRef.current = 0; // ✅ Reset ref too
                 const cpName = cp.checkpoint_name || cp.checkpoint_id;
                 // ✅ Enhanced toast message with time and center positioning
                 const syncTime = new Date().toLocaleTimeString();
@@ -1213,12 +1353,12 @@ useEffect(() => {
         //   console.log(`🔄 [startUserMovementSimulation] "${cp.checkpoint_name}" (ID: ${cp.checkpoint_id}) - skipping sync`);
         // }
       }
-      if (steps >= 30) { // 30 steps = 1 min (2s interval)
+      if (steps >= 30) { // 30 steps = 1.5 min (3s interval)
         clearInterval(simulationIntervalRef.current);
         setIsSimulating(false);
         Alert.alert("Simulation Stopped", "Random movement simulation completed.");
       }
-    }, 2000);
+    }, 3000); // ✅ Increased from 2000ms to 3000ms for slower movement
   };
 
   useEffect(() => {
@@ -1272,46 +1412,11 @@ useEffect(() => {
         )}
       </View>
 
-      {/* ✅ Centered Overspeed Warning - Only show when actually overspeeding */}
-      {/* {isOverspeedAlertShown && (isSimulating ? simulatedSpeed : currentSpeed) > speedLimit && (
-        <View style={{
-          position: 'absolute',
-          top: '40%', // ✅ Center vertically on screen
-          left: 20,
-          right: 20,
-          backgroundColor: '#FF5722',
-          padding: 20,
-          borderRadius: 15,
-          alignItems: 'center',
-          justifyContent: 'center',
-          zIndex: 999,
-          elevation: 15,
-          shadowColor: '#FF5722',
-          shadowOpacity: 0.5,
-          shadowOffset: { width: 0, height: 5 },
-          shadowRadius: 10,
-        }}>
-          <Text style={{
-            color: '#fff',
-            fontSize: 20,
-            fontWeight: 'bold',
-            textAlign: 'center'
-          }}>
-            🚨 OVERSPEED! SLOW DOWN! 🚨
-          </Text>
-          <Text style={{
-            color: '#fff',
-            fontSize: 16,
-            textAlign: 'center',
-            marginTop: 8
-          }}>
-            {isSimulating ? simulatedSpeed : currentSpeed} km/h | Limit: {speedLimit} km/h
-          </Text>
-        </View>
-      )} */}
+      
 
       {/* Top Right Layers Button */}
       <View style={styles.topRightContainer}>
+        
         
         {/* Abort Event Button */}
         <TouchableOpacity
@@ -1391,6 +1496,33 @@ useEffect(() => {
           >
             <Text style={{ color: '#fff', fontSize: 16, fontWeight: 'bold' }}>
               Start Move-Event
+            </Text>
+          </TouchableOpacity>
+          
+          {/* Test Voice Alerts Button */}
+          <TouchableOpacity
+            style={{
+              position: 'absolute',
+              bottom: 200,
+              right: 20,
+              backgroundColor: '#9C27B0',
+              paddingVertical: 10,
+              paddingHorizontal: 15,
+              borderRadius: 20,
+              elevation: 6,
+              zIndex: 50,
+            }}
+            onPress={() => {
+              if (voiceAlertsEnabled) {
+                getVoiceAlertUtils().testAllAlerts();
+                showCenterToast('Testing all voice alerts...', 'info');
+              } else {
+                showCenterToast('Voice alerts are disabled', 'warning');
+              }
+            }}
+          >
+            <Text style={{ color: '#fff', fontSize: 14, fontWeight: 'bold' }}>
+              Test Voice
             </Text>
           </TouchableOpacity>
           
@@ -1795,7 +1927,7 @@ useEffect(() => {
                     event_id: event_id,
                     // category_id: category_id,
                     checkpoint_id: selectedCheckpointId,
-                    over_speed: overspeedCount
+                    over_speed: overspeedCountRef.current // ✅ Use ref for latest value
                   }),
                 }
               );
@@ -1805,6 +1937,7 @@ useEffect(() => {
               if ((res.status === 200 && data.status === "success") || data.status === "success") {
                 // Mark as completed
                 setOverspeedCount(0);
+                overspeedCountRef.current = 0; // ✅ Reset ref too
                 const reachedTime = new Date().toLocaleTimeString();
                 setCheckpointStatus((prev) => ({
                   ...prev,
@@ -2227,13 +2360,6 @@ useEffect(() => {
         </View>
       </Modal>
 
-      {/* My Location Button - bottom right */}
-      {/* <TouchableOpacity
-        style={styles.locationButton}
-        onPress={getCurrentLocation}
-      >
-        <Text style={styles.buttonText}>My Location</Text>
-      </TouchableOpacity> */}
       {/* ✅ Toast overlay - Dynamic icons and colors */}
       {showToast && (
         <View style={[styles.toastContainer, { borderLeftColor: getToastColor(toastType) }]}>
