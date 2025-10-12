@@ -11,7 +11,7 @@ const ResultsScreen = () => {
   const [myEvents, setMyEvents] = useState([]);
   const [loading, setLoading] = useState(true);
   const [loadingEventId, setLoadingEventId] = useState(null);
-  const [resultsData, setResultsData] = useState([]);
+  const [performanceMatrix, setPerformanceMatrix] = useState({});
 
   // Fetch my events on component mount
   useEffect(() => {
@@ -56,6 +56,11 @@ const ResultsScreen = () => {
           // User has participated and has results
           const userResult = resultResponse.data?.data || resultResponse.data || {};
           const userCheckpoints = userResult.checkpoints || [];
+          const performanceMatrixData = userResult.final_result || {};
+          
+          // Store performanceMatrix in state
+          setPerformanceMatrix(performanceMatrixData);
+
           
           // Process checkpoints to match the required format
           const processedCheckpoints = processCheckpoints(checkpoints, userCheckpoints);
@@ -339,7 +344,6 @@ const ResultsScreen = () => {
               <View>
                 <View style={styles.glassCard}>
                   <Text style={styles.detailTitle}>🏆 {selectedResult.name}</Text>
-                  <Text style={styles.eventIdText}>Event ID: {selectedResult.eventId}</Text>
                   {selectedResult.noParticipation && (
                     <View style={styles.noParticipationBanner}>
                       <Text style={styles.noParticipationIcon}>📭</Text>
@@ -473,49 +477,52 @@ const ResultsScreen = () => {
                     </View>
                   )}
                   <View style={styles.statsGrid}>
-                    <View style={styles.statCard}>
-                      <View style={styles.statGradient}>
-                        <Text style={styles.statIcon}>⏰</Text>
-                        <Text style={styles.statLabel}>Duration Cover</Text>
-                        <Text style={styles.statValue}>{selectedResult.performance.timeTaken}</Text>
-                      </View>
-                    </View>
-                    <View style={styles.statCard}>
-                      <View style={styles.statGradient}>
-                        <Text style={styles.statIcon}>🎯</Text>
-                        <Text style={styles.statLabel}>Completed</Text>
-                        <Text style={styles.statValue}>{selectedResult.performance.checkpoints}/{selectedResult.performance.totalCheckpoints}</Text>
-                      </View>
-                    </View>
-                    <View style={styles.statCard}>
-                      <View style={styles.statGradient}>
-                        <Text style={styles.statIcon}>❌</Text>
-                        <Text style={styles.statLabel}>Missed</Text>
-                        <Text style={styles.statValue}>{selectedResult.performance.missedCheckpoints}</Text>
-                      </View>
-                    </View>
+                    {Object.keys(performanceMatrix).map((key, index) => {
+                      // Get icon based on key name with more specific matching
+                      const getIcon = (keyName) => {
+                        const lowerKey = keyName.toLowerCase();
+                        
+                        if (lowerKey.includes('total') && lowerKey.includes('checkpoint') && lowerKey.includes('reached')) return '🎯';
+                        if (lowerKey.includes('total') && lowerKey.includes('points') && lowerKey.includes('earned')) return '💰';
+                        if (lowerKey.includes('event') && lowerKey.includes('time') && lowerKey.includes('deduction')) return '⏱️';
+                        if (lowerKey.includes('overspeed') && lowerKey.includes('time')) return '🚗';
+                        if (lowerKey.includes('overspeed') && lowerKey.includes('penalty')) return '⚡';
+                        if (lowerKey.includes('mandatory') && lowerKey.includes('required')) return '📋';
+                        if (lowerKey.includes('mandatory') && lowerKey.includes('missed')) return '❌';
+                        if (lowerKey.includes('mandatory') && lowerKey.includes('penalty')) return '⛔';
+                        if (lowerKey.includes('total') && lowerKey.includes('deductions')) return '➖';
+                        if (lowerKey.includes('net') && lowerKey.includes('score')) return '🏆';
+                        if (lowerKey.includes('formatted') && lowerKey.includes('time')) return '📅';
+                        
+                        // Fallback for general categories
+                        if (lowerKey.includes('checkpoint')) return '🎯';
+                        if (lowerKey.includes('points') || lowerKey.includes('score')) return '🏅';
+                        if (lowerKey.includes('time')) return '⏰';
+                        if (lowerKey.includes('penalty')) return '❌';
+                        if (lowerKey.includes('mandatory')) return '�';
+                        
+                        return '📊';
+                      };
 
-                    <View style={styles.statCard}>
-                      <View style={styles.statGradient}>
-                        <Text style={styles.statIcon}>⚡</Text>
-                        <Text style={styles.statLabel}>Penalty</Text>
-                        <Text style={styles.statValue}>-{selectedResult.performance.speedPenalty}</Text>
-                      </View>
-                    </View>
-                    <View style={styles.statCard}>
-                      <View style={styles.statGradient}>
-                        <Text style={styles.statIcon}>🏅</Text>
-                        <Text style={styles.statLabel}>Completed Checkpoints</Text>
-                        <Text style={styles.statValue}>{selectedResult.performance.checkpoints}</Text>
-                      </View>
-                    </View>
-                    <View style={styles.statCard}>
-                      <View style={styles.statGradient}>
-                        <Text style={styles.statIcon}>🏆</Text>
-                        <Text style={styles.statLabel}>Total Points</Text>
-                        <Text style={styles.statValue}>{selectedResult.performance.totalPoints}</Text>
-                      </View>
-                    </View>
+                      // Format key name for display (remove parentheses and make readable)
+                      const formatLabel = (keyName) => {
+                        return keyName
+                          .replace(/([A-Z])/g, ' $1') // Add space before capital letters
+                          .replace(/^\s+/, '') // Remove leading space
+                          .replace(/\(.*?\)/g, '') // Remove content in parentheses
+                          .trim();
+                      };
+
+                      return (
+                        <View key={`stat-${index}`} style={styles.statCard}>
+                          <View style={styles.statGradient}>
+                            <Text style={styles.statIcon}>{getIcon(key)}</Text>
+                            <Text style={styles.statLabel}>{formatLabel(key)}</Text>
+                            <Text style={styles.statValue}>{performanceMatrix[key]}</Text>
+                          </View>
+                        </View>
+                      );
+                    })}
                   </View>
                 </View>
                 )}
