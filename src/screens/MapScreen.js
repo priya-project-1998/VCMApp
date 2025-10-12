@@ -44,6 +44,8 @@ const MapScreen = ({ route, navigation }) => {
   const [actionDropdownVisible, setActionDropdownVisible] = useState(false);
   const [elapsedSeconds, setElapsedSeconds] = useState(0); // Will be calculated from event dates
   const [totalEventDuration, setTotalEventDuration] = useState(0); // Total duration in seconds
+  const [remainingSeconds, setRemainingSeconds] = useState(0); // Countdown timer for event duration
+  const [fifteenMinuteWarningGiven, setFifteenMinuteWarningGiven] = useState(false); // Track 15-min warning
   const [currentSpeed, setCurrentSpeed] = useState(0);
   const [modalVisible, setModalVisible] = useState(false);
   const [userRoute, setUserRoute] = useState([]); // Track user route - real user movement path
@@ -123,6 +125,28 @@ const MapScreen = ({ route, navigation }) => {
     }, duration);
   };
  
+
+  // ✅ Initialize countdown timer from duration parameter
+  useEffect(() => {
+    if (duration) {
+      // Parse duration string (e.g., "3:00:00" or "2:30:45") to seconds
+      const parseDurationToSeconds = (durationStr) => {
+        if (!durationStr) return 0;
+        const parts = durationStr.split(':');
+        if (parts.length === 3) {
+          const hours = parseInt(parts[0]) || 0;
+          const minutes = parseInt(parts[1]) || 0;
+          const seconds = parseInt(parts[2]) || 0;
+          return (hours * 3600) + (minutes * 60) + seconds;
+        }
+        return 0;
+      };
+      
+      const totalSeconds = parseDurationToSeconds(duration);
+      setRemainingSeconds(totalSeconds);
+      setTotalEventDuration(totalSeconds);
+    }
+  }, [duration]);
 
   // ✅ Table create
   useEffect(() => {
@@ -822,14 +846,47 @@ useEffect(() => {
     }
   };
 
-  // Countdown timer effect
+  // ✅ Countdown timer effect - decreases from total duration
   useEffect(() => {
-    if (elapsedSeconds <= 0) return;
+    if (remainingSeconds <= 0) return;
+    
     const timer = setInterval(() => {
-      setElapsedSeconds((prev) => (prev > 0 ? prev - 1 : 0));
+      setRemainingSeconds((prev) => {
+        const newRemaining = prev > 0 ? prev - 1 : 0;
+        
+        // ✅ Check for 15-minute warning (900 seconds = 15 minutes)
+        if (newRemaining === 900 && !fifteenMinuteWarningGiven && voiceAlertsEnabled) {
+          setFifteenMinuteWarningGiven(true);
+          // Play simple sound alert instead of voice dialogue
+          try {
+            SystemSoundUtils.playSystemSound(); // System sound for 15-min warning
+            console.log('🔔 15-minute warning alert played');
+          } catch (error) {
+            console.log('Error playing 15-minute warning sound:', error);
+          }
+        }
+        
+        // ✅ Check for event completion (00:00:00)
+        if (newRemaining === 0 && voiceAlertsEnabled) {
+          // Play simple sound alert for event completion
+          try {
+            SystemSoundUtils.playSystemSound(); // System sound for event completion
+            // Add a second alert sound after a brief delay for emphasis
+            setTimeout(() => {
+              SystemSoundUtils.playSystemSound();
+            }, 500);
+            console.log('🏁 Event completion alert played');
+          } catch (error) {
+            console.log('Error playing event completion sound:', error);
+          }
+        }
+        
+        return newRemaining;
+      });
     }, 1000);
+    
     return () => clearInterval(timer);
-  }, [elapsedSeconds]);
+  }, [remainingSeconds, fifteenMinuteWarningGiven, voiceAlertsEnabled]);
 
   // Format seconds to HH:MM:SS
   const formatTime = (secs) => {
@@ -1204,7 +1261,7 @@ useEffect(() => {
               const cpName = cp.checkpoint_name || cp.checkpoint_id;
               // ✅ Enhanced toast message with time and center positioning
               const syncTime = new Date().toLocaleTimeString();
-              const successMessage = `✅ Checkpoint "${cpName}" synced successfully at ${syncTime}`;
+              const successMessage = `Checkpoint "${cpName}" synced successfully at ${syncTime}`;
               
               // ✅ Console log for tracking initial simulation sync toast display
               console.log(`🎯 [startUserMovementSimulation-Initial] Showing sync success toast for checkpoint "${cpName}" (ID: ${cp.checkpoint_id}) at ${syncTime}`);
@@ -1332,7 +1389,7 @@ useEffect(() => {
                 const cpName = cp.checkpoint_name || cp.checkpoint_id;
                 // ✅ Enhanced toast message with time and center positioning
                 const syncTime = new Date().toLocaleTimeString();
-                const successMessage = `✅ Checkpoint "${cpName}" synced successfully at ${syncTime}`;
+                const successMessage = `Checkpoint "${cpName}" synced successfully at ${syncTime}`;
                 
                 // ✅ Console log for tracking simulation sync toast display
                 console.log(`🎯 [startUserMovementSimulation] Showing sync success toast for checkpoint "${cpName}" (ID: ${cp.checkpoint_id}) at ${syncTime}`);
@@ -1382,7 +1439,22 @@ useEffect(() => {
     <View style={styles.container}>
       {/* Top Left Info Bar */}
       <View style={styles.infoBar}>
-        <Text style={styles.infoText}>Time Elapsed: {duration}</Text>
+        <Text style={[
+          styles.infoText,
+          {
+            color: remainingSeconds === 0 ? '#F44336' : remainingSeconds <= 900 ? '#FF5722' : remainingSeconds <= 1800 ? '#FF9800' : '#333',
+            fontWeight: remainingSeconds <= 900 ? 'bold' : 'normal',
+            backgroundColor: remainingSeconds === 0 ? '#FFEBEE' : 'transparent',
+            padding: remainingSeconds === 0 ? 4 : 0,
+            borderRadius: remainingSeconds === 0 ? 4 : 0,
+          }
+        ]}>
+          {remainingSeconds === 0 && '🚨 '}
+          {remainingSeconds <= 900 && remainingSeconds > 0 && '⚠️ '}
+          {remainingSeconds === 0 ? 'EVENT TIME OVER!' : `Time Remaining: ${formatTime(remainingSeconds)}`}
+          {remainingSeconds === 0 && ' 🚨'}
+          {remainingSeconds <= 900 && remainingSeconds > 0 && ' ⚠️'}
+        </Text>
         <Text style={styles.infoText}>Checkpoint: {Object.values(checkpointStatus).filter(s => s.completed).length}/{checkpoints.length}</Text>
         <Text style={[
           styles.infoText,

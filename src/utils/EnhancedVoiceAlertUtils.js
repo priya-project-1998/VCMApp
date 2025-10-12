@@ -28,6 +28,16 @@ class EnhancedVoiceAlertUtils {
       await Tts.setDefaultPitch(1.0); // Normal pitch
       await Tts.setDefaultLanguage('en-US'); // English
       
+      // ✅ Additional TTS settings to prevent system dialogs
+      try {
+        // Set ignoreSilentSwitch to true to ensure TTS works even in silent mode
+        await Tts.setIgnoreSilentSwitch('ignore');
+        // Set duck to mix with other audio sources without system dialogs
+        await Tts.setDucking(true);
+      } catch (settingsError) {
+        console.log('🔊 Some TTS settings not available:', settingsError);
+      }
+      
       // Set up TTS event listeners
       Tts.addEventListener('tts-start', () => {
         this.isSpeaking = true;
@@ -110,7 +120,15 @@ class EnhancedVoiceAlertUtils {
 
       // Start speaking with proper promise handling
       try {
-        await Tts.speak(message);
+        // ✅ Speak without any system UI by using options
+        await Tts.speak(message, {
+          androidParams: {
+            KEY_PARAM_PAN: 0,
+            KEY_PARAM_VOLUME: 1.0,
+            KEY_PARAM_STREAM: 'STREAM_MUSIC'
+          },
+          iosVoiceId: 'com.apple.ttsbundle.siri_female_en-US_compact'
+        });
         console.log('🔊 Speech initiated:', message.substring(0, 30) + '...');
       } catch (speechError) {
         this.isSpeaking = false;
@@ -210,12 +228,9 @@ class EnhancedVoiceAlertUtils {
   testAllAlerts() {
     console.log('🔊 Testing all enhanced voice alerts with actual speech...');
     
-    // Show immediate feedback
-    Alert.alert(
-      '🔊 Enhanced Voice Alert Test',
-      'Testing all 5 voice alerts with actual speech synthesis. Listen for the spoken messages.',
-      [{ text: 'Start Test', onPress: () => this.runTestSequence() }]
-    );
+    // ✅ No Alert dialog - just start test immediately and use console logs
+    console.log('🔊 Enhanced Voice Alert Test: Starting all 5 voice alerts with actual speech synthesis. Listen for the spoken messages.');
+    this.runTestSequence();
   }
 
   // Run the test sequence
@@ -240,11 +255,7 @@ class EnhancedVoiceAlertUtils {
 
     // Final completion message
     setTimeout(() => {
-      Alert.alert(
-        '🔊 Enhanced Voice Test Complete',
-        'All voice alerts with speech synthesis have been tested. You should have heard actual spoken messages.',
-        [{ text: 'Excellent!' }]
-      );
+      console.log('🔊 Enhanced Voice Test Complete: All voice alerts with speech synthesis have been tested. You should have heard actual spoken messages.');
     }, 30000);
   }
 
