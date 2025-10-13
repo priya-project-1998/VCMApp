@@ -25,27 +25,40 @@ export const createTables = () => {
   });
 };
 
-// ✅ Checkpoint save karo (offline bhi hoga)
+// ✅ Checkpoint save karo (offline bhi hoga) - Only if not already exists
 export const saveCheckpoint = (checkpoint) => {
   db.transaction(tx => {
+    // First check if checkpoint already exists for this event
     tx.executeSql(
-      `INSERT INTO checkpoints (
-        event_id, category_id, checkpoint_id, checkpoint_name, checkpoint_point, latitude, longitude, sequence_number, description, synced, time_stamp, status
-      ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)`,
-      [
-        checkpoint.event_id,
-        checkpoint.category_id,
-        checkpoint.checkpoint_id,
-        checkpoint.checkpoint_name,
-        checkpoint.checkpoint_point,
-        checkpoint.latitude,
-        checkpoint.longitude,
-        checkpoint.sequence_number,
-        checkpoint.description,
-        0,
-        checkpoint.time_stamp || '',
-        checkpoint.status || 'not completed'
-      ]
+      `SELECT COUNT(*) as count FROM checkpoints WHERE checkpoint_id = ? AND event_id = ?`,
+      [checkpoint.checkpoint_id, checkpoint.event_id],
+      (txObj, result) => {
+        const count = result.rows.item(0).count;
+        if (count === 0) {
+          // Checkpoint doesn't exist, insert new record
+          tx.executeSql(
+            `INSERT INTO checkpoints (
+              event_id, category_id, checkpoint_id, checkpoint_name, checkpoint_point, latitude, longitude, sequence_number, description, synced, time_stamp, status
+            ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)`,
+            [
+              checkpoint.event_id,
+              checkpoint.category_id,
+              checkpoint.checkpoint_id,
+              checkpoint.checkpoint_name,
+              checkpoint.checkpoint_point,
+              checkpoint.latitude,
+              checkpoint.longitude,
+              checkpoint.sequence_number,
+              checkpoint.description,
+              0,
+              checkpoint.time_stamp || '',
+              checkpoint.status || 'not completed'
+            ]
+          );
+        } else {
+          console.log(`🔄 [saveCheckpoint] Checkpoint "${checkpoint.checkpoint_id}" already exists in database - skipping insert`);
+        }
+      }
     );
   });
 };
@@ -98,6 +111,17 @@ export const getCheckpointById = (checkpoint_id, callback) => {
       `SELECT * FROM checkpoints WHERE checkpoint_id = ?`,
       [checkpoint_id],
       (txObj, { rows: { _array } }) => callback(_array && _array.length > 0 ? _array[0] : null)
+    );
+  });
+};
+
+// ✅ Get all completed checkpoints for a specific event
+export const getCompletedCheckpointsForEvent = (event_id, callback) => {
+  db.transaction(tx => {
+    tx.executeSql(
+      `SELECT * FROM checkpoints WHERE event_id = ? AND status = 'completed'`,
+      [event_id],
+      (txObj, { rows: { _array } }) => callback(_array || [])
     );
   });
 };

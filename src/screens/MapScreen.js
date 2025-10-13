@@ -27,7 +27,8 @@ import {
   saveCheckpoint,
   getPendingCheckpoints,
   markSynced,
-  getCheckpointById, // <-- import the new function
+  getCheckpointById,
+  getCompletedCheckpointsForEvent, // <-- import the new function
 } from "../services/dbService";
 import SoundUtils from '../utils/SoundUtils';
 import VibrationSoundUtils from '../utils/VibrationSoundUtils';
@@ -152,6 +153,26 @@ const MapScreen = ({ route, navigation }) => {
   useEffect(() => {
     createTables();
   }, []);
+
+  // ✅ Load previously completed checkpoints from database
+  useEffect(() => {
+    if (event_id) {
+      getCompletedCheckpointsForEvent(event_id, (completedCheckpoints) => {
+        const previousCheckpointStatus = {};
+        completedCheckpoints.forEach((checkpoint) => {
+          previousCheckpointStatus[checkpoint.checkpoint_id] = {
+            time: checkpoint.time_stamp,
+            completed: true
+          };
+        });
+        
+        if (Object.keys(previousCheckpointStatus).length > 0) {
+          console.log(`🔄 [MapScreen] Loaded ${Object.keys(previousCheckpointStatus).length} previously completed checkpoints for event ${event_id}`);
+          setCheckpointStatus(previousCheckpointStatus);
+        }
+      });
+    }
+  }, [event_id]);
 
   // ✅ Voice Alert: Event Start Announcement
   useEffect(() => {
@@ -572,9 +593,11 @@ useEffect(() => {
             ...prev,
             [cp.checkpoint_id]: { time: reachedTime, completed: true },
           }));
+          
+          // ✅ Only save checkpoint to database once per event
           saveCheckpoint({
-            event_id: cp.event_id,
-            category_id: cp.category_id,
+            event_id: event_id, // Use event_id from route params for consistency
+            category_id: category_id, // Use category_id from route params for consistency
             checkpoint_id: cp.checkpoint_id,
             checkpoint_name: cp.checkpoint_name,
             checkpoint_point: cp.checkpoint_point,
@@ -585,10 +608,11 @@ useEffect(() => {
             time_stamp: reachedTime,
             status: 'completed'
           });
+          
           // Only sync if not already completed
           syncCheckpointToServer(cp.checkpoint_id);
         } else {
-          console.log(`🔄 [checkProximityToCheckpoints] User in range of already synced checkpoint "${cp.checkpoint_name}" (ID: ${cp.checkpoint_id}) - skipping sync`);
+          console.log(`🔄 [checkProximityToCheckpoints] User in range of already synced checkpoint "${cp.checkpoint_name}" (ID: ${cp.checkpoint_id}) - skipping sync and database save`);
         }
       }
     });
