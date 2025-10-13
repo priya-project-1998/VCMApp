@@ -1,331 +1,266 @@
-import { Platform, Alert, Vibration } from 'react-native';
-import Tts from 'react-native-tts';
+import { Platform, NativeModules } from 'react-native';
 
-// Enhanced Voice Alert Utility with actual Text-to-Speech
+// Enhanced Voice Alert Utility with sound for Android only
+// Using native sound module to avoid dependency issues
 class EnhancedVoiceAlertUtils {
   constructor() {
-    this.isEnabled = true;
-    this.lastAnnouncementTime = 0;
-    this.isSpeaking = false;
-    this.ttsReady = false;
+    // Initialize sound objects
+    this.sounds = {};
+    this.isAndroid = Platform.OS === 'android';
     
-    // Initialize Speech settings with delay
-    this.initializeSpeechAsync();
+    // Define the event types
+    this.eventTypes = {
+      EVENT_START: 'event_start',
+      CHECKPOINT: 'checkpoint',
+      EVENT_END: 'event_end',
+      OVER_SPEED: 'over_speed',
+      TIME_FRAME_LIMIT: 'time_frame_limit'
+    };
+    
+    // Pre-load sounds on Android only
+    if (this.isAndroid) {
+      console.log('EnhancedVoiceAlertUtils initialized - using native sound module');
+    }
   }
-
-  // Initialize TTS settings asynchronously
-  async initializeSpeechAsync() {
-    try {
-      // Wait a bit for TTS to be ready
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      // Check if TTS is available
-      const voices = await Tts.voices();
-      console.log('🔊 TTS voices available:', voices.length);
-      
-      // Initialize TTS settings
-      await Tts.setDefaultRate(0.6); // Slightly slower for clarity
-      await Tts.setDefaultPitch(1.0); // Normal pitch
-      await Tts.setDefaultLanguage('en-US'); // English
-      
-      // ✅ Additional TTS settings to prevent system dialogs
+  
+  // Play alert with sound only for Android
+  playAlert(eventType) {
+    // Only play on Android
+    if (!this.isAndroid) return;
+    
+    console.log(`Playing sound alert for: ${eventType}`);
+    
+    // Safe wrapper function that never throws or rejects
+    const safePlay = async (soundName) => {
       try {
-        // Set ignoreSilentSwitch to true to ensure TTS works even in silent mode
-        await Tts.setIgnoreSilentSwitch('ignore');
-        // Set duck to mix with other audio sources without system dialogs
-        await Tts.setDucking(true);
-      } catch (settingsError) {
-        console.log('🔊 Some TTS settings not available:', settingsError);
+        // First safely release any previous sounds
+        await this.release();
+        
+        // After release, play the new sound if module exists
+        if (NativeModules.SoundModule) {
+          try {
+            const result = await NativeModules.SoundModule.playSound(soundName);
+            console.log('Sound played successfully:', result);
+          } catch (playError) {
+            // Just log errors but don't propagate them
+            console.log(`Non-critical error playing sound ${soundName}:`, playError);
+          }
+        }
+      } catch (error) {
+        // This should never happen with our safe release() method, but just in case
+        console.log(`Safely handled error in playAlert sequence:`, error);
       }
-      
-      // Set up TTS event listeners
-      Tts.addEventListener('tts-start', () => {
-        this.isSpeaking = true;
-        console.log('🔊 TTS Started');
-      });
-      
-      Tts.addEventListener('tts-finish', () => {
-        this.isSpeaking = false;
-        console.log('🔊 TTS Finished');
-      });
-      
-      Tts.addEventListener('tts-cancel', () => {
-        this.isSpeaking = false;
-        console.log('🔊 TTS Cancelled');
-      });
-      
-      this.ttsReady = true;
-      console.log('🔊 Enhanced Voice Alert Utils initialized with TTS successfully');
-    } catch (error) {
-      console.log('Error initializing TTS:', error);
-      this.ttsReady = false;
+    };
+    
+    // Convert EVENT_START to event_start format for file names
+    const soundName = eventType.toLowerCase();
+    
+    // Call our safe wrapper
+    safePlay(soundName);
+  }
+  
+  // Event start notification
+  notifyEventStart() {
+    if (this.isAndroid) {
+      console.log('Playing event start alert');
+      this.playAlert(this.eventTypes.EVENT_START);
     }
   }
-
-  // Generic announce method with actual speech
-  announce(message, priority = 'normal') {
-    if (!this.isEnabled) return;
-
-    const now = Date.now();
-    
-    // ✅ Reduced minimum delay for more responsive alerts
-    const minDelay = priority === 'high' ? 100 : 1000; // Reduced delays
-    if (now - this.lastAnnouncementTime < minDelay && priority !== 'high') {
-      console.log('Voice alert skipped (too frequent):', message);
-      return;
+  
+  // Checkpoint reached notification
+  notifyCheckpoint() {
+    if (this.isAndroid) {
+      console.log('Playing checkpoint alert');
+      this.playAlert(this.eventTypes.CHECKPOINT);
     }
-
-    this.lastAnnouncementTime = now;
-
-    // Console log for debugging
-    console.log(`🔊 [ENHANCED VOICE ALERT ${priority.toUpperCase()}]: ${message}`);
-
-    // ✅ Stop any current speech immediately before new announcement
-    if (this.isSpeaking) {
-      this.forceStop();
-    }
-
-    // Speak the message
-    this.speakMessage(message, priority);
-    
-    // Add vibration for tactile feedback
-    this.addVibrationFeedback(priority);
   }
-
-  // Speak the message using TTS
-  async speakMessage(message, priority = 'normal') {
-    try {
-      // Check if TTS is ready
-      if (!this.ttsReady) {
-        console.log('🔊 TTS not ready yet, using fallback');
-        this.fallbackAnnouncement(message, priority);
+  
+  // Event end notification
+  notifyEventEnd() {
+    if (this.isAndroid) {
+      console.log('Playing event end alert');
+      this.playAlert(this.eventTypes.EVENT_END);
+    }
+  }
+  
+  // Over speed notification
+  notifyOverSpeed() {
+    if (this.isAndroid) {
+      console.log('Playing over speed alert');
+      this.playAlert(this.eventTypes.OVER_SPEED);
+    }
+  }
+  
+  // Time frame limit notification
+  notifyTimeFrameLimit() {
+    if (this.isAndroid) {
+      console.log('Playing time frame limit alert');
+      this.playAlert(this.eventTypes.TIME_FRAME_LIMIT);
+    }
+  }
+  
+  // Release resources when app is closing or component unmounts
+  release() {
+    // Return a promise for proper chaining
+    return new Promise((resolve) => {
+      if (!this.isAndroid) {
+        // Resolve immediately on non-Android platforms
+        resolve("Not on Android platform");
         return;
       }
-
-      // ✅ Force stop any current speech immediately
-      if (this.isSpeaking) {
-        await Tts.stop();
-        this.isSpeaking = false;
-      }
-
-      // Configure speech rate and pitch based on priority
-      const rate = priority === 'high' ? 0.8 : 0.7; // ✅ Slightly faster for more responsive feedback
-      const pitch = priority === 'high' ? 1.2 : 1.0; // Higher pitch for urgent messages
-
-      // Set rate and pitch for this message
-      await Tts.setDefaultRate(rate);
-      await Tts.setDefaultPitch(pitch);
-
-      this.isSpeaking = true;
-
-      // Start speaking with proper promise handling
-      try {
-        // ✅ Speak without any system UI by using options
-        await Tts.speak(message, {
-          androidParams: {
-            KEY_PARAM_PAN: 0,
-            KEY_PARAM_VOLUME: 1.0,
-            KEY_PARAM_STREAM: 'STREAM_MUSIC'
-          },
-          iosVoiceId: 'com.apple.ttsbundle.siri_female_en-US_compact'
-        });
-        console.log('🔊 Speech initiated:', message.substring(0, 30) + '...');
-      } catch (speechError) {
-        this.isSpeaking = false;
-        console.log('🔊 Speech error:', speechError);
-        
-        // Fallback to basic announcement if TTS fails
-        this.fallbackAnnouncement(message, priority);
-      }
-
-    } catch (error) {
-      console.log('Error in speakMessage:', error);
-      this.isSpeaking = false;
       
-      // Fallback to basic announcement
-      this.fallbackAnnouncement(message, priority);
-    }
-  }
-
-  // Fallback announcement if TTS fails
-  fallbackAnnouncement(message, priority) {
-    console.log(`🔊 [FALLBACK VOICE ALERT ${priority.toUpperCase()}]: ${message}`);
-    
-    // ✅ No persistent Alert dialog - just console log
-    // Alert dialogs stay on screen and don't auto-dismiss, so we avoid them
-    if (__DEV__) {
-      console.log(`🔊 [DEV FALLBACK]: ${message}`);
-    }
-  }
-
-  // Add vibration feedback based on priority
-  addVibrationFeedback(priority = 'normal') {
-    try {
-      if (priority === 'high') {
-        // Urgent pattern for high priority alerts
-        Vibration.vibrate([0, 300, 100, 300, 100, 600]);
-      } else {
-        // Gentle pattern for normal alerts
-        Vibration.vibrate([0, 150, 50, 150]);
+      // Stop any sound playback
+      if (!NativeModules.SoundModule) {
+        // No sound module available
+        resolve("SoundModule not available");
+        return;
       }
-    } catch (error) {
-      console.log('Error with vibration:', error);
-    }
+      
+      // Safe wrapper for stopSound that never rejects
+      const safeStopSound = () => {
+        // Create a timeout to ensure we always resolve
+        const timeoutId = setTimeout(() => {
+          console.warn('SoundModule.stopSound timed out, resolving anyway');
+          resolve("Timeout - resolved anyway");
+        }, 1000); // 1 second timeout
+        
+        try {
+          // Call stopSound and handle the Promise safely
+          NativeModules.SoundModule.stopSound()
+            .then(result => {
+              clearTimeout(timeoutId);
+              console.log('Sound stopped successfully:', result);
+              resolve(result);
+            })
+            .catch(() => {
+              // This should never happen now with our improved native module
+              clearTimeout(timeoutId);
+              console.log('Safely handled stopSound rejection');
+              resolve("Handled stopSound rejection");
+            });
+        } catch (err) {
+          // Handle any synchronous errors
+          clearTimeout(timeoutId);
+          console.log('Safely handled stopSound exception:', err);
+          resolve("Handled stopSound exception");
+        }
+      };
+      
+      // Call our safe wrapper
+      safeStopSound();
+    });
   }
-
-  // 1. Event Start Voice Alert
-  announceEventStart(eventName) {
-    const message = `This event has started. Welcome to ${eventName || 'your event'}. Drive safely and follow the checkpoints.`;
-    this.announce(message, 'high');
+  
+  // Force stop any ongoing sound playback
+  forceStop() {
+    if (!this.isAndroid) return Promise.resolve("Not on Android platform");
+    return this.release();
   }
-
-  // 2. Checkpoint Completion Voice Alert  
-  announceCheckpointComplete(checkpointName, completedCount, totalCount) {
-    const message = `Checkpoint ${checkpointName || 'reached'} completed successfully. ${completedCount} of ${totalCount} checkpoints finished.`;
-    this.announce(message, 'normal');
+  
+  // Stop speaking (alias for release)
+  stopSpeaking() {
+    if (!this.isAndroid) return Promise.resolve("Not on Android platform");
+    return this.release();
   }
-
-  // 3. Overspeed Voice Alert
-  announceOverspeed(currentSpeed, speedLimit) {
-    const message = `You are driving at ${currentSpeed} kilometers per hour. Speed limit is ${speedLimit}. Please reduce your speed immediately.`;
-    this.announce(message, 'high');
+  
+  // Set volume level (0.0 - 1.0)
+  setVolume(volume = 1.0) {
+    return new Promise((resolve) => {
+      if (!this.isAndroid) {
+        resolve("Not on Android platform");
+        return;
+      }
+      
+      if (!NativeModules.SoundModule) {
+        resolve("SoundModule not available");
+        return;
+      }
+      
+      // Safe wrapper for setVolume that never rejects
+      const safeSetVolume = () => {
+        // Create a timeout to ensure we always resolve
+        const timeoutId = setTimeout(() => {
+          console.log('setVolume timed out, resolving anyway');
+          resolve("Timeout - resolved anyway");
+        }, 1000); // 1 second timeout
+        
+        try {
+          // Ensure volume is between 0.0 and 1.0
+          const safeVolume = Math.max(0.0, Math.min(1.0, volume));
+          
+          NativeModules.SoundModule.setVolume(safeVolume)
+            .then((result) => {
+              clearTimeout(timeoutId);
+              console.log(`Volume set to ${safeVolume}`);
+              resolve(result);
+            })
+            .catch((error) => {
+              clearTimeout(timeoutId);
+              console.log('Safely handled setVolume rejection:', error);
+              resolve("Handled setVolume rejection");
+            });
+        } catch (err) {
+          clearTimeout(timeoutId);
+          console.log('Safely handled setVolume exception:', err);
+          resolve("Handled setVolume exception");
+        }
+      };
+      
+      // Call our safe wrapper
+      safeSetVolume();
+    });
   }
-
-  // 4. Event Finish Voice Alert
-  announceEventFinish(totalCheckpoints, duration) {
-    const message = `Congratulations! Event completed successfully. You have finished all ${totalCheckpoints} checkpoints. Well done and drive safely.`;
-    this.announce(message, 'high');
+  
+  // Compatibility methods with existing voice utils
+  announceEventStart() {
+    this.notifyEventStart();
   }
-
-  // 5. Time Limit Warning (15 minutes before)
-  announceTimeWarning(remainingMinutes) {
-    const message = `Time alert! You have ${remainingMinutes} minutes remaining to complete the event. Please continue to the next checkpoint.`;
-    this.announce(message, 'high');
+  
+  announceEventFinish() {
+    this.notifyEventEnd();
   }
-
-  // Additional helpful announcements
-  announceLocationFound() {
-    const message = 'Current location found successfully.';
-    this.announce(message, 'normal');
-  }
-
-  announceLocationError() {
-    const message = 'Unable to get your current location. Please check your GPS settings.';
-    this.announce(message, 'normal');
-  }
-
+  
   announceEventAborted() {
-    const message = 'Event has been aborted. Thank you for participating.';
-    this.announce(message, 'high');
+    this.notifyEventEnd();
   }
-
-  announceSOSActivated() {
-    const message = 'Emergency S.O.S activated. Calling event organizer.';
-    this.announce(message, 'high');
+  
+  announceCheckpointComplete() {
+    this.notifyCheckpoint();
   }
-
-  // Test all voice alerts with actual speech
+  
+  announceOverspeed() {
+    this.notifyOverSpeed();
+  }
+  
+  announceTimeWarning() {
+    this.notifyTimeFrameLimit();
+  }
+  
   testAllAlerts() {
-    console.log('🔊 Testing all enhanced voice alerts with actual speech...');
+    if (!this.isAndroid) return;
     
-    // ✅ No Alert dialog - just start test immediately and use console logs
-    console.log('🔊 Enhanced Voice Alert Test: Starting all 5 voice alerts with actual speech synthesis. Listen for the spoken messages.');
-    this.runTestSequence();
+    console.log('Testing all alerts');
+    setTimeout(() => this.notifyEventStart(), 0);
+    setTimeout(() => this.notifyCheckpoint(), 2000);
+    setTimeout(() => this.notifyOverSpeed(), 4000);
+    setTimeout(() => this.notifyTimeFrameLimit(), 6000);
+    setTimeout(() => this.notifyEventEnd(), 8000);
   }
-
-  // Run the test sequence
-  runTestSequence() {
-    this.announceEventStart('Test Event');
-    
-    setTimeout(() => {
-      this.announceCheckpointComplete('Test Checkpoint Alpha', 1, 5);
-    }, 6000);
-    
-    setTimeout(() => {
-      this.announceOverspeed(80, 60);
-    }, 12000);
-    
-    setTimeout(() => {
-      this.announceTimeWarning(15);
-    }, 18000);
-    
-    setTimeout(() => {
-      this.announceEventFinish(5, '1 hour 30 minutes');
-    }, 24000);
-
-    // Final completion message
-    setTimeout(() => {
-      console.log('🔊 Enhanced Voice Test Complete: All voice alerts with speech synthesis have been tested. You should have heard actual spoken messages.');
-    }, 30000);
-  }
-
-  // Stop current speech immediately
-  async stopSpeaking() {
-    try {
-      if (this.ttsReady && this.isSpeaking) {
-        await Tts.stop();
-        // Force immediate stop
-        this.isSpeaking = false;
-      }
-      console.log('🔊 Speech stopped immediately');
-    } catch (error) {
-      console.log('Error stopping speech:', error);
-      this.isSpeaking = false;
-    }
-  }
-
-  // ✅ Additional stop method for immediate response
-  async stop() {
-    await this.stopSpeaking();
-  }
-
-  // ✅ Force stop all TTS activity immediately
-  async forceStop() {
-    try {
-      this.isSpeaking = false;
-      if (this.ttsReady) {
-        await Tts.stop();
-      }
-      console.log('🔊 All speech activity force stopped');
-    } catch (error) {
-      console.log('Error in force stop:', error);
-      this.isSpeaking = false;
-    }
-  }
-
-  // Enable/disable voice alerts
-  setEnabled(enabled) {
-    this.isEnabled = enabled;
-    if (!enabled) {
-      this.stopSpeaking();
-    }
-    console.log(`🔊 Enhanced voice alerts ${enabled ? 'enabled' : 'disabled'}`);
-  }
-
-  // Get current speaking status
-  isSpeakingNow() {
-    return this.isSpeaking;
-  }
-
-  // Cleanup method
-  async cleanup() {
-    // ✅ Force stop all speech immediately
-    await this.forceStop();
-    
-    // Remove TTS event listeners
-    try {
-      if (this.ttsReady) {
-        Tts.removeAllListeners('tts-start');
-        Tts.removeAllListeners('tts-finish');
-        Tts.removeAllListeners('tts-cancel');
-      }
-    } catch (error) {
-      console.log('Error removing TTS listeners:', error);
-    }
-    
-    this.ttsReady = false;
-    this.isSpeaking = false;
-    console.log('🔊 Enhanced Voice Alert Utils cleaned up completely');
+  
+  // Alias for release method to match the function call in MapScreen.js
+  cleanup() {
+    // This method should never reject, it always resolves
+    return this.release()
+      .then(result => {
+        console.log('Sound cleanup completed:', result);
+        return result;
+      })
+      .catch(() => {
+        // This should never happen with our safe release implementation
+        // but we add this as an extra safety layer
+        console.log('Safely handled unexpected error during cleanup');
+        return "Safely handled cleanup error";
+      });
   }
 }
 
