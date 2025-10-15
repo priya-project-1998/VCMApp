@@ -2293,17 +2293,54 @@ useEffect(() => {
         }}
       >
         <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: 'rgba(0,0,0,0.35)' }}>
-          <View style={{ backgroundColor: '#fff', borderRadius: 18, padding: 32, alignItems: 'center', width: '80%' }}>
-            <Text style={{ fontSize: 22, fontWeight: 'bold', color: '#185a9d', marginBottom: 18, textAlign: 'center' }}>
+          <View style={{ backgroundColor: '#fff', borderRadius: 18, padding: 24, alignItems: 'center', width: '90%', maxHeight: '90%' }}>
+            <Text style={{ fontSize: 22, fontWeight: 'bold', color: '#185a9d', marginBottom: 12, textAlign: 'center' }}>
               Event is completed!
             </Text>
             <Text style={{ fontSize: 16, color: '#333', marginBottom: 12, textAlign: 'center' }}>
               You can go back to the home page.
             </Text>
+            
+            {/* Checkpoint History Details */}
+            <View style={{ width: '100%', marginBottom: 12 }}>
+              <Text style={{ fontSize: 16, fontWeight: 'bold', color: '#185a9d', marginBottom: 8, textAlign: 'center' }}>
+                Checkpoint History
+              </Text>
+              
+              {/* Header Row */}
+              <View style={styles.modalHeaderRow}>
+                <Text style={[styles.modalHeaderCell, styles.modalHeaderCellLeft]}>Sr.</Text>
+                <Text style={[styles.modalHeaderCell, styles.modalHeaderCellCenter]}>Checkpoint</Text>
+                <Text style={[styles.modalHeaderCell, styles.modalHeaderCellTimeRight]}>Time</Text>
+                <Text style={[styles.modalHeaderCell, styles.modalHeaderCellRight]}>Status</Text>
+              </View>
+              
+              <ScrollView style={{ maxHeight: 200, width: '100%' }}>
+                {checkpoints.map((cp, idx) => {
+                  const statusObj = checkpointStatus[cp.checkpoint_id];
+                  return (
+                    <View
+                      key={cp.checkpoint_id || idx}
+                      style={[styles.modalRow, idx % 2 === 0 ? styles.modalRowEven : styles.modalRowOdd]}
+                    >
+                      <Text style={[styles.modalCell, styles.modalCellLeft]}>{idx + 1}</Text>
+                      <Text style={[styles.modalCell, styles.modalCellCenter]}>{cp.checkpoint_name || `Checkpoint ${idx + 1}`}</Text>
+                      <Text style={[styles.modalCell, styles.modalCellRight]}>{statusObj?.time || '-'}</Text>
+                      <Text style={[styles.modalCell, styles.modalCellRight]}>{statusObj?.completed ? 'Completed' : 'Not Completed'}</Text>
+                    </View>
+                  );
+                })}
+              </ScrollView>
+              
+              <Text style={{ fontSize: 14, fontWeight: 'bold', color: '#555', marginTop: 8, textAlign: 'center' }}>
+                Total Checkpoints: {checkpoints.length}
+              </Text>
+            </View>
+            
             <Text style={{ 
               fontSize: 14, 
               color: okayTimeout <= 5 ? '#F44336' : '#FF5722', 
-              marginBottom: 28, 
+              marginBottom: 16, 
               textAlign: 'center', 
               fontWeight: 'bold',
               backgroundColor: okayTimeout <= 5 ? '#FFEBEE' : 'transparent',
@@ -2312,6 +2349,7 @@ useEffect(() => {
             }}>
               {okayTimeout <= 5 ? '⚠️ ' : ''}Auto-closing in {okayTimeout} seconds{okayTimeout <= 5 ? ' ⚠️' : ''}
             </Text>
+            
             <TouchableOpacity
               style={{ 
                 backgroundColor: okayTimeout <= 5 ? '#1976D2' : '#2196F3', 
