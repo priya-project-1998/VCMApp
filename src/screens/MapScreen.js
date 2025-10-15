@@ -79,6 +79,7 @@ const MapScreen = ({ route, navigation }) => {
   const [timeWarningGiven, setTimeWarningGiven] = useState(false);
   const [eventEndTime, setEventEndTime] = useState(null);
   const [useSimpleVoiceAlerts, setUseSimpleVoiceAlerts] = useState(true); // Default to simple alerts
+  const [okayTimeout, setOkayTimeout] = useState(30); // 30 second countdown for "Okay" button
   const { checkpoints: paramCheckpoints, category_id, event_id, kml_path, color, event_organizer_no, speed_limit, event_start_date, event_end_date,duration } = route.params || {};
   const checkpoints = Array.isArray(paramCheckpoints) ? paramCheckpoints : [];
 
@@ -713,6 +714,16 @@ useEffect(() => {
     setRandomAbortCode(code);
     return code;
   };
+  
+  // ✅ Handle completed event navigation
+  const handleEventCompletion = () => {
+    setEventCompletedModal(false);
+    // Reset navigation stack to prevent going back to map screen
+    navigation.reset({
+      index: 0,
+      routes: [{ name: 'Drawer', params: { screen: 'Dashboard' } }],
+    });
+  };
 
   // ✅ SOS Emergency Call Function
   const handleSOSCall = async () => {
@@ -978,6 +989,11 @@ useEffect(() => {
   // Handle back button with confirmation
   useEffect(() => {
     const onBackPress = () => {
+      // If event completed modal is visible, don't allow back button to dismiss it
+      if (eventCompletedModal) {
+        return true; // Prevent default back
+      }
+      
       Alert.alert(
         "Close Map",
         "Do you want to close the map and save/sync all checkpoint data till you reached?",
@@ -1000,7 +1016,7 @@ useEffect(() => {
     };
     BackHandler.addEventListener("hardwareBackPress", onBackPress);
     return () => BackHandler.removeEventListener("hardwareBackPress", onBackPress);
-  }, []);
+  }, [eventCompletedModal]);
 
   // Check if all checkpoints are completed
   useEffect(() => {
@@ -1013,9 +1029,28 @@ useEffect(() => {
         getVoiceAlertUtils().announceEventFinish(checkpoints.length, duration || 'unknown duration');
       }
       
+      // Reset the countdown to 30 seconds
+      setOkayTimeout(30);
       setEventCompletedModal(true);
     }
-  }, [checkpointStatus, checkpoints, voiceAlertsEnabled, duration]);
+  }, [checkpointStatus, checkpoints, voiceAlertsEnabled, duration, setOkayTimeout, setEventCompletedModal]);
+  
+  // Handle auto-dismiss countdown for event completed modal
+  useEffect(() => {
+    let timer;
+    if (eventCompletedModal && okayTimeout > 0) {
+      timer = setTimeout(() => {
+        setOkayTimeout(prevTime => prevTime - 1);
+      }, 1000);
+    } else if (eventCompletedModal && okayTimeout === 0) {
+      // Auto-dismiss and navigate to home when timer reaches 0
+      handleEventCompletion();
+    }
+    
+    return () => {
+      if (timer) clearTimeout(timer);
+    };
+  }, [eventCompletedModal, okayTimeout]);
 
   // Cleanup watch position on unmount
   useEffect(() => {
@@ -2252,26 +2287,43 @@ useEffect(() => {
         visible={eventCompletedModal}
         transparent={true}
         animationType="fade"
-        onRequestClose={() => {}}
+        onRequestClose={() => {
+          // Prevent modal from closing on back button
+          return true;
+        }}
       >
         <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: 'rgba(0,0,0,0.35)' }}>
           <View style={{ backgroundColor: '#fff', borderRadius: 18, padding: 32, alignItems: 'center', width: '80%' }}>
             <Text style={{ fontSize: 22, fontWeight: 'bold', color: '#185a9d', marginBottom: 18, textAlign: 'center' }}>
               Event is completed!
             </Text>
-            <Text style={{ fontSize: 16, color: '#333', marginBottom: 28, textAlign: 'center' }}>
+            <Text style={{ fontSize: 16, color: '#333', marginBottom: 12, textAlign: 'center' }}>
               You can go back to the home page.
             </Text>
+            <Text style={{ 
+              fontSize: 14, 
+              color: okayTimeout <= 5 ? '#F44336' : '#FF5722', 
+              marginBottom: 28, 
+              textAlign: 'center', 
+              fontWeight: 'bold',
+              backgroundColor: okayTimeout <= 5 ? '#FFEBEE' : 'transparent',
+              padding: okayTimeout <= 5 ? 5 : 0,
+              borderRadius: 4
+            }}>
+              {okayTimeout <= 5 ? '⚠️ ' : ''}Auto-closing in {okayTimeout} seconds{okayTimeout <= 5 ? ' ⚠️' : ''}
+            </Text>
             <TouchableOpacity
-              style={{ backgroundColor: '#2196F3', paddingVertical: 12, paddingHorizontal: 38, borderRadius: 22 }}
-              onPress={() => {
-                setEventCompletedModal(false);
-                // Reset navigation stack to prevent going back to map
-                navigation.reset({
-                  index: 0,
-                  routes: [{ name: 'Drawer', params: { screen: 'Dashboard' } }],
-                });
+              style={{ 
+                backgroundColor: okayTimeout <= 5 ? '#1976D2' : '#2196F3', 
+                paddingVertical: 12, 
+                paddingHorizontal: 38, 
+                borderRadius: 22,
+                elevation: okayTimeout <= 5 ? 8 : 4,
+                transform: [{ scale: okayTimeout <= 5 ? 1.05 : 1 }],
+                borderWidth: okayTimeout <= 5 ? 2 : 0,
+                borderColor: '#fff'
               }}
+              onPress={handleEventCompletion}
             >
               <Text style={{ color: '#fff', fontWeight: 'bold', fontSize: 18 }}>Okay</Text>
             </TouchableOpacity>
