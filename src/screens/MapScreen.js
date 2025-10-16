@@ -27,7 +27,9 @@ import {
   saveCheckpoint,
   getPendingCheckpoints,
   markSynced,
+  updateCheckpoint,
   getCheckpointById,
+  checkSyncStatus,
   getCompletedCheckpointsForEvent, // <-- import the new function
 } from "../services/dbService";
 import SoundUtils from '../utils/SoundUtils';
@@ -283,9 +285,37 @@ useEffect(() => {
           }
 
           console.log("📤 Sync response:", data);
-
+          console.log(`🔄 [saveCheckpoint] 2nd "${id}"`);
           if (data && data.status === "success") {
-            markSynced(item.id);
+            // Use updated markSynced method with event_id and checkpoint_id
+            console.log(`🔄 [saveCheckpoint] item.id "${item.id}"`);
+            //markSynced(item.id, item.event_id, item.checkpoint_id);
+            
+            // Also update checkpoint data to reflect sync status
+            updateCheckpoint({
+              ...item,
+              synced: 1,
+              status: 'completed'
+            });
+            
+            console.log(`✅ [NetInfo Sync] Successfully updated checkpoint "${item.checkpoint_id}" in database for event "${item.event_id}"`);
+            
+            // Update UI state if the checkpoint belongs to current event
+            if (item.event_id === event_id) {
+              // Update marker colors
+              setMarkerColors((prev) => ({ ...prev, [item.checkpoint_id]: '#185a9d' }));
+              
+              // Update checkpoint status in state if not already completed
+              if (!checkpointStatus[item.checkpoint_id]?.completed) {
+                setCheckpointStatus((prev) => ({
+                  ...prev,
+                  [item.checkpoint_id]: { 
+                    time: item.time_stamp || new Date().toLocaleTimeString(), 
+                    completed: true 
+                  },
+                }));
+              }
+            }
           }
         } catch (err) {
           console.log("❌ Sync failed for checkpoint:", item.checkpoint_id, err);
@@ -550,7 +580,31 @@ useEffect(() => {
         const successMessage = `Checkpoint "${cpName}" synced successfully at ${syncTime}`;
         
         // ✅ Console log for tracking sync toast display
-        console.log(`🎯 [syncCheckpointToServer] Showing sync success toast for checkpoint "${cpName}" (ID: ${checkpointId}) at ${syncTime}`);
+        console.log(`🎯 [syncCheckpointToServer] Showing sync success toast for checkpoint 1 "${cpName}" (ID: ${checkpointId}) at ${syncTime}`);
+        console.log(`🔄 [saveCheckpoint] 5th "${cpName}"`);
+
+        
+
+        // ✅ Update checkpoint in database to mark it as synceds
+        getCheckpointById(checkpointId, (checkpointData) => {
+          if (checkpointData) {
+            // Mark specific event's checkpoint as synced using the new method
+            //markSynced(checkpointData.id, event_id, checkpointId);
+            console.log(`🔄 [saveCheckpoint] checkpointData.id "${checkpointData.id}"`)
+            //Also update the checkpoint data in the database with synced status
+            // updateCheckpoint({
+            //   ...checkpointData,
+            //   synced: 1,
+            //   event_id: event_id,
+            //   status: 'completed',
+            //   time_stamp: syncTime
+            // });
+            
+            console.log(`✅ [syncCheckpointToServer] Successfully updated checkpoint "${checkpointId}" database record for event "${event_id}"`);
+          } else {
+            console.log(`❌ [syncCheckpointToServer] Could not find checkpoint "${checkpointId}" in database`);
+          }
+        });
         
         // ✅ Voice Alert for Checkpoint Completion
         if (voiceAlertsEnabled) {
@@ -1272,7 +1326,7 @@ useEffect(() => {
         : 10;
       
       if (dist < checkpointRadius && !checkpointStatus[cp.checkpoint_id]?.completed && !syncedCheckpoints.has(cp.checkpoint_id)) {
-        console.log(`🎮 [startUserMovementSimulation] Initial position reached checkpoint "${cp.checkpoint_name}" (ID: ${cp.checkpoint_id}) - distance: ${dist.toFixed(2)}m`);
+        //console.log(`🎮 [startUserMovementSimulation] Initial position reached checkpoint "${cp.checkpoint_name}" (ID: ${cp.checkpoint_id}) - distance: ${dist.toFixed(2)}m`);
         
         // ✅ Add to local tracking immediately
         syncedCheckpoints.add(cp.checkpoint_id);
@@ -1323,7 +1377,7 @@ useEffect(() => {
               const successMessage = `Checkpoint "${cpName}" synced successfully at ${syncTime}`;
               
               // ✅ Console log for tracking initial simulation sync toast display
-              console.log(`🎯 [startUserMovementSimulation-Initial] Showing sync success toast for checkpoint "${cpName}" (ID: ${cp.checkpoint_id}) at ${syncTime}`);
+              console.log(`🎯 [startUserMovementSimulation-Initial] Showing sync success toast for checkpoint 2 "${cpName}" (ID: ${cp.checkpoint_id}) at ${syncTime}`);
               
               showCenterToast(successMessage, 'success');
             } else {
@@ -1450,8 +1504,18 @@ useEffect(() => {
                 const syncTime = new Date().toLocaleTimeString();
                 const successMessage = `Checkpoint "${cpName}" synced successfully at ${syncTime}`;
                 
+                markSynced(cp.checkpoint_id, event_id, cp.checkpoint_id);
+                checkSyncStatus( event_id, cp.checkpoint_id);
+                // updateCheckpoint({
+                //   ...checkpointData,
+                //   synced: 1,
+                //   event_id: event_id,
+                //   status: 'completed',
+                //   time_stamp: syncTime
+                // });
+                
                 // ✅ Console log for tracking simulation sync toast display
-                console.log(`🎯 [startUserMovementSimulation] Showing sync success toast for checkpoint "${cpName}" (ID: ${cp.checkpoint_id}) at ${syncTime}`);
+                console.log(`🎯 [startUserMovementSimulation] Showing sync success toast for checkpoint 3 "${cpName}" (ID: ${cp.checkpoint_id}) at ${syncTime}`);
                 
                 showCenterToast(successMessage, 'success');
               } else {
@@ -2091,6 +2155,8 @@ useEffect(() => {
                   time_stamp: reachedTime,
                   status: 'completed'
                 });
+                markSynced(cp.checkpoint_id, event_id, cp.checkpoint_id);
+                checkSyncStatus( event_id, selectedCheckpointId);
                 // Print local DB log for this checkpoint after saving
                 setTimeout(() => {
                   getCheckpointById(selectedCheckpointId, (checkpointData) => {
@@ -2106,7 +2172,7 @@ useEffect(() => {
                 const successMessage = `Checkpoint "${cpName}" synced successfully at ${syncTime}`;
                 
                 // ✅ Console log for tracking test button sync toast display
-                console.log(`🎯 [TestButton] Showing sync success toast for checkpoint "${cpName}" (ID: ${selectedCheckpointId}) at ${syncTime}`);
+                console.log(`🎯 [TestButton] Showing sync success toast for checkpoint 4 "${cpName}" (ID: ${selectedCheckpointId}) at ${syncTime}`);
                 
                 showCenterToast(successMessage, 'success');
               } else {
