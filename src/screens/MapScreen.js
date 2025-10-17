@@ -549,8 +549,6 @@ useEffect(() => {
         const syncTime = new Date().toLocaleTimeString();
         const successMessage = `Checkpoint "${cpName}" synced successfully at ${syncTime}`;
         
-        markSynced(checkpointId, event_id, checkpointId);
-        checkSyncStatus( event_id, checkpointId);
         // ✅ Console log for tracking sync toast display
         console.log(`🎯 [syncCheckpointToServer] Showing sync success toast for checkpoint "${cpName}" (ID: ${checkpointId}) at ${syncTime}`);
         
@@ -1323,8 +1321,6 @@ useEffect(() => {
               // ✅ Enhanced toast message with time and center positioning
               const syncTime = new Date().toLocaleTimeString();
               const successMessage = `Checkpoint "${cpName}" synced successfully at ${syncTime}`;
-              markSynced(cp.checkpoint_id, event_id, cp.checkpoint_id);
-              checkSyncStatus( event_id, cp.checkpoint_id);
               
               // ✅ Console log for tracking initial simulation sync toast display
               console.log(`🎯 [startUserMovementSimulation-Initial] Showing sync success toast for checkpoint "${cpName}" (ID: ${cp.checkpoint_id}) at ${syncTime}`);
@@ -2095,6 +2091,8 @@ useEffect(() => {
                   time_stamp: reachedTime,
                   status: 'completed'
                 });
+                markSynced(cp.checkpoint_id, event_id, cp.checkpoint_id);
+                checkSyncStatus( event_id, selectedCheckpointId);
                 // Print local DB log for this checkpoint after saving
                 setTimeout(() => {
                   getCheckpointById(selectedCheckpointId, (checkpointData) => {
