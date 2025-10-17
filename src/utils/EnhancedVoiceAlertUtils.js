@@ -28,7 +28,7 @@ class EnhancedVoiceAlertUtils {
     // Only play on Android
     if (!this.isAndroid) return;
     
-    //console.log(`Playing sound alert for: ${eventType}`);
+    console.log(`Playing sound alert for: ${eventType}`);
     
     // Safe wrapper function that never throws or rejects
     const safePlay = async (soundName) => {
@@ -40,7 +40,7 @@ class EnhancedVoiceAlertUtils {
         if (NativeModules.SoundModule) {
           try {
             const result = await NativeModules.SoundModule.playSound(soundName);
-            //console.log('Sound played successfully:', result);
+            console.log('Sound played successfully:', result);
           } catch (playError) {
             // Just log errors but don't propagate them
             console.log(`Non-critical error playing sound ${soundName}:`, playError);
@@ -62,7 +62,7 @@ class EnhancedVoiceAlertUtils {
   // Event start notification
   notifyEventStart() {
     if (this.isAndroid) {
-      //console.log('Playing event start alert');
+      console.log('Playing event start alert');
       this.playAlert(this.eventTypes.EVENT_START);
     }
   }
@@ -86,7 +86,7 @@ class EnhancedVoiceAlertUtils {
   // Over speed notification
   notifyOverSpeed() {
     if (this.isAndroid) {
-      //console.log('Playing over speed alert');
+      console.log('Playing over speed alert');
       this.playAlert(this.eventTypes.OVER_SPEED);
     }
   }
@@ -129,7 +129,7 @@ class EnhancedVoiceAlertUtils {
           NativeModules.SoundModule.stopSound()
             .then(result => {
               clearTimeout(timeoutId);
-              //console.log('Sound stopped successfully:', result);
+              console.log('Sound stopped successfully:', result);
               resolve(result);
             })
             .catch(() => {
