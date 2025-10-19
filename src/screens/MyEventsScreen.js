@@ -259,7 +259,7 @@ export default function MyEventsScreen({ navigation }) {
           <Text style={styles.headerBackIcon}>←</Text>
         </TouchableOpacity>
         <Text style={styles.headerTitle}>My Events</Text>
-        <NotificationBell style={{ marginLeft: 'auto' }} />
+        {/* <NotificationBell style={{ marginLeft: 'auto' }} /> */}
       </View>
 
       {myEvents.length > 0 && (

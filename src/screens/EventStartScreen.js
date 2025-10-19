@@ -189,7 +189,7 @@ export default function EventStartScreen({ navigation, route }) {
             <Text style={styles.headerBackIcon}>←</Text>
           </TouchableOpacity>
           <Text style={styles.headerTitle}>Event Start</Text>
-          <NotificationBell style={{ marginLeft: 'auto' }} />
+          {/* <NotificationBell style={{ marginLeft: 'auto' }} /> */}
         </View>
 
         {/* Banner/Icon */}
