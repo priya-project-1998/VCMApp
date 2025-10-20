@@ -44,6 +44,38 @@ export default function EventStartScreen({ navigation, route }) {
   const [startPressed, setStartPressed] = useState(false);
   const [startMessage, setStartMessage] = useState("");
   const [showStartModal, setShowStartModal] = useState(false);
+  const [canStartEvent, setCanStartEvent] = useState(false);
+
+  // Config state
+  const [eventConfig, setEventConfig] = useState(null);
+  const [configLoading, setConfigLoading] = useState(true);
+  const [configError, setConfigError] = useState(null);
+
+  useEffect(() => {
+    // Fetch event config on mount
+    async function fetchConfig() {
+      setConfigLoading(true);
+      setConfigError(null);
+      if (!event.event_id || event.event_id === 'Event ID N/A') {
+        setConfigLoading(false);
+        return;
+      }
+      const res = await EventService.getConfigPerEvent(event.event_id);
+      if (res.status === 'success' && res.data) {
+        setEventConfig(res.data);
+      } else {
+        setConfigError('Failed to fetch event config');
+      }
+      setConfigLoading(false);
+    }
+    fetchConfig();
+  }, [eventId]);
+
+  // Use config values if available, else fallback to event
+  const flagOffDisplay = eventConfig?.flag_off_time || event.flagOff || event.flag_off_time || 'N/A';
+  const durationDisplay = eventConfig?.duration || event.duration || 'N/A';
+  const speedLimitDisplay = eventConfig?.speed_limit ? `${eventConfig.speed_limit} kmph` : (event.speedLimit || 'N/A');
+  const gpsAccuracyDisplay = eventConfig?.gps_accuracy ? `${eventConfig.gps_accuracy} Meters` : (event.gpsAccuracy || 'N/A');
 
   useEffect(() => {
     const eventDateTime = eventStartDate !== 'Start Date N/A' ? new Date(eventStartDate) : new Date();
@@ -52,11 +84,56 @@ export default function EventStartScreen({ navigation, route }) {
       const diff = eventDateTime - now;
       setTimeLeft(diff > 0 ? diff : 0);
       setTimerActive(diff > 0);
+      
+      // Check if current date matches event start date and time >= flag off time
+      const currentYear = now.getFullYear();
+      const currentMonth = now.getMonth();
+      const currentDay = now.getDate();
+      
+      const eventYear = eventDateTime.getFullYear();
+      const eventMonth = eventDateTime.getMonth();
+      const eventDay = eventDateTime.getDate();
+      
+      const isSameDate = (currentYear === eventYear && currentMonth === eventMonth && currentDay === eventDay);
+      
+      let canStart = false;
+      
+      // console.log('Date Check:', {
+      //   currentDate: `${currentYear}-${currentMonth + 1}-${currentDay}`,
+      //   eventDate: `${eventYear}-${eventMonth + 1}-${eventDay}`,
+      //   isSameDate,
+      //   flagOffDisplay,
+      //   eventStartDate,
+      //   configLoading
+      // });
+      
+      if (isSameDate && flagOffDisplay && flagOffDisplay !== 'N/A' && flagOffDisplay.trim() !== '') {
+        const flagOffMatch = flagOffDisplay.match(/(\d{1,2}):(\d{2})/);
+        if (flagOffMatch) {
+          const flagOffHours = parseInt(flagOffMatch[1], 10);
+          const flagOffMinutes = parseInt(flagOffMatch[2], 10);
+          const currentHours = now.getHours();
+          const currentMinutes = now.getMinutes();
+          
+          console.log('Time Check:', {
+            currentTime: `${currentHours}:${currentMinutes}`,
+            flagOffTime: `${flagOffHours}:${flagOffMinutes}`,
+            canStart: currentHours > flagOffHours || (currentHours === flagOffHours && currentMinutes >= flagOffMinutes)
+          });
+          
+          // Enable start if current time >= flag off time
+          if (currentHours > flagOffHours || (currentHours === flagOffHours && currentMinutes >= flagOffMinutes)) {
+            canStart = true;
+          }
+        }
+      }
+      
+      setCanStartEvent(canStart);
     };
     updateTimer();
     const interval = setInterval(updateTimer, 1000);
     return () => clearInterval(interval);
-  }, [eventStartDate]);
+  }, [eventStartDate, flagOffDisplay, configLoading]);
 
   const formatTime = (ms) => {
     if (ms <= 0) return "00:00:00";
@@ -96,37 +173,6 @@ export default function EventStartScreen({ navigation, route }) {
     }
   };
 
-  // Config state
-  const [eventConfig, setEventConfig] = useState(null);
-  const [configLoading, setConfigLoading] = useState(true);
-  const [configError, setConfigError] = useState(null);
-
-  useEffect(() => {
-    // Fetch event config on mount
-    async function fetchConfig() {
-      setConfigLoading(true);
-      setConfigError(null);
-      if (!event.event_id || event.event_id === 'Event ID N/A') {
-        setConfigLoading(false);
-        return;
-      }
-      const res = await EventService.getConfigPerEvent(event.event_id);
-      if (res.status === 'success' && res.data) {
-        setEventConfig(res.data);
-      } else {
-        setConfigError('Failed to fetch event config');
-      }
-      setConfigLoading(false);
-    }
-    fetchConfig();
-  }, [eventId]);
-
-  // Use config values if available, else fallback to event
-  const flagOffDisplay = eventConfig?.flag_off_time || event.flagOff || 'N/A';
-  const durationDisplay = eventConfig?.duration || event.duration || 'N/A';
-  const speedLimitDisplay = eventConfig?.speed_limit ? `${eventConfig.speed_limit} kmph` : (event.speedLimit || 'N/A');
-  const gpsAccuracyDisplay = eventConfig?.gps_accuracy ? `${eventConfig.gps_accuracy} Meters` : (event.gpsAccuracy || 'N/A');
-
   return (
     <LinearGradient colors={["#0f2027", "#203a43", "#2c5364"]} style={styles.gradientBg}>
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
@@ -143,7 +189,7 @@ export default function EventStartScreen({ navigation, route }) {
             <Text style={styles.headerBackIcon}>←</Text>
           </TouchableOpacity>
           <Text style={styles.headerTitle}>Event Start</Text>
-          <NotificationBell style={{ marginLeft: 'auto' }} />
+          {/* <NotificationBell style={{ marginLeft: 'auto' }} /> */}
         </View>
 
         {/* Banner/Icon */}
@@ -238,22 +284,22 @@ export default function EventStartScreen({ navigation, route }) {
           {timerActive ? (
             <Text style={styles.timerText}>Event starts in: {formatTime(timeLeft)}</Text>
           ) : (
-            <Text style={styles.statusMessage}>{status.message}</Text>
+            <Text style={styles.statusMessageWhite}>
+              {status.message === "Status Unknown" ? `Event starts in: ${formatTime(timeLeft)}` : status.message}
+            </Text>
           )}
 
           {/* Start Button */}
           <TouchableOpacity
-            style={[styles.startBtnIntegrated, (!timerActive || !(status.approved && status.location && status.time)) && styles.startBtnDisabled]}
+            style={[styles.startBtnIntegrated, !canStartEvent && styles.startBtnDisabled]}
+            disabled={!canStartEvent}
             onPress={() => {
-              handleStartEvent();
-             // if (!timerActive || !status.approved || !status.location || !status.time) {
-               // setShowStartModal(true); // Show modal if not ready
-             // } else {
-               // handleStartEvent(); // Call API only if all status and timer are ready
-             // }
+              if (canStartEvent) {
+                handleStartEvent();
+              }
             }}
           >
-            <LinearGradient colors={["#43cea2", "#185a9d"]} style={styles.startBtnGradientIntegrated}>
+            <LinearGradient colors={!canStartEvent ? ["#666", "#888"] : ["#43cea2", "#185a9d"]} style={styles.startBtnGradientIntegrated}>
               <Text style={styles.startBtnTextIntegrated}>START</Text>
             </LinearGradient>
           </TouchableOpacity>
@@ -285,11 +331,25 @@ export default function EventStartScreen({ navigation, route }) {
               </View>
             </View>
           </Modal>
-          {(timerActive || !(status.approved && status.location && status.time)) && (
-            <Text style={styles.startHint}>Complete all status steps and wait for timer to enable Start</Text>
+          {!canStartEvent && (
+            <Text style={styles.startHint}>
+              Start will be enabled when event date and flag off time are reached
+            </Text>
           )}
          
         </View>
+
+        {/* Testing Button - For Development Only */}
+        <TouchableOpacity
+          style={styles.testingBtn}
+          onPress={() => {
+            handleStartEvent();
+          }}
+        >
+          <LinearGradient colors={["#FF6B6B", "#EE5A6F"]} style={styles.testingBtnGradient}>
+            <Text style={styles.testingBtnText}>🧪 TEST START (Dev Only)</Text>
+          </LinearGradient>
+        </TouchableOpacity>
 
         {/* Location Info */}
         <View style={styles.locationInfoRow}>
@@ -539,6 +599,20 @@ const styles = StyleSheet.create({
     marginTop: 4,
     letterSpacing: 0.3,
   },
+  statusMessageWhite: {
+    backgroundColor: "transparent",
+    color: "#fff",
+    fontWeight: "700",
+    fontSize: 16,
+    borderRadius: 6,
+    padding: 7,
+    textAlign: "center",
+    marginTop: 4,
+    letterSpacing: 0.3,
+  },
+  startBtnDisabled: {
+    opacity: 0.5,
+  },
   statusPending: {
     color: '#185a9d',
     fontSize: 11,
@@ -689,6 +763,31 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontWeight: '700',
     fontSize: 15,
+    letterSpacing: 0.5,
+  },
+  testingBtn: {
+    marginTop: 18,
+    width: width * 0.92,
+    borderRadius: 14,
+    alignItems: 'center',
+    alignSelf: 'center',
+    shadowColor: '#FF6B6B',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.18,
+    shadowRadius: 4,
+    elevation: 2,
+    overflow: 'hidden',
+  },
+  testingBtnGradient: {
+    borderRadius: 14,
+    width: '100%',
+    paddingVertical: 13,
+    alignItems: 'center',
+  },
+  testingBtnText: {
+    color: '#fff',
+    fontWeight: '700',
+    fontSize: 16,
     letterSpacing: 0.5,
   },
 });

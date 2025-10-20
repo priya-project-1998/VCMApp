@@ -50,7 +50,7 @@ const defaultScreenOptions = {
     letterSpacing: 0.5,
   },
   headerShadowVisible: false,
-  headerRight: () => <NotificationBell notificationCount={3} />, // Add notification bell to all screens
+  // headerRight: () => <NotificationBell notificationCount={3} />, // Add notification bell to all screens
 };
 
 function DrawerNavigator() {

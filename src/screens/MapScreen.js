@@ -82,6 +82,9 @@ const MapScreen = ({ route, navigation }) => {
   const [okayTimeout, setOkayTimeout] = useState(30); // 30 second countdown for "Okay" button
   const { checkpoints: paramCheckpoints, category_id, event_id, kml_path, color, event_organizer_no, speed_limit, event_start_date, event_end_date,duration } = route.params || {};
   const checkpoints = Array.isArray(paramCheckpoints) ? paramCheckpoints : [];
+  
+  // ✅ Track checkpoints that are currently syncing to prevent duplicate sync attempts
+  const syncingCheckpointsRef = useRef(new Set());
 
   // ✅ Helper function to get the appropriate voice alert utility
   const getVoiceAlertUtils = () => {
@@ -496,15 +499,17 @@ useEffect(() => {
   };
 
   const syncCheckpointToServer = async (checkpointId) => {
-    // ✅ Check if checkpoint is already synced before proceeding
-    if (checkpointStatus[checkpointId]?.completed) {
-      console.log(`🔄 [syncCheckpointToServer] Checkpoint "${checkpointId}" already synced - skipping toast message`);
+    // ✅ Double-check if checkpoint is already synced (shouldn't happen with new logic, but safety check)
+    if (checkpointStatus[checkpointId]?.completed && !syncingCheckpointsRef.current.has(checkpointId)) {
+      console.log(`🔄 [syncCheckpointToServer] Checkpoint "${checkpointId}" already synced - skipping`);
       return true; // Already synced, no need to show message again
     }
 
     const netState = await NetInfo.fetch();
     if (!netState.isConnected) {
       showCenterToast('No internet connection', 'error');
+      // ✅ Remove from syncing set on failure
+      syncingCheckpointsRef.current.delete(checkpointId);
       return false;
     }
     setLoadingCheckpointId(checkpointId);
@@ -513,6 +518,8 @@ useEffect(() => {
       if (!token) {
         showCenterToast('No auth token found', 'error');
         setLoadingCheckpointId(null);
+        // ✅ Remove from syncing set on failure
+        syncingCheckpointsRef.current.delete(checkpointId);
         return false;
       }
       const requestBody = {
@@ -549,10 +556,10 @@ useEffect(() => {
         const syncTime = new Date().toLocaleTimeString();
         const successMessage = `Checkpoint "${cpName}" synced successfully at ${syncTime}`;
         
-        // ✅ Console log for tracking sync toast display
-        console.log(`🎯 [syncCheckpointToServer] Showing sync success toast for checkpoint "${cpName}" (ID: ${checkpointId}) at ${syncTime}`);
+        // ✅ Console log for tracking sync toast display (only shown once)
+        console.log(`🎯 [syncCheckpointToServer] Checkpoint "${cpName}" (ID: ${checkpointId}) synced successfully at ${syncTime} - showing toast and voice alert (ONCE ONLY)`);
         
-        // ✅ Voice Alert for Checkpoint Completion
+        // ✅ Voice Alert for Checkpoint Completion (only once)
         if (voiceAlertsEnabled) {
           const completedCount = Object.values(checkpointStatus).filter(s => s.completed).length + 1; // +1 for current
           getVoiceAlertUtils().announceCheckpointComplete(cpName, completedCount, checkpoints.length);
@@ -560,12 +567,17 @@ useEffect(() => {
         
         showCenterToast(successMessage, 'success');
         setLoadingCheckpointId(null);
+        // ✅ Keep in syncing set - checkpoint is now fully synced and should never trigger again
         return true;
       } else {
         showCenterToast('Server error: ' + (data.message || 'Failed'), 'error');
+        // ✅ Remove from syncing set on failure so it can be retried
+        syncingCheckpointsRef.current.delete(checkpointId);
       }
     } catch (err) {
       showCenterToast('Network/API error', 'error');
+      // ✅ Remove from syncing set on error so it can be retried
+      syncingCheckpointsRef.current.delete(checkpointId);
     }
     setLoadingCheckpointId(null);
     return false;
@@ -586,8 +598,12 @@ useEffect(() => {
         : 10;
       
       if (distance < checkpointRadius) {
-        if (!checkpointStatus[cp.checkpoint_id]?.completed) {
+        // ✅ Check if checkpoint is already completed OR currently syncing
+        if (!checkpointStatus[cp.checkpoint_id]?.completed && !syncingCheckpointsRef.current.has(cp.checkpoint_id)) {
           console.log(`📍 [checkProximityToCheckpoints] User reached checkpoint "${cp.checkpoint_name}" (ID: ${cp.checkpoint_id}) - distance: ${distance.toFixed(2)}m`);
+          
+          // ✅ Immediately mark as syncing to prevent duplicate attempts
+          syncingCheckpointsRef.current.add(cp.checkpoint_id);
           
           const reachedTime = new Date().toLocaleTimeString();
           setCheckpointStatus((prev) => ({
@@ -612,8 +628,8 @@ useEffect(() => {
           
           // Only sync if not already completed
           syncCheckpointToServer(cp.checkpoint_id);
-        } else {
-          console.log(`🔄 [checkProximityToCheckpoints] User in range of already synced checkpoint "${cp.checkpoint_name}" (ID: ${cp.checkpoint_id}) - skipping sync and database save`);
+        } else if (checkpointStatus[cp.checkpoint_id]?.completed || syncingCheckpointsRef.current.has(cp.checkpoint_id)) {
+          // ✅ Silently skip - no console log spam while user remains in radius
         }
       }
     });
@@ -1247,9 +1263,6 @@ useEffect(() => {
       return;
     }
     
-    // ✅ Local tracking to prevent duplicate syncs during simulation
-    const syncedCheckpoints = new Set();
-    
     const startPoint = {
       latitude: parseFloat(checkpoints[0].latitude),
       longitude: parseFloat(checkpoints[0].longitude),
@@ -1271,11 +1284,12 @@ useEffect(() => {
         ? parseFloat(cp.accuracy) 
         : 10;
       
-      if (dist < checkpointRadius && !checkpointStatus[cp.checkpoint_id]?.completed && !syncedCheckpoints.has(cp.checkpoint_id)) {
+      // ✅ Use the same syncing prevention mechanism as real location tracking
+      if (dist < checkpointRadius && !checkpointStatus[cp.checkpoint_id]?.completed && !syncingCheckpointsRef.current.has(cp.checkpoint_id)) {
         console.log(`🎮 [startUserMovementSimulation] Initial position reached checkpoint "${cp.checkpoint_name}" (ID: ${cp.checkpoint_id}) - distance: ${dist.toFixed(2)}m`);
         
-        // ✅ Add to local tracking immediately
-        syncedCheckpoints.add(cp.checkpoint_id);
+        // ✅ Add to syncing set immediately to prevent duplicates
+        syncingCheckpointsRef.current.add(cp.checkpoint_id);
         
         // ✅ Immediately mark as completed to prevent duplicate API calls
         setCheckpointStatus((prev) => ({
@@ -1401,11 +1415,12 @@ useEffect(() => {
           ? parseFloat(cp.accuracy) 
           : 10;
         
-        if (dist < checkpointRadius && !checkpointStatus[cp.checkpoint_id]?.completed && !syncedCheckpoints.has(cp.checkpoint_id)) {
-          //console.log(`🎮 [startUserMovementSimulation] Simulation reached checkpoint "${cp.checkpoint_name}" (ID: ${cp.checkpoint_id}) - distance: ${dist.toFixed(2)}m`);
+        // ✅ Use the same syncing prevention mechanism as real location tracking
+        if (dist < checkpointRadius && !checkpointStatus[cp.checkpoint_id]?.completed && !syncingCheckpointsRef.current.has(cp.checkpoint_id)) {
+          console.log(`🎮 [startUserMovementSimulation] Simulation reached checkpoint "${cp.checkpoint_name}" (ID: ${cp.checkpoint_id}) - distance: ${dist.toFixed(2)}m`);
           
-          // ✅ Add to local tracking immediately to prevent duplicates
-          syncedCheckpoints.add(cp.checkpoint_id);
+          // ✅ Add to syncing set immediately to prevent duplicates
+          syncingCheckpointsRef.current.add(cp.checkpoint_id);
           
           // ✅ Immediately mark as completed to prevent duplicate API calls
           setCheckpointStatus((prev) => ({
@@ -2019,15 +2034,18 @@ useEffect(() => {
         <TouchableOpacity
           style={{ position: 'absolute', bottom: 75, right: 20, backgroundColor: '#4caf50', padding: 14, borderRadius: 28, zIndex: 100, elevation: 8 }}
           onPress={async () => {
-            // ✅ Check if checkpoint is already synced before proceeding
-            if (checkpointStatus[selectedCheckpointId]?.completed) {
-              console.log(`🔄 [TestButton] Checkpoint "${selectedCheckpointId}" already synced - skipping toast message`);
+            // ✅ Check if checkpoint is already synced or currently syncing
+            if (checkpointStatus[selectedCheckpointId]?.completed || syncingCheckpointsRef.current.has(selectedCheckpointId)) {
+              console.log(`🔄 [TestButton] Checkpoint "${selectedCheckpointId}" already synced or syncing - skipping`);
               const cpObj = checkpoints.find(c => c.checkpoint_id === selectedCheckpointId);
               const cpName = cpObj?.checkpoint_name || selectedCheckpointId;
               showCenterToast(`Checkpoint "${cpName}" is already synced`, 'warning');
               setSelectedCheckpointId(null);
               return;
             }
+            
+            // ✅ Mark as syncing to prevent duplicate attempts
+            syncingCheckpointsRef.current.add(selectedCheckpointId);
 
             // Check internet
             const netState = await NetInfo.fetch();
