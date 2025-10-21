@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { View, Text, StyleSheet, TouchableOpacity, Dimensions, ScrollView, Share, Alert, Modal } from "react-native";
 import LinearGradient from "react-native-linear-gradient";
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import NotificationBell from '../components/NotificationBell';
 import EventService from "../services/apiService/event_service";
 import { generateShareMessage } from '../utils/deepLinkUtils';
@@ -45,11 +46,35 @@ export default function EventStartScreen({ navigation, route }) {
   const [startMessage, setStartMessage] = useState("");
   const [showStartModal, setShowStartModal] = useState(false);
   const [canStartEvent, setCanStartEvent] = useState(false);
+  const [isEventCompleted, setIsEventCompleted] = useState(false); // Track if event is completed
 
   // Config state
   const [eventConfig, setEventConfig] = useState(null);
   const [configLoading, setConfigLoading] = useState(true);
   const [configError, setConfigError] = useState(null);
+
+  // ✅ Check if event is already completed on mount
+  useEffect(() => {
+    async function checkEventStatus() {
+      try {
+        const status = await AsyncStorage.getItem(`event_${eventId}_status`);
+        if (status === 'completed') {
+          setIsEventCompleted(true);
+          console.log(`✅ Event ${eventId} is already completed - hiding START button`);
+        } else {
+          setIsEventCompleted(false);
+          console.log(`📍 Event ${eventId} status: ${status || 'not found'} - showing START button`);
+        }
+      } catch (error) {
+        console.error('❌ Error checking event status:', error);
+        setIsEventCompleted(false); // Show START button on error
+      }
+    }
+    
+    if (eventId && eventId !== 'Event ID N/A') {
+      checkEventStatus();
+    }
+  }, [eventId]);
 
   useEffect(() => {
     // Fetch event config on mount
@@ -289,20 +314,30 @@ export default function EventStartScreen({ navigation, route }) {
             </Text>
           )}
 
-          {/* Start Button */}
-          <TouchableOpacity
-            style={[styles.startBtnIntegrated, !canStartEvent && styles.startBtnDisabled]}
-            disabled={!canStartEvent}
-            onPress={() => {
-              if (canStartEvent) {
-                handleStartEvent();
-              }
-            }}
-          >
-            <LinearGradient colors={!canStartEvent ? ["#666", "#888"] : ["#43cea2", "#185a9d"]} style={styles.startBtnGradientIntegrated}>
-              <Text style={styles.startBtnTextIntegrated}>START</Text>
-            </LinearGradient>
-          </TouchableOpacity>
+          {/* Start Button - Only show if event is not completed */}
+          {!isEventCompleted && (
+            <TouchableOpacity
+              style={[styles.startBtnIntegrated, !canStartEvent && styles.startBtnDisabled]}
+              disabled={!canStartEvent}
+              onPress={() => {
+                if (canStartEvent) {
+                  handleStartEvent();
+                }
+              }}
+            >
+              <LinearGradient colors={!canStartEvent ? ["#666", "#888"] : ["#43cea2", "#185a9d"]} style={styles.startBtnGradientIntegrated}>
+                <Text style={styles.startBtnTextIntegrated}>START</Text>
+              </LinearGradient>
+            </TouchableOpacity>
+          )}
+          
+          {/* Event Completed Message */}
+          {isEventCompleted && (
+            <View style={styles.completedContainer}>
+              <Text style={styles.completedText}>✅ Event Completed</Text>
+              <Text style={styles.completedSubText}>This event has been successfully completed</Text>
+            </View>
+          )}
           <Modal
             visible={showStartModal}
             transparent
@@ -331,7 +366,7 @@ export default function EventStartScreen({ navigation, route }) {
               </View>
             </View>
           </Modal>
-          {!canStartEvent && (
+          {!canStartEvent && !isEventCompleted && (
             <Text style={styles.startHint}>
               Start will be enabled when event date and flag off time are reached
             </Text>
@@ -340,7 +375,7 @@ export default function EventStartScreen({ navigation, route }) {
         </View>
 
         {/* Testing Button - For Development Only */}
-        <TouchableOpacity
+        {/* <TouchableOpacity
           style={styles.testingBtn}
           onPress={() => {
             handleStartEvent();
@@ -349,7 +384,7 @@ export default function EventStartScreen({ navigation, route }) {
           <LinearGradient colors={["#FF6B6B", "#EE5A6F"]} style={styles.testingBtnGradient}>
             <Text style={styles.testingBtnText}>🧪 TEST START (Dev Only)</Text>
           </LinearGradient>
-        </TouchableOpacity>
+        </TouchableOpacity> */}
 
         {/* Location Info */}
         <View style={styles.locationInfoRow}>
@@ -789,6 +824,30 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     fontSize: 16,
     letterSpacing: 0.5,
+  },
+  completedContainer: {
+    marginTop: 14,
+    width: '80%',
+    borderRadius: 14,
+    alignItems: 'center',
+    alignSelf: 'center',
+    backgroundColor: 'rgba(67,206,162,0.15)',
+    padding: 16,
+    borderWidth: 2,
+    borderColor: '#43cea2',
+  },
+  completedText: {
+    color: '#43cea2',
+    fontWeight: '700',
+    fontSize: 18,
+    letterSpacing: 0.5,
+    marginBottom: 6,
+  },
+  completedSubText: {
+    color: '#e0e0e0',
+    fontWeight: '500',
+    fontSize: 13,
+    textAlign: 'center',
   },
 });
 
