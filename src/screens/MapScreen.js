@@ -732,7 +732,32 @@ useEffect(() => {
   };
   
   // ✅ Handle completed event navigation
-  const handleEventCompletion = () => {
+  const handleEventCompletion = async () => {
+    try {
+      // ✅ Save event completion status to AsyncStorage
+      await AsyncStorage.setItem(`event_${event_id}_status`, 'completed');
+      await AsyncStorage.setItem(`event_${event_id}_completion_time`, new Date().toISOString());
+      
+      // ✅ Optionally save completion statistics
+      const completionData = {
+        event_id: event_id,
+        total_checkpoints: checkpoints.length,
+        completed_checkpoints: Object.values(checkpointStatus).filter(s => s.completed).length,
+        completion_time: new Date().toISOString(),
+        overspeed_count: overspeedCount,
+        duration: duration,
+      };
+      
+      await AsyncStorage.setItem(
+        `event_${event_id}_completion_data`, 
+        JSON.stringify(completionData)
+      );
+      
+      console.log('✅ Event completion data saved successfully to AsyncStorage');
+    } catch (error) {
+      console.error('❌ Error saving event completion data:', error);
+    }
+    
     setEventCompletedModal(false);
     // Reset navigation stack to prevent going back to map screen
     navigation.reset({
@@ -2383,7 +2408,7 @@ useEffect(() => {
               }}
               onPress={handleEventCompletion}
             >
-              <Text style={{ color: '#fff', fontWeight: 'bold', fontSize: 18 }}>Okay</Text>
+              <Text style={{ color: '#fff', fontWeight: 'bold', fontSize: 18 }}>FINISH</Text>
             </TouchableOpacity>
           </View>
         </View>
