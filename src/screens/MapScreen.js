@@ -300,50 +300,7 @@ useEffect(() => {
   return () => unsubscribe();
 }, []); // ✅ Remove overspeedCount dependency since we're using ref
 
-  // ✅ Internet change listener → sync pending checkpoints
-  // useEffect(() => {
-  //   const unsubscribe = NetInfo.addEventListener((state) => {
-  //     if (state.isConnected) {
-  //       getPendingCheckpoints(async (pending) => {
-  //         // Ensure pending is always an array
-  //         if (!Array.isArray(pending)) pending = [];
-  //         for (let item of pending) {
-  //           try {
-  //             const res = await fetch(
-  //               "https://e-pickup.randomsoftsolution.in/api/events/checkpoints/update",
-  //               {
-  //                 method: "POST",
-  //                 headers: { "Content-Type": "application/json" },
-  //                 body: JSON.stringify({
-  //                   event_id: item.event_id,
-  //                   //category_id: item.category_id,
-  //                   checkpoint_id: item.checkpoint_id,
-  //                   over_speed:overspeedCount
-  //                 }),
-  //               }
-  //             );
-  //             let data = {};
-  //             try {
-  //               data = await res.json();
-  //               setOverspeedCount(0);
 
-  //             } catch (jsonErr) {
-  //               // JSON parse error occurred
-  //             }
-  //             // Sync response received
-
-  //             if (data && data.status === "success") {
-  //               markSynced(item.id);
-  //             }
-  //           } catch (err) {
-  //             // Sync failed
-  //           }
-  //         }
-  //       });
-  //     }
-  //   });
-  //   return () => unsubscribe();
-  // }, []);
 
   // ✅ Simple Speed Limit Checking Function
   const checkSpeedLimit = useCallback((currentSpeedKmh) => {
@@ -924,8 +881,11 @@ useEffect(() => {
 
   // ✅ Countdown timer effect - decreases from total duration
   useEffect(() => {
-    if (remainingSeconds <= 0) return;
-    
+    if (remainingSeconds <= 0) {
+      setOkayTimeout(30);
+      setEventCompletedModal(true);
+      return;
+    }
     const timer = setInterval(() => {
       setRemainingSeconds((prev) => {
         const newRemaining = prev > 0 ? prev - 1 : 0;
