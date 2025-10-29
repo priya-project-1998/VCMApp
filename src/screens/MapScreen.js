@@ -524,6 +524,11 @@ useEffect(() => {
         
         showCenterToast(successMessage, 'success');
         setLoadingCheckpointId(null);
+        // --- NEW LOGIC: Immediate event exit if "FINISH" checkpoint reached ---
+        if (cpName === "FINISH") {
+            setOkayTimeout(30);
+            setEventCompletedModal(true);
+        }
         // ✅ Keep in syncing set - checkpoint is now fully synced and should never trigger again
         return true;
       } else {
@@ -557,6 +562,7 @@ useEffect(() => {
       if (distance < checkpointRadius) {
         // ✅ Check if checkpoint is already completed OR currently syncing
         if (!checkpointStatus[cp.checkpoint_id]?.completed && !syncingCheckpointsRef.current.has(cp.checkpoint_id)) {
+         
           console.log(`📍 [checkProximityToCheckpoints] User reached checkpoint "${cp.checkpoint_name}" (ID: ${cp.checkpoint_id}) - distance: ${distance.toFixed(2)}m`);
           
           // ✅ Immediately mark as syncing to prevent duplicate attempts
@@ -585,6 +591,7 @@ useEffect(() => {
           
           // Only sync if not already completed
           syncCheckpointToServer(cp.checkpoint_id);
+          
         } else if (checkpointStatus[cp.checkpoint_id]?.completed || syncingCheckpointsRef.current.has(cp.checkpoint_id)) {
           // ✅ Silently skip - no console log spam while user remains in radius
         }
