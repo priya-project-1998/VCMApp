@@ -1714,7 +1714,7 @@ useEffect(() => {
         toolbarEnabled={false}
       >
         {/* --- User Movement Route Polyline (Exact Google Maps Style) --- */}
-        {userRoute && userRoute.length > 1 && (
+        {/* {userRoute && userRoute.length > 1 && (
           <Polyline
             coordinates={userRoute}
             strokeColor="#4285F4"
@@ -1724,7 +1724,7 @@ useEffect(() => {
             geodesic={true}
             strokePattern={[1, 0]} // Solid line like Google Maps
           />
-        )}
+        )} */}
         
         {/* --- Simulated Movement Route (Test Mode Only) --- */}
         {isSimulating && userRoute && userRoute.length > 1 && (
