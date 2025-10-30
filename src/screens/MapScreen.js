@@ -509,6 +509,7 @@ useEffect(() => {
         setMarkerColors((prev) => ({ ...prev, [checkpointId]: '#185a9d' })); // blue
         const cpObj = checkpoints.find(c => c.checkpoint_id === checkpointId);
         const cpName = cpObj?.checkpoint_name || checkpointId;
+        console.log('dhfhshfd', cpName);
         // ✅ Enhanced toast message with time and center positioning
         const syncTime = new Date().toLocaleTimeString();
         const successMessage = `Checkpoint "${cpName}" synced successfully at ${syncTime}`;
@@ -535,8 +536,10 @@ useEffect(() => {
         showCenterToast('Server error: ' + (data.message || 'Failed'), 'error');
         // ✅ Remove from syncing set on failure so it can be retried
         syncingCheckpointsRef.current.delete(checkpointId);
+       
       }
     } catch (err) {
+    
       showCenterToast('Network/API error', 'error');
       // ✅ Remove from syncing set on error so it can be retried
       syncingCheckpointsRef.current.delete(checkpointId);
@@ -888,11 +891,7 @@ useEffect(() => {
 
   // ✅ Countdown timer effect - decreases from total duration
   useEffect(() => {
-    if (remainingSeconds <= 0) {
-      setOkayTimeout(30);
-      setEventCompletedModal(true);
-      return;
-    }
+    
     const timer = setInterval(() => {
       setRemainingSeconds((prev) => {
         const newRemaining = prev > 0 ? prev - 1 : 0;
@@ -919,6 +918,10 @@ useEffect(() => {
               SystemSoundUtils.playSystemSound();
             }, 500);
             console.log('🏁 Event completion alert played');
+            if (remainingSeconds === 0) {
+              setOkayTimeout(30);
+              setEventCompletedModal(true);
+            }
           } catch (error) {
             console.log('Error playing event completion sound:', error);
           }
@@ -1332,6 +1335,11 @@ useEffect(() => {
               console.log(`🎯 [startUserMovementSimulation-Initial] Showing sync success toast for checkpoint "${cpName}" (ID: ${cp.checkpoint_id}) at ${syncTime}`);
               
               showCenterToast(successMessage, 'success');
+              // --- NEW LOGIC: Immediate event exit if "FINISH" checkpoint reached ---
+              if (cpName === "FINISH") {
+                  setOkayTimeout(30);
+                  setEventCompletedModal(true);
+              }
             } else {
               showCenterToast('Server error: ' + (data.message || 'Failed'), 'error');
             }
@@ -1461,6 +1469,11 @@ useEffect(() => {
                 console.log(`🎯 [startUserMovementSimulation] Showing sync success toast for checkpoint "${cpName}" (ID: ${cp.checkpoint_id}) at ${syncTime}`);
                 
                 showCenterToast(successMessage, 'success');
+                // --- NEW LOGIC: Immediate event exit if "FINISH" checkpoint reached ---
+                if (cpName === "FINISH") {
+                    setOkayTimeout(30);
+                    setEventCompletedModal(true);
+                }
               } else {
                 showCenterToast('Server error: ' + (data.message || 'Failed'), 'error');
               }
@@ -2047,6 +2060,7 @@ useEffect(() => {
             }
             setLoadingCheckpointId(selectedCheckpointId);
             try {
+                  
               // Use event_id and category_id from route.params, and selectedCheckpointId
               const token = await AsyncStorage.getItem('authToken');
               if (!token) {
@@ -2055,6 +2069,7 @@ useEffect(() => {
                 setSelectedCheckpointId(null);
                 return;
               }
+              
               // Debug log removed
               const res = await fetch(
                 "https://e-pickup.randomsoftsolution.in/api/events/checkpoints/update",
@@ -2072,6 +2087,7 @@ useEffect(() => {
                   }),
                 }
               );
+             
               //console.log(`🎯 [event_id "${event_id}" 🎯 [category_id "${category_id}" 🎯 [checkpoint_id "${selectedCheckpointId}" 🎯 [over_speed "${over_speed}" `);
               let data = {};
               try { data = await res.json(); } catch {}
@@ -2087,6 +2103,7 @@ useEffect(() => {
                 setMarkerColors((prev) => ({ ...prev, [selectedCheckpointId]: '#185a9d' })); // blue
                 const cpObj = checkpoints.find(c => c.checkpoint_id === selectedCheckpointId);
                 const cpName = cpObj?.checkpoint_name || selectedCheckpointId;
+                  
                 // Save checkpoint with new fields
                 saveCheckpoint({
                   event_id: event_id,
@@ -2121,12 +2138,18 @@ useEffect(() => {
                 console.log(`🎯 [TestButton] Showing sync success toast for checkpoint "${cpName}" (ID: ${selectedCheckpointId}) at ${syncTime}`);
                 
                 showCenterToast(successMessage, 'success');
+                // --- NEW LOGIC: Immediate event exit if "FINISH" checkpoint reached ---
+                if (cpName === "FINISH") {
+                    setOkayTimeout(30);
+                    setEventCompletedModal(true);
+                }
               } else {
                 showCenterToast('Server error: ' + (data.message || 'Failed'), 'error');
               }
             } catch (err) {
               // API call error occurred
               showCenterToast('Network/API error', 'error');
+              console.error('❌ Error syncing checkpoint:', err);
             }
             setLoadingCheckpointId(null);
             setSelectedCheckpointId(null);
