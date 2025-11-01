@@ -83,7 +83,7 @@ const MapScreen = ({ route, navigation }) => {
   const { checkpoints: paramCheckpoints, category_id, event_id, kml_path, color, event_organizer_no, speed_limit, event_start_date, event_end_date,duration } = route.params || {};
   const checkpoints = Array.isArray(paramCheckpoints) ? paramCheckpoints : [];
   
-  // ✅ Track checkpoints that are currently syncing to prevent duplicate sync attempts
+  const eventStartTimeRef = useRef(null);
   const syncingCheckpointsRef = useRef(new Set());
 
   // ✅ Helper function to get the appropriate voice alert utility
@@ -129,7 +129,31 @@ const MapScreen = ({ route, navigation }) => {
       setShowToast(false);
     }, duration);
   };
- 
+
+  useEffect(() => {
+    if (!eventStartTimeRef.current) {
+      eventStartTimeRef.current = new Date();
+    }
+  }, []);
+
+  const addStartCheckpointTime = () => {
+  try {
+    if (!eventStartTimeRef.current) return;
+
+    const now = new Date();
+    const timeTakenSec = Math.floor((now - eventStartTimeRef.current) / 1000);
+
+    if (timeTakenSec > 0) {
+      setRemainingSeconds(prev => prev + timeTakenSec);
+      console.log(`✅ START checkpoint time added: ${timeTakenSec} seconds`);
+      console.log(`⏳ New Remaining Time: `, remainingSeconds + timeTakenSec);
+    }
+
+  } catch (e) {
+    console.log("Error adding START time:", e);
+  }
+};
+
 
   // ✅ Initialize countdown timer from duration parameter
   useEffect(() => {
@@ -505,10 +529,13 @@ useEffect(() => {
         
         showCenterToast(successMessage, 'success');
         setLoadingCheckpointId(null);
-        // --- NEW LOGIC: Immediate event exit if "FINISH" checkpoint reached ---
+        // --- NEW LOGIC: Immediate event exit if "FINISH" - "START" checkpoint reached ---
         if (cpName === "FINISH") {
             setOkayTimeout(30);
             setEventCompletedModal(true);
+        }
+        if (cpName === "START") {
+            addStartCheckpointTime();
         }
         // ✅ Keep in syncing set - checkpoint is now fully synced and should never trigger again
         return true;
@@ -1085,9 +1112,9 @@ useEffect(() => {
           enableHighAccuracy: true,
           timeout: 30000,
           maximumAge: 5000,
-          distanceFilter: 1,
-          showLocationDialog: true,
-          forceRequestLocation: true
+          distanceFilter: 1
+        //  showLocationDialog: true,
+          //forceRequestLocation: true
 
         }
       );
@@ -1116,33 +1143,27 @@ useEffect(() => {
   const simulationIntervalRef = useRef(null);
   const [simulatedSpeed, setSimulatedSpeed] = useState(0); // <-- add this line
 
-  // Detect test mode (emulator/simulator) vs real device
   const [isTestMode, setIsTestMode] = useState(false);
   const [isTestModeChecked, setIsTestModeChecked] = useState(false);
 
   useEffect(() => {
-    // Use DeviceInfo for reliable detection
     DeviceInfo.isEmulator().then((isEmu) => {
       setIsTestMode(isEmu);
       setIsTestModeChecked(true);
     });
   }, []);
 
-  // Show device info on mount (only after check is complete)
   useEffect(() => {
     if (!isTestModeChecked) return;
-    //let msg = `isTestMode: ${isTestMode}\n`;
     if (isTestMode) {
       msg = 'App is on Virtual Device';
     } else {
       msg = 'App is on Real Device';
     }
     if (Platform.OS === 'android') {
-      //ToastAndroid.show(msg, ToastAndroid.LONG);
     } else {
       Alert.alert('Device Info', msg);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isTestModeChecked, isTestMode]);
 
   // --- MOVE EVENT SIMULATION FUNCTION ---
@@ -1160,7 +1181,6 @@ useEffect(() => {
     setUserRoute([startPoint]); // Initialize simulation route
     setIsSimulating(true);
     
-    // Immediately check and sync if at a checkpoint (for first point)
     for (let cp of checkpoints) {
       const dist = getDistanceFromLatLonInMeters(
         startPoint.latitude,
@@ -1168,19 +1188,14 @@ useEffect(() => {
         parseFloat(cp.latitude),
         parseFloat(cp.longitude)
       );
-      // ✅ Use dynamic radius based on checkpoint accuracy, fallback to 10 meters
       const checkpointRadius = (cp.accuracy && !isNaN(parseFloat(cp.accuracy)) && parseFloat(cp.accuracy) > 0) 
         ? parseFloat(cp.accuracy) 
         : 10;
       
-      // ✅ Use the same syncing prevention mechanism as real location tracking
       if (dist < checkpointRadius && !checkpointStatus[cp.checkpoint_id]?.completed && !syncingCheckpointsRef.current.has(cp.checkpoint_id)) {
         console.log(`🎮 [startUserMovementSimulation] Initial position reached checkpoint "${cp.checkpoint_name}" (ID: ${cp.checkpoint_id}) - distance: ${dist.toFixed(2)}m`);
-        
-        // ✅ Add to syncing set immediately to prevent duplicates
         syncingCheckpointsRef.current.add(cp.checkpoint_id);
         
-        // ✅ Immediately mark as completed to prevent duplicate API calls
         setCheckpointStatus((prev) => ({
           ...prev,
           [cp.checkpoint_id]: { time: new Date().toLocaleTimeString(), completed: true },
@@ -1195,7 +1210,6 @@ useEffect(() => {
               setLoadingCheckpointId(null);
               return;
             }
-            // API call details removed
             
             const res = await fetch(
               "https://e-pickup.randomsoftsolution.in/api/events/checkpoints/update",
@@ -1207,32 +1221,27 @@ useEffect(() => {
                 },
                 body: JSON.stringify({
                   event_id: event_id,
-                 // category_id: category_id,
                   checkpoint_id: cp.checkpoint_id,
                   over_speed: overspeedCountRef.current // ✅ Use ref for latest value
                 }),
               }
             );
-         //   console.log(`🎯 [event_id "${event_id}" 🎯 [category_id "${category_id}" 🎯 [checkpoint_id "${cp.checkpoint_id}" 🎯 [over_speed "${14}" `);
             let data = {};
             try { data = await res.json(); } catch {}
-            console.log('Simulation Data Response check', data);
             if ((res.status === 200 && data.status === "success") || data.status === "success") {
               setOverspeedCount(0);
               overspeedCountRef.current = 0; // ✅ Reset ref too
               const cpName = cp.checkpoint_name || cp.checkpoint_id;
-              // ✅ Enhanced toast message with time and center positioning
               const syncTime = new Date().toLocaleTimeString();
               const successMessage = `Checkpoint "${cpName}" synced successfully at ${syncTime}`;
-              
-              // ✅ Console log for tracking initial simulation sync toast display
-              console.log(`🎯 [startUserMovementSimulation-Initial] Showing sync success toast for checkpoint "${cpName}" (ID: ${cp.checkpoint_id}) at ${syncTime}`);
-              
+              console.log(`🎯 [startUserMovementSimulation-Initial] Showing sync success toast for checkpoint "${cpName}" (ID: ${cp.checkpoint_id}) at ${syncTime}`);              
               showCenterToast(successMessage, 'success');
-              // --- NEW LOGIC: Immediate event exit if "FINISH" checkpoint reached ---
               if (cpName === "FINISH") {
                   setOkayTimeout(30);
                   setEventCompletedModal(true);
+              }
+              if (cpName === "START") {
+                  addStartCheckpointTime();
               }
             } else {
               showCenterToast('Server error: ' + (data.message || 'Failed'), 'error');
@@ -1244,7 +1253,6 @@ useEffect(() => {
         })();
         break;
       } else if (dist < checkpointRadius && (checkpointStatus[cp.checkpoint_id]?.completed || syncedCheckpoints.has(cp.checkpoint_id))) {
-        // ✅ Log when initial position is in range of already synced checkpoint
         console.log(`🔄 [startUserMovementSimulation-Initial] Initial position in range of already synced checkpoint "${cp.checkpoint_name}" (ID: ${cp.checkpoint_id}) - skipping sync`);
       }
     }
@@ -1252,7 +1260,6 @@ useEffect(() => {
     let current = startPoint;
     let steps = 0;
     simulationIntervalRef.current = setInterval(() => {
-      // Move towards a random checkpoint (other than current)
       const availableCheckpoints = checkpoints.filter(cp =>
         parseFloat(cp.latitude) !== current.latitude || parseFloat(cp.longitude) !== current.longitude
       );
@@ -1261,13 +1268,11 @@ useEffect(() => {
         setIsSimulating(false);
         return;
       }
-      // Pick a random checkpoint as target
       const targetCp = availableCheckpoints[Math.floor(Math.random() * availableCheckpoints.length)];
       const target = {
         latitude: parseFloat(targetCp.latitude),
         longitude: parseFloat(targetCp.longitude),
       };
-      // Move a small step towards the target (reduced step size for slower movement)
       const stepLat = (target.latitude - current.latitude) * 0.02; // ✅ Reduced from 0.1 to 0.02 for slower movement
       const stepLng = (target.longitude - current.longitude) * 0.02; // ✅ Reduced from 0.1 to 0.02 for slower movement
       const newPoint = {
@@ -1368,6 +1373,9 @@ useEffect(() => {
                     setOkayTimeout(30);
                     setEventCompletedModal(true);
                 }
+                if (cpName === "START") {
+                    addStartCheckpointTime();
+                }
               } else {
                 showCenterToast('Server error: ' + (data.message || 'Failed'), 'error');
               }
@@ -1400,12 +1408,10 @@ useEffect(() => {
   // Only auto-start simulation on emulator/test mode
   useEffect(() => {
     if (isTestMode) {
-      // Auto-start checkpoint simulation for easy testing
       setTimeout(() => {
         startUserMovementSimulation();
-      }, 2000); // 2 second delay for initialization
+      }, 2000); 
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isTestMode]);
 
   return (
@@ -1961,7 +1967,6 @@ useEffect(() => {
                   },
                   body: JSON.stringify({
                     event_id: event_id,
-                    // category_id: category_id,
                     checkpoint_id: selectedCheckpointId,
                     over_speed: overspeedCountRef.current // ✅ Use ref for latest value
                   }),
@@ -2023,6 +2028,9 @@ useEffect(() => {
                     setOkayTimeout(30);
                     setEventCompletedModal(true);
                 }
+                if (cpName === "START") {
+                    addStartCheckpointTime();
+                }
               } else {
                 showCenterToast('Server error: ' + (data.message || 'Failed'), 'error');
               }
@@ -2063,15 +2071,11 @@ useEffect(() => {
             if (isFollowingUser) {
               stopFollowingUserLocation();
             } else {
-              // ✅ Show immediate feedback
               showCenterToast('Getting your location...', 'info');
-              
               // ✅ Get current location and zoom immediately
               Geolocation.getCurrentPosition(
                 (position) => {
                   const { latitude, longitude } = position.coords;
-                  
-                  // ✅ Immediate zoom to current location
                   if (mapRef.current) {
                     try {
                       mapRef.current.animateToRegion({
@@ -2085,17 +2089,10 @@ useEffect(() => {
                     }
                   }
                   
-                  // ✅ Update coordinates and start route tracking
                   setUserCoords({ latitude, longitude });
                   setLastUserLocation({ latitude, longitude });
-                  
-                  // ✅ Initialize route with starting position
                   setUserRoute([{ latitude, longitude }]);
-                  
-                  // ✅ Success feedback
                   showCenterToast('Location found and tracking started!', 'success');
-                  
-                  // ✅ Start following after finding location
                   startFollowingUserLocation();
                 },
                 (error) => {

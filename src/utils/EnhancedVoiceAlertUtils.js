@@ -27,9 +27,7 @@ class EnhancedVoiceAlertUtils {
   playAlert(eventType) {
     // Only play on Android
     if (!this.isAndroid) return;
-    
-    console.log(`Playing sound alert for: ${eventType}`);
-    
+        
     // Safe wrapper function that never throws or rejects
     const safePlay = async (soundName) => {
       try {
@@ -40,7 +38,6 @@ class EnhancedVoiceAlertUtils {
         if (NativeModules.SoundModule) {
           try {
             const result = await NativeModules.SoundModule.playSound(soundName);
-            console.log('Sound played successfully:', result);
           } catch (playError) {
             // Just log errors but don't propagate them
             console.log(`Non-critical error playing sound ${soundName}:`, playError);
@@ -54,15 +51,12 @@ class EnhancedVoiceAlertUtils {
     
     // Convert EVENT_START to event_start format for file names
     const soundName = eventType.toLowerCase();
-    
-    // Call our safe wrapper
-    safePlay(soundName);
+     safePlay(soundName);
   }
   
   // Event start notification
   notifyEventStart() {
     if (this.isAndroid) {
-      console.log('Playing event start alert');
       this.playAlert(this.eventTypes.EVENT_START);
     }
   }
@@ -70,7 +64,6 @@ class EnhancedVoiceAlertUtils {
   // Checkpoint reached notification
   notifyCheckpoint() {
     if (this.isAndroid) {
-      console.log('Playing checkpoint alert');
       this.playAlert(this.eventTypes.CHECKPOINT);
     }
   }
@@ -78,7 +71,6 @@ class EnhancedVoiceAlertUtils {
   // Event end notification
   notifyEventEnd() {
     if (this.isAndroid) {
-      console.log('Playing event end alert');
       this.playAlert(this.eventTypes.EVENT_END);
     }
   }
@@ -86,7 +78,6 @@ class EnhancedVoiceAlertUtils {
   // Over speed notification
   notifyOverSpeed() {
     if (this.isAndroid) {
-      console.log('Playing over speed alert');
       this.playAlert(this.eventTypes.OVER_SPEED);
     }
   }
@@ -94,7 +85,6 @@ class EnhancedVoiceAlertUtils {
   // Time frame limit notification
   notifyTimeFrameLimit() {
     if (this.isAndroid) {
-      console.log('Playing time frame limit alert');
       this.playAlert(this.eventTypes.TIME_FRAME_LIMIT);
     }
   }
@@ -120,7 +110,6 @@ class EnhancedVoiceAlertUtils {
       const safeStopSound = () => {
         // Create a timeout to ensure we always resolve
         const timeoutId = setTimeout(() => {
-          console.warn('SoundModule.stopSound timed out, resolving anyway');
           resolve("Timeout - resolved anyway");
         }, 1000); // 1 second timeout
         
@@ -129,19 +118,16 @@ class EnhancedVoiceAlertUtils {
           NativeModules.SoundModule.stopSound()
             .then(result => {
               clearTimeout(timeoutId);
-              console.log('Sound stopped successfully:', result);
               resolve(result);
             })
             .catch(() => {
               // This should never happen now with our improved native module
               clearTimeout(timeoutId);
-              console.log('Safely handled stopSound rejection');
               resolve("Handled stopSound rejection");
             });
         } catch (err) {
           // Handle any synchronous errors
           clearTimeout(timeoutId);
-          console.log('Safely handled stopSound exception:', err);
           resolve("Handled stopSound exception");
         }
       };
@@ -180,33 +166,27 @@ class EnhancedVoiceAlertUtils {
       const safeSetVolume = () => {
         // Create a timeout to ensure we always resolve
         const timeoutId = setTimeout(() => {
-          console.log('setVolume timed out, resolving anyway');
           resolve("Timeout - resolved anyway");
         }, 1000); // 1 second timeout
         
         try {
           // Ensure volume is between 0.0 and 1.0
           const safeVolume = Math.max(0.0, Math.min(1.0, volume));
-          
           NativeModules.SoundModule.setVolume(safeVolume)
             .then((result) => {
               clearTimeout(timeoutId);
-              console.log(`Volume set to ${safeVolume}`);
               resolve(result);
             })
             .catch((error) => {
               clearTimeout(timeoutId);
-              console.log('Safely handled setVolume rejection:', error);
               resolve("Handled setVolume rejection");
             });
         } catch (err) {
           clearTimeout(timeoutId);
-          console.log('Safely handled setVolume exception:', err);
           resolve("Handled setVolume exception");
         }
       };
       
-      // Call our safe wrapper
       safeSetVolume();
     });
   }
@@ -238,8 +218,6 @@ class EnhancedVoiceAlertUtils {
   
   testAllAlerts() {
     if (!this.isAndroid) return;
-    
-    console.log('Testing all alerts');
     setTimeout(() => this.notifyEventStart(), 0);
     setTimeout(() => this.notifyCheckpoint(), 2000);
     setTimeout(() => this.notifyOverSpeed(), 4000);
@@ -249,20 +227,14 @@ class EnhancedVoiceAlertUtils {
   
   // Alias for release method to match the function call in MapScreen.js
   cleanup() {
-    // This method should never reject, it always resolves
     return this.release()
       .then(result => {
-        console.log('Sound cleanup completed:', result);
         return result;
       })
       .catch(() => {
-        // This should never happen with our safe release implementation
-        // but we add this as an extra safety layer
-        console.log('Safely handled unexpected error during cleanup');
         return "Safely handled cleanup error";
       });
   }
 }
 
-// Export singleton instance
 export default new EnhancedVoiceAlertUtils();

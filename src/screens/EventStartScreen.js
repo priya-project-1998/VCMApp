@@ -122,16 +122,7 @@ export default function EventStartScreen({ navigation, route }) {
       const isSameDate = (currentYear === eventYear && currentMonth === eventMonth && currentDay === eventDay);
       
       let canStart = false;
-      
-      // console.log('Date Check:', {
-      //   currentDate: `${currentYear}-${currentMonth + 1}-${currentDay}`,
-      //   eventDate: `${eventYear}-${eventMonth + 1}-${eventDay}`,
-      //   isSameDate,
-      //   flagOffDisplay,
-      //   eventStartDate,
-      //   configLoading
-      // });
-      
+     
       if (isSameDate && flagOffDisplay && flagOffDisplay !== 'N/A' && flagOffDisplay.trim() !== '') {
         const flagOffMatch = flagOffDisplay.match(/(\d{1,2}):(\d{2})/);
         if (flagOffMatch) {
@@ -139,14 +130,7 @@ export default function EventStartScreen({ navigation, route }) {
           const flagOffMinutes = parseInt(flagOffMatch[2], 10);
           const currentHours = now.getHours();
           const currentMinutes = now.getMinutes();
-          
-          console.log('Time Check:', {
-            currentTime: `${currentHours}:${currentMinutes}`,
-            flagOffTime: `${flagOffHours}:${flagOffMinutes}`,
-            canStart: currentHours > flagOffHours || (currentHours === flagOffHours && currentMinutes >= flagOffMinutes)
-          });
-          
-          // Enable start if current time >= flag off time
+                
           if (currentHours > flagOffHours || (currentHours === flagOffHours && currentMinutes >= flagOffMinutes)) {
             canStart = true;
           }
@@ -375,7 +359,7 @@ export default function EventStartScreen({ navigation, route }) {
         </View>
 
         {/* Testing Button - For Development Only */}
-        {/* <TouchableOpacity
+        <TouchableOpacity
           style={styles.testingBtn}
           onPress={() => {
             handleStartEvent();
@@ -384,7 +368,7 @@ export default function EventStartScreen({ navigation, route }) {
           <LinearGradient colors={["#FF6B6B", "#EE5A6F"]} style={styles.testingBtnGradient}>
             <Text style={styles.testingBtnText}>🧪 TEST START (Dev Only)</Text>
           </LinearGradient>
-        </TouchableOpacity> */}
+        </TouchableOpacity> 
 
         {/* Location Info */}
         <View style={styles.locationInfoRow}>

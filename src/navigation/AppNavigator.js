@@ -160,13 +160,13 @@ function DrawerNavigator() {
       <Drawer.Screen name="Notifications" component={NotificationsScreen} options={{drawerItemStyle: { display: 'none' }}}/>
       <Drawer.Screen name="Event" component={OrganiserScreen} />
       <Drawer.Screen name="Results" component={ResultsScreen} />
-      <Drawer.Screen name="Search" component={SearchScreen} />
+      {/* <Drawer.Screen name="Search" component={SearchScreen} /> */}
       <Drawer.Screen name="Feedback" component={FeedbackScreen} />
       <Drawer.Screen name="Invite User" component={InviteUserScreen} />
       <Drawer.Screen name="Rate Us" component={RateUsScreen} />
-      <Drawer.Screen name="Privacy Policy" component={PrivacyPolicyScreen} />
       <Drawer.Screen name="Location Permission Policy" component={LocationPermissionPolicyScreen} />
       <Drawer.Screen name="Settings" component={SettingsScreen} />
+      <Drawer.Screen name="Privacy Policy" component={PrivacyPolicyScreen} />
       <Drawer.Screen name="Terms & Condition" component={TermsConditionScreen} />
       <Drawer.Screen name="About App" component={AboutAppScreen} />
     </Drawer.Navigator>
