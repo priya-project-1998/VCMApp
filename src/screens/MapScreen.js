@@ -171,7 +171,6 @@ const MapScreen = ({ route, navigation }) => {
         });
         
         if (Object.keys(previousCheckpointStatus).length > 0) {
-          console.log(`🔄 [MapScreen] Loaded ${Object.keys(previousCheckpointStatus).length} previously completed checkpoints for event ${event_id}`);
           setCheckpointStatus(previousCheckpointStatus);
         }
       });
@@ -197,7 +196,6 @@ const MapScreen = ({ route, navigation }) => {
       try {
         const endTime = new Date(event_end_date);
         setEventEndTime(endTime);
-        console.log('Event end time set:', endTime);
       } catch (error) {
         console.log('Error parsing event end date:', error);
       }
@@ -216,7 +214,6 @@ const MapScreen = ({ route, navigation }) => {
         if (minutesRemaining <= 15 && minutesRemaining > 0 && !timeWarningGiven) {
           getVoiceAlertUtils().announceTimeWarning(minutesRemaining);
           setTimeWarningGiven(true);
-          console.log(`Time warning given: ${minutesRemaining} minutes remaining`);
         }
       };
 
@@ -249,7 +246,6 @@ useEffect(() => {
       // Get token from AsyncStorage
       const token = await AsyncStorage.getItem('authToken');
       if (!token) {
-        console.log("❌ No auth token found, cannot sync checkpoints");
         return;
       }
 
@@ -260,9 +256,6 @@ useEffect(() => {
             checkpoint_id: item.checkpoint_id,
             over_speed: overspeedCountRef.current // ✅ Use ref for latest value
           };
-
-          console.log("📤 API Request Body for checkpoint:", requestBody);
-          console.log(`🐛 [NetInfo Sync] Current overspeedCount value: ${overspeedCountRef.current}`);
 
           const res = await fetch(
             "https://e-pickup.randomsoftsolution.in/api/events/checkpoints/update",
@@ -284,9 +277,6 @@ useEffect(() => {
           } catch (jsonErr) {
             console.log("❌ JSON parse error:", jsonErr);
           }
-
-          console.log("📤 Sync response:", data);
-
           if (data && data.status === "success") {
             markSynced(item.id);
           }
@@ -342,8 +332,6 @@ useEffect(() => {
         }, 300);
         
       } catch (error) {
-        console.log('Error playing speed alert:', error);
-        // Ultimate fallback: basic vibration
         try {
           Vibration.vibrate([0, 400, 150, 400, 150, 400]); // Strong urgent pattern
         } catch (vibError) {
@@ -373,7 +361,6 @@ useEffect(() => {
           if (voiceUtils && typeof voiceUtils.stop === 'function') {
             voiceUtils.stop();
           }
-          console.log('✅ Voice alerts force stopped immediately - speed back to normal');
         } catch (error) {
           console.log('Error stopping voice alerts:', error);
         }
@@ -458,7 +445,6 @@ useEffect(() => {
   const syncCheckpointToServer = async (checkpointId) => {
     // ✅ Double-check if checkpoint is already synced (shouldn't happen with new logic, but safety check)
     if (checkpointStatus[checkpointId]?.completed && !syncingCheckpointsRef.current.has(checkpointId)) {
-      console.log(`🔄 [syncCheckpointToServer] Checkpoint "${checkpointId}" already synced - skipping`);
       return true; // Already synced, no need to show message again
     }
 
@@ -487,7 +473,6 @@ useEffect(() => {
       };
       
       // ✅ Debug log to check overspeedCount value being sent
-      console.log(`🐛 [syncCheckpointToServer] Sending API request with overspeedCount: ${overspeedCountRef.current}`, requestBody);
       
       const res = await fetch(
         "https://e-pickup.randomsoftsolution.in/api/events/checkpoints/update",
@@ -500,7 +485,6 @@ useEffect(() => {
           body: JSON.stringify(requestBody),
         }
       );
-     // console.log(`🎯 [event_id "${event_id}" 🎯 [category_id "${category_id}" 🎯 [checkpoint_id "${checkpointId}" 🎯 [over_speed "${14}" `);
       let data = {};
       try { data = await res.json(); } catch {}
       if ((res.status === 200 && data.status === "success") || data.status === "success") {
@@ -509,14 +493,10 @@ useEffect(() => {
         setMarkerColors((prev) => ({ ...prev, [checkpointId]: '#185a9d' })); // blue
         const cpObj = checkpoints.find(c => c.checkpoint_id === checkpointId);
         const cpName = cpObj?.checkpoint_name || checkpointId;
-        console.log('dhfhshfd', cpName);
         // ✅ Enhanced toast message with time and center positioning
         const syncTime = new Date().toLocaleTimeString();
         const successMessage = `Checkpoint "${cpName}" synced successfully at ${syncTime}`;
-        
-        // ✅ Console log for tracking sync toast display (only shown once)
-        console.log(`🎯 [syncCheckpointToServer] Checkpoint "${cpName}" (ID: ${checkpointId}) synced successfully at ${syncTime} - showing toast and voice alert (ONCE ONLY)`);
-        
+                
         // ✅ Voice Alert for Checkpoint Completion (only once)
         if (voiceAlertsEnabled) {
           const completedCount = Object.values(checkpointStatus).filter(s => s.completed).length + 1; // +1 for current
@@ -565,9 +545,7 @@ useEffect(() => {
       if (distance < checkpointRadius) {
         // ✅ Check if checkpoint is already completed OR currently syncing
         if (!checkpointStatus[cp.checkpoint_id]?.completed && !syncingCheckpointsRef.current.has(cp.checkpoint_id)) {
-         
-          console.log(`📍 [checkProximityToCheckpoints] User reached checkpoint "${cp.checkpoint_name}" (ID: ${cp.checkpoint_id}) - distance: ${distance.toFixed(2)}m`);
-          
+                   
           // ✅ Immediately mark as syncing to prevent duplicate attempts
           syncingCheckpointsRef.current.add(cp.checkpoint_id);
           
@@ -592,11 +570,9 @@ useEffect(() => {
             status: 'completed'
           });
           
-          // Only sync if not already completed
           syncCheckpointToServer(cp.checkpoint_id);
           
         } else if (checkpointStatus[cp.checkpoint_id]?.completed || syncingCheckpointsRef.current.has(cp.checkpoint_id)) {
-          // ✅ Silently skip - no console log spam while user remains in radius
         }
       }
     });
@@ -720,7 +696,6 @@ useEffect(() => {
         JSON.stringify(completionData)
       );
       
-      console.log('✅ Event completion data saved successfully to AsyncStorage');
     } catch (error) {
       console.error('❌ Error saving event completion data:', error);
     }
@@ -740,12 +715,6 @@ useEffect(() => {
         showCenterToast('Organizer contact not available', 'error');
         return;
       }
-
-      // ✅ Voice Alert for SOS Activation
-      if (voiceAlertsEnabled) {
-        getVoiceAlertUtils().announceSOSActivated();
-      }
-
       Alert.alert(
         "🆘 Emergency Call",
         `Do you want to call the event organizer?\n\nNumber: ${event_organizer_no}`,
@@ -810,84 +779,6 @@ useEffect(() => {
     setEnteredAbortCode("");
   };
 
-  // Handler for Time Stamp dropdown actions
-  const handleTimeStampMenu = (action) => {
-    setTimeStampDropdownVisible(false);
-    switch (action) {
-      case 'Checkpoint History':
-        setModalVisible(true);
-        break;
-      case 'My Location':
-        setShouldCenterOnUser(true); // set flag to center on user
-        if (mapRef.current) {
-          // Show immediate feedback
-          showCenterToast('Getting your location...', 'info');
-          
-          Geolocation.getCurrentPosition(
-            (pos) => {
-              const { latitude, longitude } = pos.coords;
-              try {
-                mapRef.current.animateToRegion({
-                  latitude,
-                  longitude,
-                  latitudeDelta: 0.0008, // ✅ Maximum zoom level everywhere
-                  longitudeDelta: 0.0008, // ✅ Maximum zoom level everywhere
-                }, 1000); // ✅ Consistent animation timing
-              } catch (error) {
-                // Error animating to region in handleTimeStampMenu
-              }
-              setUserCoords({ latitude, longitude });
-              setLastUserLocation({ latitude, longitude });
-              setCurrentLocationMarkerCoords({ latitude, longitude });
-              setShowCurrentLocationMarker(true);
-              if (currentLocationTimeoutRef.current) {
-                clearTimeout(currentLocationTimeoutRef.current);
-              }
-              currentLocationTimeoutRef.current = setTimeout(() => {
-                setShowCurrentLocationMarker(false);
-                currentLocationTimeoutRef.current = null;
-              }, 15000);
-              
-              // Success feedback
-              showCenterToast('Location found!', 'success');
-              
-              // ✅ Voice Alert for Location Found
-              if (voiceAlertsEnabled) {
-                getVoiceAlertUtils().announceLocationFound();
-              }
-            },
-            (error) => {
-              let msg = 'Location error';
-              if (error && error.message) msg += ': ' + error.message;
-              if (error && error.code) msg += ` (code: ${error.code})`;
-              showCenterToast(msg, 'error');
-              
-              // ✅ Voice Alert for Location Error
-              if (voiceAlertsEnabled) {
-                getVoiceAlertUtils().announceLocationError();
-              }
-            },
-            { 
-              enableHighAccuracy: false, // Faster response
-              timeout: 10000, // Reduced timeout
-              maximumAge: 60000 // Allow cached location
-            }
-          );
-        }
-        break;
-      case 'Checkpoint Location':
-        if (checkpoints.length && mapRef.current) {
-          try {
-            mapRef.current.animateToRegion(getBoundingRegion(checkpoints), 1000);
-          } catch (error) {
-            // Error animating to checkpoint location
-          }
-        }
-        break;
-      default:
-        break;
-    }
-  };
 
   // ✅ Countdown timer effect - decreases from total duration
   useEffect(() => {
@@ -1761,8 +1652,8 @@ useEffect(() => {
           >
             {/* Perfect Google Maps Style Car Icon */}
             <View style={{
-              width: 24,
-              height: 32,
+              width: 25,
+              height: 36,
               justifyContent: 'center',
               alignItems: 'center',
               transform: [{ rotate: `${userHeading}deg` }] // Direct rotation like Google Maps
@@ -1771,7 +1662,7 @@ useEffect(() => {
               <View style={{
                 width: 18,
                 height: 28,
-                backgroundColor: '#4285F4',
+                backgroundColor: '#FF5722',
                 borderRadius: 8,
                 borderWidth: 2,
                 borderColor: '#fff',
@@ -1811,7 +1702,7 @@ useEffect(() => {
                   left: -1,
                   width: 3,
                   height: 4,
-                  backgroundColor: '#2563EB',
+                  backgroundColor: '#FF5722',
                   borderRadius: 1,
                 }} />
                 <View style={{
@@ -1820,7 +1711,7 @@ useEffect(() => {
                   right: -1,
                   width: 3,
                   height: 4,
-                  backgroundColor: '#2563EB',
+                  backgroundColor: '#FF5722',
                   borderRadius: 1,
                 }} />
                 
@@ -1831,7 +1722,7 @@ useEffect(() => {
                   left: 1,
                   right: 1,
                   height: 12,
-                  backgroundColor: '#4285F4',
+                  backgroundColor: '#FF5722',
                 }} />
                 
                 {/* Rear windshield */}
@@ -1852,7 +1743,7 @@ useEffect(() => {
                   left: 3,
                   right: 3,
                   height: 3,
-                  backgroundColor: '#1E40AF',
+                  backgroundColor: '#FF5722',
                   borderBottomLeftRadius: 4,
                   borderBottomRightRadius: 4,
                 }} />
@@ -1870,119 +1761,105 @@ useEffect(() => {
             anchor={{ x: 0.5, y: 0.5 }}
             flat={false}
           >
-            {/* Perfect Google Maps Style Car Icon */}
-            <View style={{
-              width: 24,
-              height: 32,
-              justifyContent: 'center',
-              alignItems: 'center',
-              transform: [{ rotate: `${userHeading}deg` }] // Direct rotation like Google Maps
-            }}>
-              {/* Car Icon with SVG-like design */}
+           {/* Perfect Google Maps Style Car Icon - 50% Bigger & Red */}
               <View style={{
-                width: 18,
-                height: 28,
-                backgroundColor: '#4285F4',
-                borderRadius: 8,
-                borderWidth: 2,
-                borderColor: '#fff',
-                shadowColor: '#000',
-                shadowOpacity: 0.5,
-                shadowOffset: { width: 0, height: 3 },
-                elevation: 6,
-                overflow: 'hidden',
-              }}>
-                {/* Front bumper - Clear indication of front */}
-                <View style={{
-                  position: 'absolute',
-                  top: 0,
-                  left: 2,
-                  right: 2,
-                  height: 4,
-                  backgroundColor: '#fff',
-                  borderTopLeftRadius: 6,
-                  borderTopRightRadius: 6,
-                }} />
-                
-                {/* Front windshield */}
-                <View style={{
-                  position: 'absolute',
-                  top: 4,
-                  left: 3,
-                  right: 3,
-                  height: 6,
-                  backgroundColor: 'rgba(255,255,255,0.8)',
-                  borderRadius: 2,
-                }} />
-                
-                {/* Side mirrors */}
-                <View style={{
-                  position: 'absolute',
-                  top: 8,
-                  left: -1,
-                  width: 3,
-                  height: 4,
-                  backgroundColor: '#2563EB',
-                  borderRadius: 1,
-                }} />
-                <View style={{
-                  position: 'absolute',
-                  top: 8,
-                  right: -1,
-                  width: 3,
-                  height: 4,
-                  backgroundColor: '#2563EB',
-                  borderRadius: 1,
-                }} />
-                
-                {/* Main body */}
-                <View style={{
-                  position: 'absolute',
-                  top: 10,
-                  left: 1,
-                  right: 1,
-                  height: 12,
-                  backgroundColor: '#4285F4',
-                }} />
-                
-                {/* Rear windshield */}
-                <View style={{
-                  position: 'absolute',
-                  bottom: 4,
-                  left: 4,
-                  right: 4,
-                  height: 4,
-                  backgroundColor: 'rgba(255,255,255,0.7)',
-                  borderRadius: 1,
-                }} />
-                
-                {/* Rear bumper */}
-                <View style={{
-                  position: 'absolute',
-                  bottom: 0,
-                  left: 3,
-                  right: 3,
-                  height: 3,
-                  backgroundColor: '#1E40AF',
-                  borderBottomLeftRadius: 4,
-                  borderBottomRightRadius: 4,
-                }} />
-              </View>
-              
-              {/* Location accuracy circle (like Google Maps) */}
-              <View style={{
-                position: 'absolute',
                 width: 36,
-                height: 36,
-                borderRadius: 18,
-                backgroundColor: 'rgba(66, 133, 244, 0.1)',
-                borderWidth: 1,
-                borderColor: 'rgba(66, 133, 244, 0.3)',
-                top: -2,
-                left: -6,
-                zIndex: -1,
-              }} />
-            </View>
+                height: 63,
+                justifyContent: 'center',
+                alignItems: 'center',
+                transform: [{ rotate: `${userHeading}deg` }]
+              }}>
+                <View style={{
+                  width: 27,
+                  height: 42,
+                  backgroundColor: '#FF0000',
+                  borderRadius: 12,
+                  borderWidth: 2,
+                  borderColor: '#fff',
+                  shadowColor: '#000',
+                  shadowOpacity: 0.5,
+                  shadowOffset: { width: 0, height: 4 },
+                  elevation: 8,
+                  overflow: 'hidden',
+                }}>
+                  
+                  {/* Front bumper */}
+                  <View style={{
+                    position: 'absolute',
+                    top: 0,
+                    left: 3,
+                    right: 3,
+                    height: 6,
+                    backgroundColor: '#fff',
+                    borderTopLeftRadius: 8,
+                    borderTopRightRadius: 8,
+                  }} />
+
+                  {/* Front windshield */}
+                  <View style={{
+                    position: 'absolute',
+                    top: 6,
+                    left: 4,
+                    right: 4,
+                    height: 9,
+                    backgroundColor: 'rgba(255,255,255,0.8)',
+                    borderRadius: 2,
+                  }} />
+
+                  {/* Side mirrors */}
+                  <View style={{
+                    position: 'absolute',
+                    top: 12,
+                    left: -2,
+                    width: 4,
+                    height: 6,
+                    backgroundColor: '#B30000',
+                    borderRadius: 2,
+                  }} />
+                  <View style={{
+                    position: 'absolute',
+                    top: 12,
+                    right: -2,
+                    width: 4,
+                    height: 6,
+                    backgroundColor: '#B30000',
+                    borderRadius: 2,
+                  }} />
+
+                  {/* Main body */}
+                  <View style={{
+                    position: 'absolute',
+                    top: 15,
+                    left: 2,
+                    right: 2,
+                    height: 18,
+                    backgroundColor: '#FF0000',
+                  }} />
+
+                  {/* Rear windshield */}
+                  <View style={{
+                    position: 'absolute',
+                    bottom: 6,
+                    left: 5,
+                    right: 5,
+                    height: 6,
+                    backgroundColor: 'rgba(255,255,255,0.7)',
+                    borderRadius: 2,
+                  }} />
+
+                  {/* Rear bumper */}
+                  <View style={{
+                    position: 'absolute',
+                    bottom: 0,
+                    left: 4,
+                    right: 4,
+                    height: 5,
+                    backgroundColor: '#990000',
+                    borderBottomLeftRadius: 6,
+                    borderBottomRightRadius: 6,
+                  }} />
+                </View>
+              </View>
           </Marker>
         )}
         
@@ -2512,9 +2389,11 @@ useEffect(() => {
                 backgroundColor: '#fff',
                 textAlign: 'center',
                 letterSpacing: 4,
-                fontFamily: 'monospace'
+                fontFamily: 'monospace',
+                color: 'black',
+
               }}
-              placeholder="Enter the 4-digit code"
+              placeholder="Enter 4-digit code"
               placeholderTextColor="#999"
               keyboardType="numeric"
               maxLength={4}
