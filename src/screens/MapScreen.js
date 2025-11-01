@@ -1083,9 +1083,12 @@ useEffect(() => {
         },
         {
           enableHighAccuracy: true,
-          timeout: 15000,
+          timeout: 30000,
           maximumAge: 5000,
-          distanceFilter: 1, // ✅ Very small distance filter for smoother route
+          distanceFilter: 1,
+          showLocationDialog: true,
+          forceRequestLocation: true
+
         }
       );
 
@@ -2102,7 +2105,7 @@ useEffect(() => {
                 },
                 {
                   enableHighAccuracy: true,
-                  timeout: 10000,
+                  timeout: 30000,
                   maximumAge: 5000,
                 }
               );
