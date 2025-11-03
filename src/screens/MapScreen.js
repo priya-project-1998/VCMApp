@@ -80,6 +80,8 @@ const MapScreen = ({ route, navigation }) => {
   const [eventEndTime, setEventEndTime] = useState(null);
   const [useSimpleVoiceAlerts, setUseSimpleVoiceAlerts] = useState(true); // Default to simple alerts
   const [okayTimeout, setOkayTimeout] = useState(30); // 30 second countdown for "Okay" button
+  const [startTimeAdded, setStartTimeAdded] = useState(false); // ✅ new state
+
   const { checkpoints: paramCheckpoints, category_id, event_id, kml_path, color, event_organizer_no, speed_limit, event_start_date, event_end_date,duration } = route.params || {};
   const checkpoints = Array.isArray(paramCheckpoints) ? paramCheckpoints : [];
   
@@ -147,6 +149,8 @@ const MapScreen = ({ route, navigation }) => {
       setRemainingSeconds(prev => prev + timeTakenSec);
       console.log(`✅ START checkpoint time added: ${timeTakenSec} seconds`);
       console.log(`⏳ New Remaining Time: `, remainingSeconds + timeTakenSec);
+      setStartTimeAdded(true); // ✅ flag ON once start time added
+
     }
 
   } catch (e) {
@@ -1430,7 +1434,8 @@ useEffect(() => {
         ]}>
           {remainingSeconds === 0 && '🚨 '}
           {remainingSeconds <= 900 && remainingSeconds > 0 && '⚠️ '}
-          {remainingSeconds === 0 ? 'EVENT TIME OVER!' : `Time Remaining: ${formatTime(remainingSeconds)}`}
+          {remainingSeconds === 0 ? "EVENT TIME OVER!" : startTimeAdded ? `Time Remaining: ${formatTime(remainingSeconds)}` : ""}
+          {/* {remainingSeconds === 0 ? 'EVENT TIME OVER!' : `Time Remaining: ${formatTime(remainingSeconds)}`} */}
           {remainingSeconds === 0 && ' 🚨'}
           {remainingSeconds <= 900 && remainingSeconds > 0 && ' ⚠️'}
         </Text>
