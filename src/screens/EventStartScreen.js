@@ -47,17 +47,20 @@ export default function EventStartScreen({ navigation, route }) {
   const [showStartModal, setShowStartModal] = useState(false);
   const [canStartEvent, setCanStartEvent] = useState(false);
   const [isEventCompleted, setIsEventCompleted] = useState(false); // Track if event is completed
+  const [isEventAborted, setIsEventAborted] = useState(false); // Track if event was aborted
 
   // Config state
   const [eventConfig, setEventConfig] = useState(null);
   const [configLoading, setConfigLoading] = useState(true);
   const [configError, setConfigError] = useState(null);
 
-  // ✅ Check if event is already completed on mount
+  // ✅ Check if event is already completed or aborted on mount
   useEffect(() => {
     async function checkEventStatus() {
       try {
         const status = await AsyncStorage.getItem(`event_${eventId}_status`);
+        const abortFlag = await AsyncStorage.getItem(`event_${eventId}_aborted`);
+        
         if (status === 'completed') {
           setIsEventCompleted(true);
           console.log(`✅ Event ${eventId} is already completed - hiding START button`);
@@ -65,9 +68,17 @@ export default function EventStartScreen({ navigation, route }) {
           setIsEventCompleted(false);
           console.log(`📍 Event ${eventId} status: ${status || 'not found'} - showing START button`);
         }
+        
+        if (abortFlag === 'true') {
+          setIsEventAborted(true);
+          console.log(`⚠️ Event ${eventId} was aborted - disabling START button`);
+        } else {
+          setIsEventAborted(false);
+        }
       } catch (error) {
         console.error('❌ Error checking event status:', error);
         setIsEventCompleted(false); // Show START button on error
+        setIsEventAborted(false);
       }
     }
     
@@ -156,6 +167,9 @@ export default function EventStartScreen({ navigation, route }) {
   const handleStartEvent = async () => {
     setStartPressed(true);
     setStartMessage(`Event will be start in ${formatTime(timeLeft)}`);
+    // ✅ Reset abort flag when starting event normally
+    await AsyncStorage.removeItem(`event_${eventId}_aborted`);
+    console.log(`✅ Abort flag reset for event ${eventId}`);
     // Fetch checkpoints and kml_path for this event
     const res = await EventService.getCheckpointsPerEvent(eventId);
     if (res.status === 'success' && res.data) {
@@ -301,15 +315,15 @@ export default function EventStartScreen({ navigation, route }) {
           {/* Start Button - Only show if event is not completed */}
           {!isEventCompleted && (
             <TouchableOpacity
-              style={[styles.startBtnIntegrated, !canStartEvent && styles.startBtnDisabled]}
-              disabled={!canStartEvent}
+              style={[styles.startBtnIntegrated, (!canStartEvent || isEventAborted) && styles.startBtnDisabled]}
+              disabled={!canStartEvent || isEventAborted}
               onPress={() => {
-                if (canStartEvent) {
+                if (canStartEvent && !isEventAborted) {
                   handleStartEvent();
                 }
               }}
             >
-              <LinearGradient colors={!canStartEvent ? ["#666", "#888"] : ["#43cea2", "#185a9d"]} style={styles.startBtnGradientIntegrated}>
+              <LinearGradient colors={(!canStartEvent || isEventAborted) ? ["#666", "#888"] : ["#43cea2", "#185a9d"]} style={styles.startBtnGradientIntegrated}>
                 <Text style={styles.startBtnTextIntegrated}>START</Text>
               </LinearGradient>
             </TouchableOpacity>
@@ -350,9 +364,14 @@ export default function EventStartScreen({ navigation, route }) {
               </View>
             </View>
           </Modal>
-          {!canStartEvent && !isEventCompleted && (
+          {!canStartEvent && !isEventCompleted && !isEventAborted && (
             <Text style={styles.startHint}>
               Start will be enabled when event date and flag off time are reached
+            </Text>
+          )}
+          {isEventAborted && !isEventCompleted && (
+            <Text style={styles.abortHint}>
+              ⚠️ Event was aborted. Please contact the organizer to restart.
             </Text>
           )}
          
@@ -706,6 +725,13 @@ const styles = StyleSheet.create({
     color: '#185a9d',
     textAlign: 'center',
     fontWeight: '500',
+  },
+  abortHint: {
+    marginTop: 8,
+    fontSize: 13,
+    color: '#FF6B6B',
+    textAlign: 'center',
+    fontWeight: '600',
   },
   chipRow: {
     flexDirection: 'row',

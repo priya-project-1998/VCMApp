@@ -794,6 +794,9 @@ useEffect(() => {
       // Save abort event locally
       await AsyncStorage.setItem(`event_${event_id}_aborted`, 'true');
       await AsyncStorage.setItem(`event_${event_id}_abort_time`, new Date().toISOString());
+      // ✅ Mark event as completed to prevent restart
+      await AsyncStorage.setItem(`event_${event_id}_status`, 'completed');
+      console.log(`✅ Event ${event_id} marked as aborted and completed in AsyncStorage`);
       
       // Clear location watching
       if (watchId) {
