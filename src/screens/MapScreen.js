@@ -87,6 +87,7 @@ const MapScreen = ({ route, navigation }) => {
   
   const eventStartTimeRef = useRef(null);
   const syncingCheckpointsRef = useRef(new Set());
+  const eventEndTimestamp = useRef(null); // ✅ Store end timestamp for timer calculation
 
   // ✅ Helper function to get the appropriate voice alert utility
   const getVoiceAlertUtils = () => {
@@ -146,9 +147,12 @@ const MapScreen = ({ route, navigation }) => {
     const timeTakenSec = Math.floor((now - eventStartTimeRef.current) / 1000);
 
     if (timeTakenSec > 0) {
-      setRemainingSeconds(prev => prev + timeTakenSec);
+      // ✅ Extend end timestamp instead of modifying state
+      if (eventEndTimestamp.current) {
+        eventEndTimestamp.current = eventEndTimestamp.current + (timeTakenSec * 1000);
+      }
       console.log(`✅ START checkpoint time added: ${timeTakenSec} seconds`);
-      console.log(`⏳ New Remaining Time: `, remainingSeconds + timeTakenSec);
+      console.log(`⏳ End timestamp extended by: ${timeTakenSec} seconds`);
       setStartTimeAdded(true); // ✅ flag ON once start time added
 
     }
@@ -176,8 +180,14 @@ const MapScreen = ({ route, navigation }) => {
       };
       
       const totalSeconds = parseDurationToSeconds(duration);
-      setRemainingSeconds(totalSeconds);
       setTotalEventDuration(totalSeconds);
+      
+      // ✅ Set end timestamp = current time + duration
+      const now = Date.now();
+      eventEndTimestamp.current = now + (totalSeconds * 1000);
+      
+      // ✅ Set initial remaining seconds
+      setRemainingSeconds(totalSeconds);
     }
   }, [duration]);
 
@@ -811,50 +821,49 @@ useEffect(() => {
   };
 
 
-  // ✅ Countdown timer effect - decreases from total duration
+  // ✅ Countdown timer effect - timestamp-based calculation for background reliability
   useEffect(() => {
+    if (!eventEndTimestamp.current) return;
     
     const timer = setInterval(() => {
-      setRemainingSeconds((prev) => {
-        const newRemaining = prev > 0 ? prev - 1 : 0;
-        
-        // ✅ Check for 15-minute warning (900 seconds = 15 minutes)
-        if (newRemaining === 900 && !fifteenMinuteWarningGiven && voiceAlertsEnabled) {
-          setFifteenMinuteWarningGiven(true);
-          // Play simple sound alert instead of voice dialogue
-          try {
-            SystemSoundUtils.playSystemSound(); // System sound for 15-min warning
-            console.log('🔔 15-minute warning alert played');
-          } catch (error) {
-            console.log('Error playing 15-minute warning sound:', error);
-          }
+      const now = Date.now();
+      const remainingMs = eventEndTimestamp.current - now;
+      const newRemaining = Math.max(0, Math.floor(remainingMs / 1000));
+      
+      setRemainingSeconds(newRemaining);
+      
+      // ✅ Check for 15-minute warning (900 seconds = 15 minutes)
+      if (newRemaining === 900 && !fifteenMinuteWarningGiven && voiceAlertsEnabled) {
+        setFifteenMinuteWarningGiven(true);
+        // Play simple sound alert instead of voice dialogue
+        try {
+          SystemSoundUtils.playSystemSound(); // System sound for 15-min warning
+          console.log('🔔 15-minute warning alert played');
+        } catch (error) {
+          console.log('Error playing 15-minute warning sound:', error);
         }
-        
-        // ✅ Check for event completion (00:00:00)
-        if (newRemaining === 0 && voiceAlertsEnabled) {
-          // Play simple sound alert for event completion
-          try {
-            SystemSoundUtils.playSystemSound(); // System sound for event completion
-            // Add a second alert sound after a brief delay for emphasis
-            setTimeout(() => {
-              SystemSoundUtils.playSystemSound();
-            }, 500);
-            console.log('🏁 Event completion alert played');
-            if (remainingSeconds === 0) {
-              setOkayTimeout(30);
-              setEventCompletedModal(true);
-            }
-          } catch (error) {
-            console.log('Error playing event completion sound:', error);
-          }
+      }
+      
+      // ✅ Check for event completion (00:00:00)
+      if (newRemaining === 0 && voiceAlertsEnabled) {
+        // Play simple sound alert for event completion
+        try {
+          SystemSoundUtils.playSystemSound(); // System sound for event completion
+          // Add a second alert sound after a brief delay for emphasis
+          setTimeout(() => {
+            SystemSoundUtils.playSystemSound();
+          }, 500);
+          console.log('🏁 Event completion alert played');
+          setOkayTimeout(30);
+          setEventCompletedModal(true);
+        } catch (error) {
+          console.log('Error playing event completion sound:', error);
         }
-        
-        return newRemaining;
-      });
+      }
     }, 1000);
     
     return () => clearInterval(timer);
-  }, [remainingSeconds, fifteenMinuteWarningGiven, voiceAlertsEnabled]);
+  }, [fifteenMinuteWarningGiven, voiceAlertsEnabled]);
 
   // Format seconds to HH:MM:SS
   const formatTime = (secs) => {
