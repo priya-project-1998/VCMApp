@@ -78,7 +78,7 @@ export default function Dashboard({ navigation }) {
         const bannersWithImages = response.data.map((banner) => ({
           ...banner,
           image: banner.image_url 
-            ? { uri: `https://e-pickup.randomsoftsolution.in/${banner.image_url}` }
+            ? { uri: `https://rajasthanmotorsports.com/${banner.image_url}` }
             : null,
           subtitle: `Event ID: ${banner.event_id || 'N/A'}`,
           date: banner.created_date
@@ -124,7 +124,7 @@ export default function Dashboard({ navigation }) {
           .map((event) => ({
             ...event,
             image: event.event_pic 
-              ? { uri: `https://e-pickup.randomsoftsolution.in/${event.event_pic}` }
+              ? { uri: `https://rajasthanmotorsports.com/${event.event_pic}` }
               : null,
           }))
           .filter(e => e.image && isEventActive(e.event_end_date)); // Only events with images and not ended

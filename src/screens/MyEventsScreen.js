@@ -58,7 +58,7 @@ export default function MyEventsScreen({ navigation }) {
         const processedEvents = eventsData.map((event, index) => ({
           ...event,
           image: event.event_pic 
-            ? { uri: `https://e-pickup.randomsoftsolution.in/${event.event_pic}` }
+            ? { uri: `https://rajasthanmotorsports.com/${event.event_pic}` }
             : { uri: staticEventImages[index % staticEventImages.length] }
         }));
         setMyEvents(processedEvents);

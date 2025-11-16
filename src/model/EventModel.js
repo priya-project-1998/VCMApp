@@ -30,7 +30,9 @@ export default class EventModel {
     }
     
     // If it's a relative path, prepend the base URL
-    const BASE_URL = "https://e-pickup.randomsoftsolution.in";
+    // const BASE_URL = "https://e-pickup.randomsoftsolution.in";
+    const BASE_URL = "https://rajasthanmotorsports.com";
+
     const fullUrl = `${BASE_URL}/${imagePath}`;
     
     return fullUrl;

@@ -61,7 +61,7 @@ export default function ProfileScreen() {
           } else if (user.profile_pic_url) {
             setAvatarUri(user.profile_pic_url);
           } else if (user.profile_pic) {
-            setAvatarUri(`https://e-pickup.randomsoftsolution.in/assets/app/profile/${user.profile_pic}`);
+            setAvatarUri(`https://rajasthanmotorsports.com/assets/app/profile/${user.profile_pic}`);
           }
         }
       };
@@ -98,7 +98,7 @@ export default function ProfileScreen() {
     }
 
     setLoading(true);
-
+    await new Promise(resolve => setTimeout(resolve, 5000));
     // Use FormData for image upload
     const formData = new FormData();
     formData.append('name', String(name));
@@ -135,7 +135,7 @@ export default function ProfileScreen() {
         } else if (user.profile_pic_url) {
           setAvatarUri(user.profile_pic_url);
         } else if (user.profile_pic) {
-          setAvatarUri(`https://e-pickup.randomsoftsolution.in/assets/app/profile/${user.profile_pic}`);
+          setAvatarUri(`https://rajasthanmotorsports.com/assets/app/profile/${user.profile_pic}`);
         }
         setSelectedImage(null);
         setSelectedImageFilename(null);
@@ -160,7 +160,7 @@ export default function ProfileScreen() {
           } else if (latestUser.profile_pic_url) {
             setAvatarUri(latestUser.profile_pic_url);
           } else if (latestUser.profile_pic) {
-            setAvatarUri(`https://e-pickup.randomsoftsolution.in/assets/app/profile/${latestUser.profile_pic}`);
+            setAvatarUri(`https://rajasthanmotorsports.com/assets/app/profile/${latestUser.profile_pic}`);
           }
           // Remove forced drawer open/close logic
         }

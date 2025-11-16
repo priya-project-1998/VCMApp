@@ -296,7 +296,7 @@ useEffect(() => {
           };
 
           const res = await fetch(
-            "https://e-pickup.randomsoftsolution.in/api/events/checkpoints/update",
+            "https://rajasthanmotorsports.com/api/events/checkpoints/update",
             {
               method: "POST",
               headers: {
@@ -513,7 +513,7 @@ useEffect(() => {
       // ✅ Debug log to check overspeedCount value being sent
       
       const res = await fetch(
-        "https://e-pickup.randomsoftsolution.in/api/events/checkpoints/update",
+        "https://rajasthanmotorsports.com/api/events/checkpoints/update",
         {
           method: "POST",
           headers: {
@@ -1228,7 +1228,7 @@ useEffect(() => {
             }
             
             const res = await fetch(
-              "https://e-pickup.randomsoftsolution.in/api/events/checkpoints/update",
+              "https://rajasthanmotorsports.com/api/events/checkpoints/update",
               {
                 method: "POST",
                 headers: {
@@ -1354,7 +1354,7 @@ useEffect(() => {
                 return;
               }
               const res = await fetch(
-                "https://e-pickup.randomsoftsolution.in/api/events/checkpoints/update",
+                "https://rajasthanmotorsports.com/api/events/checkpoints/update",
                 {
                   method: "POST",
                   headers: {
@@ -1975,7 +1975,7 @@ useEffect(() => {
               
               // Debug log removed
               const res = await fetch(
-                "https://e-pickup.randomsoftsolution.in/api/events/checkpoints/update",
+                "https://rajasthanmotorsports.com/api/events/checkpoints/update",
                 {
                   method: "POST",
                   headers: {
