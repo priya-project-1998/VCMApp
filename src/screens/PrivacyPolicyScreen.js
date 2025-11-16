@@ -4,71 +4,100 @@ import { ScrollView, Text, StyleSheet } from "react-native";
 const PrivacyPolicyScreen = () => {
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
-      <Text style={styles.heading}>VCM - Privacy Policy</Text>
+      <Text style={styles.heading}>
+        Privacy Policy precedent to use of NaviQuest systems and it’s components.
+      </Text>
 
       <Text style={styles.section}>
-        Your privacy is important to us. This Privacy Policy explains how VCM
-        collects, uses, and protects your personal information when you use our app.
-        By using VCM, you agree to the practices described in this policy.
+        NaviQuest recognises the importance of maintaining your privacy. We value your privacy and appreciate your trust in us. This Policy describes how we treat user information we collect on NaviQuest and other offline sources. This Privacy Policy applies to current and former visitors to our app and register users. By visiting and/or using our app, you agree to this Privacy Policy.
       </Text>
 
-      <Text style={styles.subHeading}>1. Information We Collect</Text>
+      <Text style={styles.subHeading}>Contact information</Text>
       <Text style={styles.section}>
-        • Personal details you provide during signup (name, email, username, mobile).
-        {"\n"}• Profile photo you upload.
-        {"\n"}• Event participation details.
-        {"\n"}• Device and usage data to improve our services.
+        We might collect your name, email, mobile number, city, country and ip address, and other information.
       </Text>
 
-      <Text style={styles.subHeading}>2. How We Use Your Information</Text>
+      <Text style={styles.subHeading}>Other information</Text>
       <Text style={styles.section}>
-        • To create and manage your VCM account.
-        {"\n"}• To register you for racing events.
-        {"\n"}• To communicate important event updates and notifications.
-        {"\n"}• To improve app performance and user experience.
+        If you use our app, we may collect information about your IP address and the device address you’re using. We might look at what site you came from, duration of time spent on our app, pages accessed or what site you visit when you leave us. We might also collect the type of mobile device you are using, or the version of the operating system your device is running.
       </Text>
 
-      <Text style={styles.subHeading}>3. Data Sharing</Text>
+      <Text style={styles.subHeading}>Facebook Login</Text>
       <Text style={styles.section}>
-        VCM does not sell your personal data to third parties. We may share your
-        information with trusted event organizers and partners strictly for the
-        purpose of conducting events and awarding prizes.
+        When you choose facebook as login option we validate your facebook account and pick data from that account which includes Gender, First Name, Last Name, Profile picture, Email id.
       </Text>
 
-      <Text style={styles.subHeading}>4. Data Security</Text>
+      <Text style={styles.subHeading}>Google Login</Text>
       <Text style={styles.section}>
-        We implement reasonable security measures to protect your personal
-        information. However, no method of electronic storage is 100% secure.
+        When you choose Google as login option, we validate your google account and pick data from that account which includes Name, Profile picture, Email id
       </Text>
 
-      <Text style={styles.subHeading}>5. Your Rights</Text>
+      <Text style={styles.subHeading}>We collect Information about your geographical location</Text>
       <Text style={styles.section}>
-        • You can update your profile information anytime in the Profile section.
-        {"\n"}• You may request deletion of your account by contacting support.
-        {"\n"}• You can control notification preferences in your device settings.
+        As our app is completed base on race, we track your location in real time during an event and store it on our server for the processing. The Location are stored in database to display results.
       </Text>
 
-      <Text style={styles.subHeading}>6. Children's Privacy</Text>
+      <Text style={styles.subHeading}>We collect information directly from you</Text>
       <Text style={styles.section}>
-        VCM is strictly for users aged 18+ in India. We do not knowingly collect
-        personal information from minors.
+        We collect information directly from you when you register or create profile.
       </Text>
 
-      <Text style={styles.subHeading}>7. Changes to Privacy Policy</Text>
+      <Text style={styles.subHeading}>We collect information from you passively</Text>
       <Text style={styles.section}>
-        We may update this Privacy Policy from time to time. Any significant changes
-        will be notified via the app.
+        We use tracking tools like firebase and fabric for collecting information about your usage of our app.
       </Text>
 
-      <Text style={styles.subHeading}>8. Contact Us</Text>
+      <Text style={styles.subHeading}>We use information to contact you</Text>
       <Text style={styles.section}>
-        If you have questions or concerns about this Privacy Policy, please reach
-        out through the in-app Help section.
+        We might use the information you provide to contact you for the reminder of event or in case of results.
       </Text>
 
-      <Text style={styles.footer}>
-        © {new Date().getFullYear()} VCM. All Rights Reserved.
+      <Text style={styles.subHeading}>We use information to improve services</Text>
+      <Text style={styles.section}>
+        We might use your information to customize your experience with us. This could include displaying offer and events near you.
       </Text>
+
+      <Text style={styles.subHeading}>We use information to send you transactional communications</Text>
+      <Text style={styles.section}>
+        We might send you emails or SMS about latest offers.
+      </Text>
+
+      <Text style={styles.subHeading}>We will share information with third parties who perform services on our behalf</Text>
+      <Text style={styles.section}>
+        We share information you entered while submitting participation request to the respective Organiser.
+      </Text>
+
+      <Text style={styles.subHeading}>We may share your information for reasons not described in this policy</Text>
+      <Text style={styles.section}>
+        We will tell you before we do this.
+      </Text>
+
+      <Text style={styles.subHeading}>Updates to this policy</Text>
+      <Text style={styles.section}>
+        This Privacy Policy was last updated on Nov 12, 2025. From time to time we may change our privacy practices. We will notify you of any material changes to this policy as required by law. We will also post an updated copy on our website. Please check our site periodically for updates.
+      </Text>
+
+      <Text style={styles.subHeading}>Jurisdiction</Text>
+      <Text style={styles.section}>
+        If you choose to continue the app, your visit and any dispute over privacy is subject to this Policy and the app’s terms of use. In addition to the foregoing, any disputes arising under this Policy shall be governed by the laws of India.
+      </Text>
+
+      <Text style={styles.subHeading}>Privacy policy and user data</Text>
+      <Text style={styles.section}>
+        You agree to NaviQuest data policy, including the collection, use, processing, and sharing of your information as described in our Privacy Policy, as well as the transfer and processing of your information where we have or use facilities, service providers, or partners, regardless of where you use our Services. You acknowledge that the laws, regulations, and standards of the country in which your information is stored or processed may be different from those of your own country. NaviQuest doesn’t not claim the ownership of the information that you submit for NaviQuest account. You shall have the authority and rights to provider such information that you submit for your account.
+      </Text>
+
+      <Text style={styles.subHeading}>Ownership</Text>
+      <Text style={styles.section}>
+        NaviQuest or its licensors retain ownership of all intellectual property rights in and to the Application, including copies, improvements, and modifications thereof. Your right to use the Application is limited to those expressly granted by this Agreement. No other rights with respect of the Application or any related intellectual property rights are granted or implied.
+      </Text>
+
+      <Text style={styles.subHeading}>Copyrights</Text>
+      <Text style={styles.section}>
+        Our services and materials incorporated by Service provider on our Services (“Material”) are protected by copyrights, patents, trade secrets or other proprietary rights (“Copyrights”). Some of the characters, logos, or other images incorporated by Service provider in our services are also protected as reregistered or unregistered trademarks, trade names, and/or service marks owned by the Service providers or its licensors own the title, copyright, and other intellectual property rights in the Material and Service, and by using our Services, you do not acquire any ownership rights in Service or Materials contained therein. Service Provider respects the intellectual property rights of others and asks users of our Services to do the same.
+      </Text>
+
+      <Text style={styles.section}>Team NaviQuest</Text>
     </ScrollView>
   );
 };
@@ -99,13 +128,6 @@ const styles = StyleSheet.create({
     fontSize: 15,
     color: "#fff",
     lineHeight: 22,
-  },
-  footer: {
-    fontSize: 14,
-    color: "#aaa",
-    textAlign: "center",
-    marginTop: 20,
-    marginBottom: 10,
   },
 });
 
