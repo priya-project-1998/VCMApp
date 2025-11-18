@@ -4,6 +4,7 @@ import colors from '../constants/colors';
 
 export default function EventDetailsView({ event, onBack }) {
   if (!event) return null;
+  console.log('Event Details:', event);
 
   return (
     <View style={[styles.bgSoft, { backgroundColor: colors.background }]}> 
@@ -15,30 +16,30 @@ export default function EventDetailsView({ event, onBack }) {
             </TouchableOpacity>
           )}
           <View style={[styles.detailImageContainer, { backgroundColor: colors.card, borderColor: colors.border }]}> 
-            <Image source={event.pic ? { uri: event.pic } : { uri: 'https://via.placeholder.com/400x200/333333/ffffff?text=Event+Image' }} style={styles.detailImage} resizeMode="cover" />
+            <Image source={event.event_pic ? { uri: event.image.uri } : { uri: 'https://via.placeholder.com/400x200/333333/ffffff?text=Event+Image' }} style={styles.detailImage} resizeMode="cover" />
           </View>
           <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border }]}> 
-            <Text style={[styles.detailTitle, { color: colors.accent }]}>{event.name}</Text>
+            <Text style={[styles.detailTitle, { color: colors.accent }]}>{event.event_name}</Text>
             <View style={styles.detailSection}>
               <View style={[styles.detailItem, { backgroundColor: colors.background, borderColor: colors.border }]}> 
                 <View style={[styles.detailIconContainer, { backgroundColor: colors.accent, borderColor: colors.border }]}><Text style={styles.detailItemIcon}>📍</Text></View>
-                <View style={styles.detailItemContent}><Text style={[styles.detailItemLabel, { color: colors.light }]} >Venue</Text><Text style={[styles.detailItemValue, { color: colors.text }]}>{event.venue}</Text></View>
+                <View style={styles.detailItemContent}><Text style={[styles.detailItemLabel, { color: colors.light }]} >Venue</Text><Text style={[styles.detailItemValue, { color: colors.text }]}>{event.event_venue}</Text></View>
               </View>
               <View style={[styles.detailItem, { backgroundColor: colors.background, borderColor: colors.border }]}> 
                 <View style={[styles.detailIconContainer, { backgroundColor: colors.accent, borderColor: colors.border }]}><Text style={styles.detailItemIcon}>📝</Text></View>
-                <View style={styles.detailItemContent}><Text style={[styles.detailItemLabel, { color: colors.light }]} >Description</Text><Text style={[styles.detailItemValue, { color: colors.text }]}>{event.desc || 'No description available'}</Text></View>
+                <View style={styles.detailItemContent}><Text style={[styles.detailItemLabel, { color: colors.light }]} >Description</Text><Text style={[styles.detailItemValue, { color: colors.text }]}>{event.event_desc || 'No description available'}</Text></View>
               </View>
               <View style={[styles.detailItem, { backgroundColor: colors.background, borderColor: colors.border }]}> 
                 <View style={[styles.detailIconContainer, { backgroundColor: colors.accent, borderColor: colors.border }]}><Text style={styles.detailItemIcon}>📅</Text></View>
-                <View style={styles.detailItemContent}><Text style={[styles.detailItemLabel, { color: colors.light }]} >Start Date</Text><Text style={[styles.detailItemValue, { color: colors.text }]}>{event.startDate}</Text></View>
+                <View style={styles.detailItemContent}><Text style={[styles.detailItemLabel, { color: colors.light }]} >Start Date</Text><Text style={[styles.detailItemValue, { color: colors.text }]}>{event.event_start_date}</Text></View>
               </View>
               <View style={[styles.detailItem, { backgroundColor: colors.background, borderColor: colors.border }]}> 
                 <View style={[styles.detailIconContainer, { backgroundColor: colors.accent, borderColor: colors.border }]}><Text style={styles.detailItemIcon}>🏁</Text></View>
-                <View style={styles.detailItemContent}><Text style={[styles.detailItemLabel, { color: colors.light }]} >End Date</Text><Text style={[styles.detailItemValue, { color: colors.text }]}>{event.endDate}</Text></View>
+                <View style={styles.detailItemContent}><Text style={[styles.detailItemLabel, { color: colors.light }]} >End Date</Text><Text style={[styles.detailItemValue, { color: colors.text }]}>{event.event_end_date}</Text></View>
               </View>
               <View style={[styles.detailItem, { backgroundColor: colors.background, borderColor: colors.border }]}> 
                 <View style={[styles.detailIconContainer, { backgroundColor: colors.accent, borderColor: colors.border }]}><Text style={styles.detailItemIcon}>👤</Text></View>
-                <View style={styles.detailItemContent}><Text style={[styles.detailItemLabel, { color: colors.light }]} >Organised By</Text><Text style={[styles.detailItemValue, { color: colors.text }]}>{event.organisedBy}</Text></View>
+                <View style={styles.detailItemContent}><Text style={[styles.detailItemLabel, { color: colors.light }]} >Organised By</Text><Text style={[styles.detailItemValue, { color: colors.text }]}>{event.event_organised_by}</Text></View>
               </View>
             </View>
           </View>
