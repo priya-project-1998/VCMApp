@@ -953,7 +953,7 @@ useEffect(() => {
       // If map center is more than 100m away from user, they probably panned manually
       if (distanceFromUser > 100) {
         setIsFollowingUser(false);
-        showCenterToast('Map follow disabled - You moved the map', 'info');
+        // showCenterToast('Map follow disabled - You moved the map', 'info');
       }
     }
   };
@@ -2113,7 +2113,7 @@ useEffect(() => {
                     latitudeDelta: userCurrentRegion?.latitudeDelta || 0.0008, // Keep current zoom
                     longitudeDelta: userCurrentRegion?.longitudeDelta || 0.0008, // Keep current zoom
                   }, 800);
-                  showCenterToast('Map centered on your location', 'info');
+                  // showCenterToast('Map centered on your location', 'info');
                 } catch (error) {
                   console.log('Error centering map:', error);
                 }
