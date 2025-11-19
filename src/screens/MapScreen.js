@@ -1934,26 +1934,25 @@ useEffect(() => {
             </View>
           </Marker>
         )}
-        {checkpoints.map((cp, idx) => (
-          <Marker
-            key={cp.checkpoint_id}
-            testID={`marker-${cp.checkpoint_id}`}
-            coordinate={{
-              latitude: parseFloat(cp.latitude),
-              longitude: parseFloat(cp.longitude),
-            }}
-            title={cp.checkpoint_name}
-            pinColor={
-              checkpointStatus[cp.checkpoint_id]?.completed
-                ? '#4caf50' // green for completed
-                : (() => {
-                    //console.log(`🎨 Checkpoint ${cp.checkpoint_id} (${cp.checkpoint_name}) - Received color: "${cp.color}", Using: "${cp.color || 'green'}", Status: ${checkpointStatus[cp.checkpoint_id]?.completed ? 'completed' : 'pending'}`);
-                    return (cp.color || 'red'); // use passed color or fallback to red for pending
-                  })()
-            }
-            onPress={() => setSelectedCheckpointId(cp.checkpoint_id)}
-          />
-        ))}
+        {checkpoints.map((cp, idx) => {
+          // ✅ Determine marker color based on completion status
+          const isCompleted = checkpointStatus[cp.checkpoint_id]?.completed;
+          const markerColor = isCompleted ? 'green' : (cp.color || 'green');
+
+          return (
+            <Marker
+              key={`${cp.checkpoint_id}-${isCompleted ? 'completed' : 'pending'}`}
+              testID={`marker-${cp.checkpoint_id}`}
+              coordinate={{
+                latitude: parseFloat(cp.latitude),
+                longitude: parseFloat(cp.longitude),
+              }}
+              title={cp.checkpoint_name}
+              pinColor={markerColor}
+              onPress={() => setSelectedCheckpointId(cp.checkpoint_id)}
+            />
+          );
+        })}
       </MapView>
       {/* TEST BUTTON: Mark selected checkpoint as completed - Only show on simulator/emulator */}
       {isTestMode && selectedCheckpointId && (
