@@ -65,6 +65,8 @@ const MapScreen = ({ route, navigation }) => {
   const [abortPassword, setAbortPassword] = useState("");
   const [isFollowingUser, setIsFollowingUser] = useState(false); // Track if following user location
   const [watchId, setWatchId] = useState(null); // Store watch position ID
+  const [userCurrentRegion, setUserCurrentRegion] = useState(null); // Track current map region
+  const [hasInitialZoom, setHasInitialZoom] = useState(false); // Track if initial zoom done
   const [speedLimit, setSpeedLimit] = useState(60); // Default speed limit
   const [isOverspeedAlertShown, setIsOverspeedAlertShown] = useState(false);
   const [overspeedCount, setOverspeedCount] = useState(0);
@@ -912,22 +914,47 @@ useEffect(() => {
         // ✅ Check speed limit
         checkSpeedLimit(speedKmh);
       }
-      // Center map if flag is set
-      if (shouldCenterOnUser && mapRef.current) {
+      
+      // ✅ GOOGLE MAPS BEHAVIOR: Only center map if following, NEVER change zoom
+      if (isFollowingUser && mapRef.current) {
         try {
           mapRef.current.animateToRegion({
             latitude,
             longitude,
-            latitudeDelta: 0.01,
-            longitudeDelta: 0.01,
-          }, 1000);
+            latitudeDelta: userCurrentRegion?.latitudeDelta || 0.0008, // Use current zoom or fallback
+            longitudeDelta: userCurrentRegion?.longitudeDelta || 0.0008, // Use current zoom or fallback
+          }, 500); // Quick, smooth centering
         } catch (error) {
           // Error animating to region in handleUserLocationChange
         }
-        setShouldCenterOnUser(false);
       }
     } catch (err) {
       // ignore
+    }
+  };
+
+  // ✅ GOOGLE MAPS BEHAVIOR: Detect when user manually moves map to stop following
+  const handleRegionChange = (region) => {
+    setUserCurrentRegion(region);
+  };
+
+  const handleRegionChangeComplete = (region) => {
+    setUserCurrentRegion(region);
+    
+    // ✅ GOOGLE MAPS BEHAVIOR: If user manually moved map, stop following
+    if (isFollowingUser && lastUserLocation) {
+      const distanceFromUser = getDistanceFromLatLonInMeters(
+        region.latitude,
+        region.longitude,
+        lastUserLocation.latitude,
+        lastUserLocation.longitude
+      );
+      
+      // If map center is more than 100m away from user, they probably panned manually
+      if (distanceFromUser > 100) {
+        setIsFollowingUser(false);
+        showCenterToast('Map follow disabled - You moved the map', 'info');
+      }
     }
   };
 
@@ -1025,9 +1052,6 @@ useEffect(() => {
       Geolocation.clearWatch(watchId);
     }
 
-    // Show immediate feedback
-    showCenterToast('Getting your location...', 'info');
-
     // Request location permission first
     const requestLocationPermission = async () => {
       if (Platform.OS === "android") {
@@ -1052,69 +1076,64 @@ useEffect(() => {
         return;
       }
 
-        // Start watching user location
-        const id = Geolocation.watchPosition(
-          (position) => {
-            const { latitude, longitude, heading } = position.coords;
-            
-            // Update user coordinates
-            setUserCoords({ latitude, longitude });
-            
-            // ✅ Always add to route - instant tracking (no 5m filter)
-            setUserRoute((prev) => [...prev, { latitude, longitude }]);
-            
-            setLastUserLocation({ latitude, longitude });
-            
-            // Update heading/direction for car icon rotation
-            if (typeof heading === 'number' && !isNaN(heading)) {
-              setUserHeading(heading);
-            } else {
-              // Calculate heading from previous position if GPS heading not available
-              const lastLocation = userRoute[userRoute.length - 1];
-              if (lastLocation) {
-                const calculatedHeading = calculateBearing(
-                  lastLocation.latitude,
-                  lastLocation.longitude,
-                  latitude,
-                  longitude
-                );
-                setUserHeading(calculatedHeading);
-              }
+      // Start watching user location
+      const id = Geolocation.watchPosition(
+        (position) => {
+          const { latitude, longitude, heading } = position.coords;
+          
+          // Update user coordinates
+          setUserCoords({ latitude, longitude });
+          
+          // ✅ Always add to route - instant tracking (no 5m filter)
+          setUserRoute((prev) => [...prev, { latitude, longitude }]);
+          
+          setLastUserLocation({ latitude, longitude });
+          
+          // Update heading/direction for car icon rotation
+          if (typeof heading === 'number' && !isNaN(heading)) {
+            setUserHeading(heading);
+          } else {
+            // Calculate heading from previous position if GPS heading not available
+            const lastLocation = userRoute[userRoute.length - 1];
+            if (lastLocation) {
+              const calculatedHeading = calculateBearing(
+                lastLocation.latitude,
+                lastLocation.longitude,
+                latitude,
+                longitude
+              );
+              setUserHeading(calculatedHeading);
             }
-            
-            // ✅ Check speed and speed limit
-            if (typeof position.coords.speed === 'number' && !isNaN(position.coords.speed)) {
-              const speedKmh = Math.round(position.coords.speed * 3.6);
-              setCurrentSpeed(speedKmh);
-              checkSpeedLimit(speedKmh);
-            }          // If first time or user wants to center, animate to location
-          if (!isFollowingUser || shouldCenterOnUser) {
-              try {
-                if (mapRef.current) {
-                  mapRef.current.animateToRegion({
-                    latitude,
-                    longitude,
-                    latitudeDelta: 0.0008, // ✅ Street-level zoom detail
-                    longitudeDelta: 0.0008, // ✅ Street-level zoom detail  
-                  }, 1000); // ✅ Smooth animation
-                }
-              } catch (error) {
-              // Error animating to region
+          }
+          
+          // ✅ Check speed and speed limit
+          if (typeof position.coords.speed === 'number' && !isNaN(position.coords.speed)) {
+            const speedKmh = Math.round(position.coords.speed * 3.6);
+            setCurrentSpeed(speedKmh);
+            checkSpeedLimit(speedKmh);
+          }
+          
+          // ✅ GOOGLE MAPS BEHAVIOR: Only center (never zoom) when following
+          if (isFollowingUser && mapRef.current && userCurrentRegion) {
+            try {
+              mapRef.current.animateToRegion({
+                latitude,
+                longitude,
+                latitudeDelta: userCurrentRegion.latitudeDelta, // Keep current zoom
+                longitudeDelta: userCurrentRegion.longitudeDelta, // Keep current zoom
+              }, 500); // Quick, smooth centering
+            } catch (error) {
+              console.log('Error centering on user location:', error);
             }
-            
-            // Success feedback only on first location
-            if (!isFollowingUser) {
-              if (Platform.OS === 'android') {
-                //ToastAndroid.show('Location found! Following your location...', ToastAndroid.SHORT);
-              }
-            }
-            
-            setIsFollowingUser(true);
-            setShouldCenterOnUser(false);
           }
           
           // Check proximity to checkpoints
           checkProximityToCheckpoints(latitude, longitude);
+          
+          // Set following status
+          if (!isFollowingUser) {
+            setIsFollowingUser(true);
+          }
         },
         (error) => {
           let msg = 'Location error';
@@ -1129,9 +1148,6 @@ useEffect(() => {
           timeout: 30000,
           maximumAge: 5000,
           distanceFilter: 1
-        //  showLocationDialog: true,
-          //forceRequestLocation: true
-
         }
       );
 
@@ -1626,8 +1642,10 @@ useEffect(() => {
         initialRegion={getBoundingRegion(checkpoints)}
         mapType={mapType}
         showsUserLocation={false} // Hide built-in user location button
-        followsUserLocation={isFollowingUser} // Follow user location when tracking
+        followsUserLocation={false} // ✅ GOOGLE MAPS BEHAVIOR: Manual control only
         onUserLocationChange={handleUserLocationChange}
+        onRegionChange={handleRegionChange} // ✅ Track region changes
+        onRegionChangeComplete={handleRegionChangeComplete} // ✅ Detect manual pan
         userLocationAnnotationTitle="My Current Location" // ✅ Custom title
         userLocationCalloutEnabled={true} // ✅ Enable callout on tap
         loadingEnabled={true} // ✅ Show loading indicator
@@ -2086,23 +2104,42 @@ useEffect(() => {
           style={styles.tabItem}
           onPress={() => {
             if (isFollowingUser) {
-              stopFollowingUserLocation();
+              // ✅ GOOGLE MAPS BEHAVIOR: Pressing My Location again just re-centers
+              if (lastUserLocation && mapRef.current) {
+                try {
+                  mapRef.current.animateToRegion({
+                    latitude: lastUserLocation.latitude,
+                    longitude: lastUserLocation.longitude,
+                    latitudeDelta: userCurrentRegion?.latitudeDelta || 0.0008, // Keep current zoom
+                    longitudeDelta: userCurrentRegion?.longitudeDelta || 0.0008, // Keep current zoom
+                  }, 800);
+                  showCenterToast('Map centered on your location', 'info');
+                } catch (error) {
+                  console.log('Error centering map:', error);
+                }
+              }
             } else {
+              // ✅ GOOGLE MAPS BEHAVIOR: First press = zoom in close + start following
               showCenterToast('Getting your location...', 'info');
-              // ✅ Get current location and zoom immediately
               Geolocation.getCurrentPosition(
                 (position) => {
                   const { latitude, longitude } = position.coords;
+                  
                   if (mapRef.current) {
                     try {
-                      mapRef.current.animateToRegion({
+                      // ✅ GOOGLE MAPS BEHAVIOR: Initial zoom is close (street level)
+                      const initialZoomRegion = {
                         latitude,
                         longitude,
-                        latitudeDelta: 0.0008, // ✅ MUCH closer zoom (was 0.002)
-                        longitudeDelta: 0.0008, // ✅ MUCH closer zoom (was 0.002)
-                      }, 1000); // ✅ Longer animation for smoother transition
+                        latitudeDelta: 0.0008, // ✅ Street level zoom (very close)
+                        longitudeDelta: 0.0008, // ✅ Street level zoom (very close)
+                      };
+                      
+                      mapRef.current.animateToRegion(initialZoomRegion, 1200);
+                      setUserCurrentRegion(initialZoomRegion); // ✅ Remember this zoom level
+                      setHasInitialZoom(true); // ✅ Mark that initial zoom is done
                     } catch (error) {
-                      // Error zooming to My Location
+                      console.log('Error zooming to My Location:', error);
                     }
                   }
                   
