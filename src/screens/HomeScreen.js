@@ -341,14 +341,15 @@ export default function Dashboard({ navigation }) {
                 // Map event data to OrganiserScreen expected format
                 const eventObj = {
                   id: item.id,
-                  name: item.event_name,
-                  venue: item.event_venue,
-                  startDate: item.event_start_date,
-                  endDate: item.event_end_date,
-                  organisedBy: item.event_organised_by,
-                  pic: item.image?.uri,
+                  event_name: item.event_name,
+                  event_venue: item.event_venue,
+                  event_start_date: item.event_start_date,
+                  event_end_date: item.event_end_date,
+                  event_organised_by: item.event_organised_by,
+                  pic: item.image.uri,
+                  //event_pic: item.image.uri,
                   headerImg: item.image?.uri,
-                  desc: item.event_desc || '',
+                  event_desc: item.event_desc || '',
                   isCompleted: item.isCompleted || false,
                   // Add other fields as needed
                 };
