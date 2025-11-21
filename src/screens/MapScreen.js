@@ -64,9 +64,11 @@ const MapScreen = ({ route, navigation }) => {
   const [abortPasswordModal, setAbortPasswordModal] = useState(false);
   const [abortPassword, setAbortPassword] = useState("");
   const [isFollowingUser, setIsFollowingUser] = useState(false); // Track if following user location
+  const isFollowingUserRef = useRef(false); // ✅ Ref to track following state immediately in callbacks
   const [watchId, setWatchId] = useState(null); // Store watch position ID
   const [userCurrentRegion, setUserCurrentRegion] = useState(null); // Track current map region
   const [hasInitialZoom, setHasInitialZoom] = useState(false); // Track if initial zoom done
+  const isProgrammaticMove = useRef(false); // ✅ Flag to distinguish app animations from user gestures
   const [speedLimit, setSpeedLimit] = useState(60); // Default speed limit
   const [isOverspeedAlertShown, setIsOverspeedAlertShown] = useState(false);
   const [overspeedCount, setOverspeedCount] = useState(0);
@@ -915,17 +917,20 @@ useEffect(() => {
         checkSpeedLimit(speedKmh);
       }
       
-      // ✅ GOOGLE MAPS BEHAVIOR: Only center map if following, NEVER change zoom
-      if (isFollowingUser && mapRef.current) {
+      // ✅ GOOGLE MAPS BEHAVIOR: Continuously center map when following
+      if (isFollowingUserRef.current && mapRef.current) {
         try {
+          isProgrammaticMove.current = true; // ✅ Mark as programmatic before animation
+          const currentZoom = userCurrentRegion || { latitudeDelta: 0.01, longitudeDelta: 0.01 };
           mapRef.current.animateToRegion({
             latitude,
             longitude,
-            latitudeDelta: userCurrentRegion?.latitudeDelta || 0.0008, // Use current zoom or fallback
-            longitudeDelta: userCurrentRegion?.longitudeDelta || 0.0008, // Use current zoom or fallback
-          }, 500); // Quick, smooth centering
+            latitudeDelta: currentZoom.latitudeDelta,
+            longitudeDelta: currentZoom.longitudeDelta,
+          }, 300); // Fast, smooth centering (reduced from 500ms)
         } catch (error) {
-          // Error animating to region in handleUserLocationChange
+          isProgrammaticMove.current = false; // ✅ Reset on error
+          console.log('Error auto-following:', error);
         }
       }
     } catch (err) {
@@ -935,14 +940,14 @@ useEffect(() => {
 
   // ✅ GOOGLE MAPS BEHAVIOR: Detect when user manually moves map to stop following
   const handleRegionChange = (region) => {
-    setUserCurrentRegion(region);
-  };
-
-  const handleRegionChangeComplete = (region) => {
-    setUserCurrentRegion(region);
+    // ✅ Skip detection if this is a programmatic move (from auto-follow)
+    if (isProgrammaticMove.current) {
+      setUserCurrentRegion(region);
+      return;
+    }
     
-    // ✅ GOOGLE MAPS BEHAVIOR: If user manually moved map, stop following
-    if (isFollowingUser && lastUserLocation) {
+    // ✅ If user is manually interacting with map, stop auto-follow immediately
+    if (isFollowingUser && lastUserLocation && userCurrentRegion) {
       const distanceFromUser = getDistanceFromLatLonInMeters(
         region.latitude,
         region.longitude,
@@ -950,11 +955,36 @@ useEffect(() => {
         lastUserLocation.longitude
       );
       
-      // If map center is more than 100m away from user, they probably panned manually
-      if (distanceFromUser > 100) {
+      // ✅ Detect zoom changes (user zoomed in/out manually)
+      const zoomChanged = Math.abs(region.latitudeDelta - userCurrentRegion.latitudeDelta) > 0.0001 ||
+                         Math.abs(region.longitudeDelta - userCurrentRegion.longitudeDelta) > 0.0001;
+      
+      // ✅ Detect pan/scroll (user moved map even slightly - 10m sensitivity)
+      const mapMoved = distanceFromUser > 5; // 5 meters sensitivity
+      // 10 meters = Very sensitive - slight touch stops it
+      // 30 meters = Medium (current) - small swipe stops it
+      // 50 meters = Less sensitive - medium swipe needed
+      // 100 meters = Least sensitive - must scroll far away
+      // ✅ Stop following if user zoomed OR panned map
+      if (zoomChanged || mapMoved) {
+        isFollowingUserRef.current = false; // ✅ Stop immediately in callbacks
         setIsFollowingUser(false);
-        // showCenterToast('Map follow disabled - You moved the map', 'info');
+        //showCenterToast('Auto-follow stopped - Tap Recenter to resume', 'info');
       }
+    }
+    
+    setUserCurrentRegion(region);
+  };
+
+  const handleRegionChangeComplete = (region) => {
+    // ✅ Reset flag after animation completes
+    const wasProgrammatic = isProgrammaticMove.current;
+    isProgrammaticMove.current = false;
+    
+    // ✅ Only update userCurrentRegion if it was a programmatic move (recenter button)
+    // Don't update for manual user zoom/pan - this preserves the recenter button's fixed zoom level
+    if (wasProgrammatic) {
+      setUserCurrentRegion(region);
     }
   };
 
@@ -1113,17 +1143,20 @@ useEffect(() => {
             checkSpeedLimit(speedKmh);
           }
           
-          // ✅ GOOGLE MAPS BEHAVIOR: Only center (never zoom) when following
-          if (isFollowingUser && mapRef.current && userCurrentRegion) {
+          // ✅ GOOGLE MAPS BEHAVIOR: Continuously center on user location when following
+          if (isFollowingUserRef.current && mapRef.current) {
             try {
+              isProgrammaticMove.current = true; // ✅ Mark as programmatic before animation
+              const currentZoom = userCurrentRegion || { latitudeDelta: 0.01, longitudeDelta: 0.01 };
               mapRef.current.animateToRegion({
                 latitude,
                 longitude,
-                latitudeDelta: userCurrentRegion.latitudeDelta, // Keep current zoom
-                longitudeDelta: userCurrentRegion.longitudeDelta, // Keep current zoom
-              }, 500); // Quick, smooth centering
+                latitudeDelta: currentZoom.latitudeDelta,
+                longitudeDelta: currentZoom.longitudeDelta,
+              }, 300); // Fast, smooth centering for real-time tracking
             } catch (error) {
-              console.log('Error centering on user location:', error);
+              isProgrammaticMove.current = false; // ✅ Reset on error
+              console.log('Error auto-following in watchPosition:', error);
             }
           }
           
@@ -1141,6 +1174,7 @@ useEffect(() => {
           if (error && error.code) msg += ` (code: ${error.code})`;
           
           showCenterToast(msg, 'error');
+          isFollowingUserRef.current = false; // ✅ Stop immediately
           setIsFollowingUser(false);
         },
         {
@@ -1161,6 +1195,7 @@ useEffect(() => {
       Geolocation.clearWatch(watchId);
       setWatchId(null);
     }
+    isFollowingUserRef.current = false; // ✅ Stop immediately
     setIsFollowingUser(false);
     
     // Optional: Clear the route when stopping tracking
@@ -1641,7 +1676,7 @@ useEffect(() => {
         style={styles.map}
         initialRegion={getBoundingRegion(checkpoints)}
         mapType={mapType}
-        showsUserLocation={false} // Hide built-in user location button
+        showsUserLocation={true} // ✅ Enable native location tracking for smooth following
         followsUserLocation={false} // ✅ GOOGLE MAPS BEHAVIOR: Manual control only
         onUserLocationChange={handleUserLocationChange}
         onRegionChange={handleRegionChange} // ✅ Track region changes
@@ -2085,6 +2120,134 @@ useEffect(() => {
         </TouchableOpacity>
       )}
       
+      {/* Recenter Button - Positioned above Bottom Tab Bar */}
+      <TouchableOpacity
+        style={{
+          position: 'absolute',
+          bottom: 80,
+          right: 15,
+          backgroundColor: isFollowingUser ? '#2196F3' : '#FFFFFF',
+          width: 48,
+          height: 48,
+          borderRadius: 24,
+          justifyContent: 'center',
+          alignItems: 'center',
+          elevation: 5,
+          shadowColor: '#000',
+          shadowOffset: { width: 0, height: 2 },
+          shadowOpacity: 0.25,
+          shadowRadius: 3.84,
+          zIndex: 100,
+          borderWidth: 2,
+          borderColor: isFollowingUser ? '#2196F3' : '#E0E0E0',
+        }}
+        onPress={() => {
+          // ✅ GOOGLE MAPS BEHAVIOR: Recenter button zooms and starts auto-following
+          if (lastUserLocation && mapRef.current) {
+            try {
+              // ✅ Predefined zoom level for comfortable driving view
+              const recenterZoom = {
+                latitude: lastUserLocation.latitude,
+                longitude: lastUserLocation.longitude,
+                latitudeDelta: 0.001, // ✅ Medium zoom - comfortable for navigation (~1km view)
+                longitudeDelta: 0.001, // ✅ Adjust this value: 0.005=close, 0.01=medium, 0.02=far
+              };
+              
+              // ✅ Smooth camera animation to user location with zoom
+              isProgrammaticMove.current = true; // ✅ Mark as programmatic
+              mapRef.current.animateToRegion(recenterZoom, 1000);
+              
+              // ✅ Update current region state to maintain this zoom level
+              setUserCurrentRegion(recenterZoom);
+              
+              // ✅ GOOGLE MAPS BEHAVIOR: Always enable auto-follow when recenter is pressed
+              if (!isFollowingUser) {
+                startFollowingUserLocation();
+              }
+              isFollowingUserRef.current = true; // ✅ Set ref immediately for callbacks
+              setIsFollowingUser(true); // ✅ Set following flag immediately
+              
+              showCenterToast('Following your location', 'success');
+            } catch (error) {
+              isProgrammaticMove.current = false; // ✅ Reset on error
+              console.log('Error recentering map:', error);
+              showCenterToast('Error centering map', 'error');
+            }
+          } else {
+            // ✅ If no location yet, get current location first
+            showCenterToast('Getting your location...', 'info');
+            Geolocation.getCurrentPosition(
+              (position) => {
+                const { latitude, longitude } = position.coords;
+                
+                if (mapRef.current) {
+                  try {
+                    const recenterZoom = {
+                      latitude,
+                      longitude,
+                      latitudeDelta: 0.001, // ✅ Medium zoom - comfortable for navigation
+                      longitudeDelta: 0.001, // ✅ Match with above zoom level
+                    };
+                    
+                    isProgrammaticMove.current = true; // ✅ Mark as programmatic
+                    mapRef.current.animateToRegion(recenterZoom, 600);
+                    setUserCurrentRegion(recenterZoom);
+                    setLastUserLocation({ latitude, longitude });
+                    setUserCoords({ latitude, longitude });
+                    
+                    // ✅ GOOGLE MAPS BEHAVIOR: Start auto-follow after finding location
+                    startFollowingUserLocation();
+                    isFollowingUserRef.current = true; // ✅ Set ref immediately
+                    setIsFollowingUser(true);
+                    
+                    showCenterToast('Following your location', 'success');
+                  } catch (error) {
+                    isProgrammaticMove.current = false; // ✅ Reset on error
+                    console.log('Error centering on location:', error);
+                    showCenterToast('Error centering map', 'error');
+                  }
+                }
+              },
+              (error) => {
+                let msg = 'Location error';
+                if (error && error.message) msg += ': ' + error.message;
+                showCenterToast(msg, 'error');
+              },
+              {
+                enableHighAccuracy: true,
+                timeout: 30000,
+                maximumAge: 2000,
+              }
+            );
+          }
+        }}
+      >
+        {/* Location/GPS Target Icon */}
+        <View style={{
+          width: 24,
+          height: 24,
+          justifyContent: 'center',
+          alignItems: 'center',
+        }}>
+          {/* Outer Circle (Target) */}
+          <View style={{
+            width: 24,
+            height: 24,
+            borderRadius: 12,
+            borderWidth: 2,
+            borderColor: isFollowingUser ? '#FFFFFF' : '#2196F3',
+            position: 'absolute',
+          }} />
+          {/* Inner Dot */}
+          <View style={{
+            width: 8,
+            height: 8,
+            borderRadius: 4,
+            backgroundColor: isFollowingUser ? '#FFFFFF' : '#2196F3',
+          }} />
+        </View>
+      </TouchableOpacity>
+      
       {/* ✅ Bottom Tab Bar */}
       <View style={styles.bottomTabBar}>
         {/* Checkpoint History Tab */}
@@ -2172,6 +2335,7 @@ useEffect(() => {
             {isFollowingUser ? 'Following' : 'Location'}
           </Text>
         </TouchableOpacity>
+        
 
         {/* SOS Call Tab */}
         <TouchableOpacity
