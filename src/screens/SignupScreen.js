@@ -61,8 +61,14 @@ export default function SignupScreen({ navigation }) {
       Alert.alert("Error", "Please fill all fields");
       return;
     }
-    if (!/^[a-zA-Z0-9._%+-]+@gmail\.com$/.test(email)) {
-      Alert.alert("Error", "Please enter a valid Gmail address");
+    // if (!/^[a-zA-Z0-9._%+-]+@gmail\.com$/.test(email)) {
+    //   Alert.alert("Error", "Please enter a valid Gmail address");
+    //   return;
+    // }
+    
+    // ✅ Updated: general email validation (removed @gmail restriction)
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      Alert.alert("Error", "Please enter a valid email address");
       return;
     }
     if (!/^\d{10}$/.test(mobile)) {
@@ -78,7 +84,6 @@ export default function SignupScreen({ navigation }) {
       setLoading(true);
       const payload = { name, username, email, password, contact: mobile, address, city, state, pincode };
       const response = await SignupService.registerUser(payload);
-      console.log('show me resonse',response);
       setLoading(false);
 
       if (response.status === "success") {

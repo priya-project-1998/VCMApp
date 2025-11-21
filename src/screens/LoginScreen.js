@@ -40,7 +40,6 @@ export default function LoginScreen({ navigation }) {
       if (profileResponse.status && profileResponse.data) {
         // Store user profile using ProfileStorage
         await ProfileStorage.storeUserProfile(profileResponse.data);
-        console.log("✅ User profile stored after login");
       } else {
         console.warn("⚠️ Failed to fetch user profile after login:", profileResponse.message);
       }

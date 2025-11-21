@@ -48,8 +48,6 @@ const OrganiserScreen = () => {
     setLoading(true);
     try {
       const res = await EventService.getEvents(); // should return {status, events: []}
-      console.log("Response Data:", res.status);
-      console.log("Response Data:", res.data);
       if (res.status === true) {
         const allEvents = res.data.events.map((e) => new EventModel(e));
         setUpcomingEvents(allEvents.filter((ev) => !ev.isCompleted));

@@ -10,7 +10,6 @@ class ProfileStorage {
       if (userProfile instanceof UserProfileModel) {
         const profileJson = JSON.stringify(userProfile);
         await AsyncStorage.setItem(this.USER_PROFILE_KEY, profileJson);
-        console.log("✅ User profile stored successfully");
         return true;
       } else {
         console.error("❌ Invalid profile data - must be UserProfileModel instance");
@@ -41,7 +40,6 @@ class ProfileStorage {
   static async clearUserProfile() {
     try {
       await AsyncStorage.removeItem(this.USER_PROFILE_KEY);
-      console.log("✅ User profile cleared");
       return true;
     } catch (error) {
       console.error("❌ Error clearing user profile:", error);

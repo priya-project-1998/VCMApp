@@ -81,7 +81,7 @@ export default function CustomDrawer(props) {
                 : user?.profile_pic_url
                 ? { uri: user.profile_pic_url }
                 : user?.profile_pic
-                ? { uri: `https://e-pickup.randomsoftsolution.in/assets/app/profile/${user.profile_pic}` }
+                ? { uri: `https://rajasthanmotorsports.com/assets/app/profile/${user.profile_pic}` }
                 : require("../assets/images/profile-placeholder.png")
             }
             style={styles.profileImage}

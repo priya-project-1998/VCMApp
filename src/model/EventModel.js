@@ -26,18 +26,14 @@ export default class EventModel {
     
     // If the path already starts with http:// or https://, return as is
     if (imagePath.startsWith('http://') || imagePath.startsWith('https://')) {
-      console.log("=== IMAGE URL DEBUG ===");
-      console.log("Image path already has protocol:", imagePath);
       return imagePath;
     }
     
     // If it's a relative path, prepend the base URL
-    const BASE_URL = "https://e-pickup.randomsoftsolution.in";
+    // const BASE_URL = "https://e-pickup.randomsoftsolution.in";
+    const BASE_URL = "https://rajasthanmotorsports.com";
+
     const fullUrl = `${BASE_URL}/${imagePath}`;
-    
-    console.log("=== IMAGE URL DEBUG ===");
-    console.log("Original path:", imagePath);
-    console.log("Full URL:", fullUrl);
     
     return fullUrl;
   }
