@@ -29,7 +29,7 @@ const InviteUserScreen = () => {
     try {
       await Share.share({
         message:
-          "Join me on VCM! Experience amazing racing events in India. Download here: https://vcmapp.com/download",
+          "Join us on NaviQuest Experience amazing Trail Hunt events in India. \nDownload here: https://rajasthanmotorsports.com/download",
       });
     } catch (error) {
       Alert.alert("Error", "Unable to share the app link.");
@@ -42,7 +42,7 @@ const InviteUserScreen = () => {
         <View style={styles.container}>
           <Text style={styles.heading}>Invite a Friend</Text>
           <Text style={styles.subHeading}>
-            Share the excitement of VCM with your friends! Invite them to join and experience racing events.
+            Share the excitement of NaviQuest with your friends! Invite them to join and experience racing events.
           </Text>
 
           {/* Email or Phone Input */}

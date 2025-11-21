@@ -16,6 +16,7 @@ import { useFocusEffect } from "@react-navigation/native";
 import LinearGradient from "react-native-linear-gradient";
 import EventService from "../services/apiService/event_service";
 import NotificationBell from '../components/NotificationBell';
+import { generateShareMessage } from '../utils/deepLinkUtils';
 
 const { width } = Dimensions.get("window");
 const isSmallDevice = width < 375;
@@ -133,8 +134,18 @@ export default function MyEventsScreen({ navigation }) {
     const onShare = async () => {
       try {
         if (typeof Share?.share === 'function') {
+          // Generate share message using deep link utility
+          const shareData = generateShareMessage({
+            event_id: item.event_id,
+            event_name: eventName,
+            event_venue: eventVenue,
+            event_start_date: item.event_start_date
+          });
+          
           await Share.share({
-            message: `Check out this event: ${eventName}\nVenue: ${eventVenue}\nDate: ${eventDate}`,
+            message: shareData.message,
+            url: shareData.url, // For iOS
+            title: shareData.title,
           });
         } else {
           alert('Share feature is not available on this device.');

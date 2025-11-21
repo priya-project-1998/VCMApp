@@ -6,7 +6,7 @@ import { Linking, Platform } from 'react-native';
  */
 
 const APP_SCHEME = 'vcmapp://';
-const WEB_BASE_URL = 'https://vcmapp.com';
+const WEB_BASE_URL = 'https://rajasthanmotorsports.com';
 const PLAY_STORE_URL = 'https://play.google.com/store/apps/details?id=com.vcmapp';
 const APP_STORE_URL = 'https://apps.apple.com/app/vcmapp/id123456789';
 
@@ -60,7 +60,7 @@ export const generateEventShareLink = (eventData) => {
 export const generateShareMessage = (eventData) => {
   const linkData = generateEventShareLink(eventData);
   
-  const message = `Check out this event: ${linkData.eventName}\nVenue: ${linkData.eventVenue}\nDate: ${new Date(linkData.eventDate).toLocaleDateString()}\n\nJoin here: ${linkData.webLink}`;
+  const message = `Check out this event:\n${linkData.eventName}\nVenue: ${linkData.eventVenue}\nDate: ${new Date(linkData.eventDate).toLocaleDateString()}\n\nJoin here: ${linkData.webLink}`;
 
   return {
     message,
