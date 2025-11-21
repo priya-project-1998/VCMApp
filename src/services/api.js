@@ -1,7 +1,10 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import ApiResponse from "./ApiResponse";
 
-const BASE_URL = "https://e-pickup.randomsoftsolution.in/api";
+//const BASE_URL = "https://e-pickup.randomsoftsolution.in/api";
+const BASE_URL = "https://rajasthanmotorsports.com/api"; //Prod URL
+
+
 
 // 🔹 Header types
 export const HEADER_TYPES = {

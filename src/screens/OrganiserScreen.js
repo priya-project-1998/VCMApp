@@ -22,6 +22,7 @@ import { StackActions } from '@react-navigation/native';
 import EventService from "../services/apiService/event_service";
 import EventModel from "../model/EventModel";
 import EventDetailsView from '../components/EventDetailsView';
+import NotificationBell from '../components/NotificationBell';
 
 const { width, height } = Dimensions.get("window");
 const isSmallDevice = width < 375;
@@ -33,6 +34,8 @@ const JoinEventForm = ({ event, onClose }) => {
     event_id: event?.id || '',
     category_id: '',
     class_id: '',
+    vehicle_model: '',
+    vehicle_rc_no: '',
     crew_members: [] // Start with empty array - no default members
   });
   const [loading, setLoading] = useState(false);
@@ -178,6 +181,8 @@ const JoinEventForm = ({ event, onClose }) => {
       event_id: eventId,
       category_id: categoryId,
       class_id: classId,
+      vehicle_model: formData.vehicle_model.trim(),
+      vehicle_rc_no: formData.vehicle_rc_no.trim(),
       crew_members: formData.crew_members.map((member) => ({
         name: member.name.trim(),
         mobile: member.mobile.trim(),
@@ -207,6 +212,16 @@ const JoinEventForm = ({ event, onClose }) => {
     
     if (!formData.class_id) {
       Alert.alert('Error', 'Please select a class');
+      return;
+    }
+
+    if (!formData.vehicle_model.trim()) {
+      Alert.alert('Error', 'Please enter vehicle model');
+      return;
+    }
+
+    if (!formData.vehicle_rc_no.trim()) {
+      Alert.alert('Error', 'Please enter vehicle RC number');
       return;
     }
 
@@ -242,13 +257,6 @@ const JoinEventForm = ({ event, onClose }) => {
         Alert.alert('Validation Error', validationError.message);
         return;
       }
-      
-      // Debug: Log the data being sent
-      console.log("=== JOIN EVENT DEBUG ===");
-      console.log("Event ID:", event?.id);
-      console.log("Form Data:", formData);
-      console.log("Cleaned Data:", cleanedData);
-      console.log("API Endpoint: /events/join");
       
       const response = await EventService.joinEvent(cleanedData);
       
@@ -362,6 +370,34 @@ const JoinEventForm = ({ event, onClose }) => {
                 </Picker>
               </View>
             )}
+          </View>
+        </View>
+
+        {/* Vehicle Details */}
+        <View style={styles.formSection}>
+          <Text style={styles.sectionTitle}>Vehicle Details</Text>
+          
+          <View style={styles.inputGroup}>
+            <Text style={styles.inputLabel}>Vehicle Model *</Text>
+            <TextInput
+              style={styles.input}
+              value={formData.vehicle_model}
+              onChangeText={(text) => setFormData(prev => ({ ...prev, vehicle_model: text }))}
+              placeholder="Enter vehicle model (e.g., Honda City, Maruti Swift)"
+              placeholderTextColor="rgba(255,255,255,0.5)"
+            />
+          </View>
+
+          <View style={styles.inputGroup}>
+            <Text style={styles.inputLabel}>Vehicle RC Number *</Text>
+            <TextInput
+              style={styles.input}
+              value={formData.vehicle_rc_no}
+              onChangeText={(text) => setFormData(prev => ({ ...prev, vehicle_rc_no: text }))}
+              placeholder="Enter vehicle RC number"
+              placeholderTextColor="rgba(255,255,255,0.5)"
+              autoCapitalize="characters"
+            />
           </View>
         </View>
 
@@ -488,12 +524,6 @@ const OrganiserScreen = ({ navigation, route }) => {
     try {
       const res = await EventService.getEvents();
       
-      console.log("=== OrganiserScreen Events API Response ===");
-      console.log("Response:", res);
-      console.log("Response Status:", res.status);
-      console.log("Response Data:", res.data);
-      console.log("Response Code:", res.code);
-      
       // Check multiple possible response structures
       let eventsArray = [];
       
@@ -590,21 +620,22 @@ const OrganiserScreen = ({ navigation, route }) => {
 
         {/* Action Buttons */}
         <View style={styles.eventActionsContainer}>
-          <TouchableOpacity 
-            style={styles.eventActionButton} 
-            onPress={() => handleJoinEvent(event)}
-            activeOpacity={0.8}
-          >
-            <LinearGradient
-              colors={['#4CAF50', '#45a049']}
-              style={styles.eventActionGradient}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 0 }}
+          {!event.isCompleted && (
+            <TouchableOpacity 
+              style={styles.eventActionButton} 
+              onPress={() => handleJoinEvent(event)}
+              activeOpacity={0.8}
             >
-              <Text style={styles.eventActionText}>Join</Text>
-            </LinearGradient>
-          </TouchableOpacity>
-
+              <LinearGradient
+                colors={['#4CAF50', '#45a049']}
+                style={styles.eventActionGradient}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 0 }}
+              >
+                <Text style={styles.eventActionText}>Join</Text>
+              </LinearGradient>
+            </TouchableOpacity>
+          )}
           <TouchableOpacity 
             style={styles.eventActionButton} 
             onPress={() => setSelectedEvent(event)}

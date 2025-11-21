@@ -16,6 +16,7 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import BannerService from "../services/apiService/banner_service";
 import EventService from "../services/apiService/event_service";
 import { formatEventStartEndDateTime } from "../utils/helpers";
+import { isEventActive } from "../utils/eventFilter";
 
 const { width, height } = Dimensions.get("window");
 const isSmallDevice = width < 375; // For iPhone SE and similar small devices
@@ -77,7 +78,7 @@ export default function Dashboard({ navigation }) {
         const bannersWithImages = response.data.map((banner) => ({
           ...banner,
           image: banner.image_url 
-            ? { uri: `https://e-pickup.randomsoftsolution.in/${banner.image_url}` }
+            ? { uri: `https://rajasthanmotorsports.com/${banner.image_url}` }
             : null,
           subtitle: `Event ID: ${banner.event_id || 'N/A'}`,
           date: banner.created_date
@@ -106,40 +107,28 @@ export default function Dashboard({ navigation }) {
         return;
       }
       const response = await EventService.getEvents();
+      let eventsArray = [];
       if (response.status === "success" && response.data && Array.isArray(response.data)) {
-        const eventsWithImages = response.data.map((event) => ({
-          ...event,
-          image: event.event_pic 
-            ? { uri: `https://e-pickup.randomsoftsolution.in/${event.event_pic}` }
-            : null,
-        })).filter(e => e.image); // Only events with images
-        setEvents(eventsWithImages);
+        eventsArray = response.data;
       } else if (response.status === "success" && response.data && response.data.events && Array.isArray(response.data.events)) {
-        const eventsWithImages = response.data.events.map((event) => ({
-          ...event,
-          image: event.event_pic 
-            ? { uri: `https://e-pickup.randomsoftsolution.in/${event.event_pic}` }
-            : null,
-        })).filter(e => e.image);
-        setEvents(eventsWithImages);
+        eventsArray = response.data.events;
       } else if (response.code === 200 && response.data) {
-        let eventsArray = [];
         if (Array.isArray(response.data)) {
           eventsArray = response.data;
         } else if (response.data.events && Array.isArray(response.data.events)) {
           eventsArray = response.data.events;
         }
-        if (eventsArray.length > 0) {
-          const eventsWithImages = eventsArray.map((event) => ({
+      }
+      if (eventsArray.length > 0) {
+        const eventsWithImages = eventsArray
+          .map((event) => ({
             ...event,
             image: event.event_pic 
-              ? { uri: `https://e-pickup.randomsoftsolution.in/${event.event_pic}` }
+              ? { uri: `https://rajasthanmotorsports.com/${event.event_pic}` }
               : null,
-          })).filter(e => e.image);
-          setEvents(eventsWithImages);
-        } else {
-          setEvents([]); // No fallback
-        }
+          }))
+          .filter(e => e.image && isEventActive(e.event_end_date)); // Only events with images and not ended
+        setEvents(eventsWithImages);
       } else {
         setEvents([]); // No fallback
       }
@@ -351,14 +340,15 @@ export default function Dashboard({ navigation }) {
                 // Map event data to OrganiserScreen expected format
                 const eventObj = {
                   id: item.id,
-                  name: item.event_name,
-                  venue: item.event_venue,
-                  startDate: item.event_start_date,
-                  endDate: item.event_end_date,
-                  organisedBy: item.event_organised_by,
-                  pic: item.image?.uri,
+                  event_name: item.event_name,
+                  event_venue: item.event_venue,
+                  event_start_date: item.event_start_date,
+                  event_end_date: item.event_end_date,
+                  event_organised_by: item.event_organised_by,
+                  pic: item.image.uri,
+                  //event_pic: item.image.uri,
                   headerImg: item.image?.uri,
-                  desc: item.event_desc || '',
+                  event_desc: item.event_desc || '',
                   isCompleted: item.isCompleted || false,
                   // Add other fields as needed
                 };
