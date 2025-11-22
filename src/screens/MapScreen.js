@@ -22,6 +22,7 @@ import Geolocation from "@react-native-community/geolocation";
 import NetInfo from "@react-native-community/netinfo";
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import DeviceInfo from 'react-native-device-info';
+import KeepAwake from 'react-native-keep-awake';
 import {
   createTables,
   saveCheckpoint,
@@ -196,6 +197,14 @@ const MapScreen = ({ route, navigation }) => {
   }, [duration]);
 
   // ✅ Table create
+  // ✅ Keep screen always awake while on MapScreen
+  useEffect(() => {
+    KeepAwake.activate();
+    return () => {
+      KeepAwake.deactivate();
+    };
+  }, []);
+
   useEffect(() => {
     createTables();
   }, []);
@@ -1483,6 +1492,9 @@ useEffect(() => {
 
   return (
     <View style={styles.container}>
+      {/* ✅ Keep screen awake - prevents mobile lock */}
+      <KeepAwake />
+      
       {/* Top Left Info Bar */}
       <View style={styles.infoBar}>
         <Text style={[
