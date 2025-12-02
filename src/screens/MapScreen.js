@@ -22,6 +22,7 @@ import Geolocation from "@react-native-community/geolocation";
 import NetInfo from "@react-native-community/netinfo";
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import DeviceInfo from 'react-native-device-info';
+import KeepAwake from 'react-native-keep-awake';
 import {
   createTables,
   saveCheckpoint,
@@ -196,6 +197,14 @@ const MapScreen = ({ route, navigation }) => {
   }, [duration]);
 
   // ✅ Table create
+  // ✅ Keep screen always awake while on MapScreen
+  useEffect(() => {
+    KeepAwake.activate();
+    return () => {
+      KeepAwake.deactivate();
+    };
+  }, []);
+
   useEffect(() => {
     createTables();
   }, []);
@@ -281,56 +290,99 @@ const MapScreen = ({ route, navigation }) => {
 useEffect(() => {
   const unsubscribe = NetInfo.addEventListener(async (state) => {
     if (state.isConnected) {
-      let pending = await getPendingCheckpoints();
-      // Ensure pending is always an array
-      if (!Array.isArray(pending)) pending = [];
-
-      // Get token from AsyncStorage
-      const token = await AsyncStorage.getItem('authToken');
-      if (!token) {
-        return;
-      }
-
-      for (let item of pending) {
-        try {
-          const requestBody = {
-            event_id: item.event_id,
-            checkpoint_id: item.checkpoint_id,
-            over_speed: overspeedCountRef.current // ✅ Use ref for latest value
-          };
-
-          const res = await fetch(
-            "https://rajasthanmotorsports.com/api/events/checkpoints/update",
-            {
-              method: "POST",
-              headers: {
-                "Content-Type": "application/json",
-                "Authorization": `Bearer ${token}`, // ✅ Pass token here
-              },
-              body: JSON.stringify(requestBody),
-            }
-          );
-
-          let data = {};
-          try {
-            data = await res.json();
-            setOverspeedCount(0);
-            overspeedCountRef.current = 0; // ✅ Reset ref too
-          } catch (jsonErr) {
-            console.log("❌ JSON parse error:", jsonErr);
-          }
-          if (data && data.status === "success") {
-            markSynced(item.id);
-          }
-        } catch (err) {
-          console.log("❌ Sync failed for checkpoint:", item.checkpoint_id, err);
-        }
-      }
+      console.log('🔄 Internet connected - checking for pending checkpoints...');
+      await syncPendingCheckpoints();
     }
   });
 
   return () => unsubscribe();
 }, []); // ✅ Remove overspeedCount dependency since we're using ref
+
+// ✅ Function to sync all pending checkpoints
+const syncPendingCheckpoints = async () => {
+  try {
+    let pending = await getPendingCheckpoints();
+    // Ensure pending is always an array
+    if (!Array.isArray(pending)) pending = [];
+
+    if (pending.length === 0) {
+      console.log('✅ No pending checkpoints to sync');
+      return;
+    }
+
+    console.log(`🔄 Found ${pending.length} pending checkpoint(s) to sync`);
+
+    // Get token from AsyncStorage
+    const token = await AsyncStorage.getItem('authToken');
+    if (!token) {
+      console.log('❌ No auth token found - cannot sync');
+      return;
+    }
+
+    let successCount = 0;
+    let failCount = 0;
+
+    for (let item of pending) {
+      try {
+        console.log(`🔄 Syncing checkpoint: ${item.checkpoint_id} for event: ${item.event_id}`);
+        
+        const requestBody = {
+          event_id: item.event_id,
+          checkpoint_id: item.checkpoint_id,
+          over_speed: item.over_speed || 0 // Use stored overspeed or 0
+        };
+
+        const res = await fetch(
+          "https://rajasthanmotorsports.com/api/events/checkpoints/update",
+          {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              "Authorization": `Bearer ${token}`, // ✅ Pass token here
+            },
+            body: JSON.stringify(requestBody),
+          }
+        );
+
+        let data = {};
+        try {
+          data = await res.json();
+        } catch (jsonErr) {
+          console.log("❌ JSON parse error:", jsonErr);
+        }
+        
+        if (data && data.status === "success") {
+          // ✅ Mark as synced using checkpoint_id and event_id for reliability
+          markSynced(item.id, item.event_id, item.checkpoint_id);
+          console.log(`✅ Successfully synced checkpoint: ${item.checkpoint_id}`);
+          
+          // ✅ Update marker color if it's the current event
+          if (item.event_id === event_id) {
+            setMarkerColors((prev) => ({ ...prev, [item.checkpoint_id]: '#185a9d' })); // blue for synced
+          }
+          
+          successCount++;
+        } else {
+          console.log(`❌ Server rejected sync for checkpoint: ${item.checkpoint_id}`, data.message || 'Unknown error');
+          failCount++;
+        }
+      } catch (err) {
+        console.log("❌ Sync failed for checkpoint:", item.checkpoint_id, err);
+        failCount++;
+      }
+    }
+
+    // ✅ Show summary toast if any syncs occurred
+    if (successCount > 0) {
+      showCenterToast(`✅ Synced ${successCount} pending checkpoint(s)`, 'success');
+    }
+    if (failCount > 0) {
+      showCenterToast(`⚠️ Failed to sync ${failCount} checkpoint(s)`, 'warning');
+    }
+  } catch (err) {
+    console.error('❌ Error in syncPendingCheckpoints:', err);
+  }
+};
 
 
 
@@ -492,7 +544,7 @@ useEffect(() => {
 
     const netState = await NetInfo.fetch();
     if (!netState.isConnected) {
-      showCenterToast('No internet connection', 'error');
+      showCenterToast('No internet connection - checkpoint saved locally', 'warning');
       // ✅ Remove from syncing set on failure
       syncingCheckpointsRef.current.delete(checkpointId);
       return false;
@@ -530,6 +582,9 @@ useEffect(() => {
       let data = {};
       try { data = await res.json(); } catch {}
       if ((res.status === 200 && data.status === "success") || data.status === "success") {
+        // ✅ Mark as synced using checkpoint_id and event_id for better reliability
+        markSynced(null, event_id, checkpointId);
+        
         setOverspeedCount(0);
         overspeedCountRef.current = 0; // ✅ Reset ref too
         setMarkerColors((prev) => ({ ...prev, [checkpointId]: '#185a9d' })); // blue
@@ -561,13 +616,23 @@ useEffect(() => {
         showCenterToast('Server error: ' + (data.message || 'Failed'), 'error');
         // ✅ Remove from syncing set on failure so it can be retried
         syncingCheckpointsRef.current.delete(checkpointId);
+        
+        // ✅ Trigger manual sync of pending checkpoints after a delay
+        setTimeout(() => {
+          syncPendingCheckpoints();
+        }, 3000);
        
       }
     } catch (err) {
     
-      showCenterToast('Network/API error', 'error');
+      showCenterToast('Network/API error - checkpoint saved locally', 'warning');
       // ✅ Remove from syncing set on error so it can be retried
       syncingCheckpointsRef.current.delete(checkpointId);
+      
+      // ✅ Trigger manual sync of pending checkpoints after a delay
+      setTimeout(() => {
+        syncPendingCheckpoints();
+      }, 3000);
     }
     setLoadingCheckpointId(null);
     return false;
@@ -612,7 +677,8 @@ useEffect(() => {
             sequence_number: cp.sequence_number,
             description: cp.description,
             time_stamp: reachedTime,
-            status: 'completed'
+            status: 'completed',
+            over_speed: overspeedCountRef.current // ✅ Store overspeed count for accurate retry syncing
           });
           
           syncCheckpointToServer(cp.checkpoint_id);
@@ -1483,6 +1549,9 @@ useEffect(() => {
 
   return (
     <View style={styles.container}>
+      {/* ✅ Keep screen awake - prevents mobile lock */}
+      <KeepAwake />
+      
       {/* Top Left Info Bar */}
       <View style={styles.infoBar}>
         <Text style={[
@@ -2070,7 +2139,8 @@ useEffect(() => {
                   sequence_number: cpObj?.sequence_number || '',
                   description: cpObj?.description || '',
                   time_stamp: reachedTime,
-                  status: 'completed'
+                  status: 'completed',
+                  over_speed: overspeedCountRef.current // ✅ Store overspeed count for test mode too
                 });
                 markSynced(cp.checkpoint_id, event_id, cp.checkpoint_id);
                 checkSyncStatus( event_id, selectedCheckpointId);

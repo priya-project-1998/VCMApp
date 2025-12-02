@@ -18,8 +18,9 @@ export const createTables = () => {
         sequence_number TEXT,
         description TEXT,
         synced INTEGER,
-        time_stamp TEXT, // new column
-        status TEXT // new column
+        time_stamp TEXT,
+        status TEXT,
+        over_speed INTEGER DEFAULT 0
       );`
     );
   });
@@ -38,8 +39,8 @@ export const saveCheckpoint = (checkpoint) => {
           // Checkpoint doesn't exist, insert new record
           tx.executeSql(
             `INSERT INTO checkpoints (
-              event_id, category_id, checkpoint_id, checkpoint_name, checkpoint_point, latitude, longitude, sequence_number, description, synced, time_stamp, status
-            ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)`,
+              event_id, category_id, checkpoint_id, checkpoint_name, checkpoint_point, latitude, longitude, sequence_number, description, synced, time_stamp, status, over_speed
+            ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)`,
             [
               checkpoint.event_id,
               checkpoint.category_id,
@@ -52,7 +53,8 @@ export const saveCheckpoint = (checkpoint) => {
               checkpoint.description,
               0,
               checkpoint.time_stamp || '',
-              checkpoint.status || 'not completed'
+              checkpoint.status || 'not completed',
+              checkpoint.over_speed || 0
             ]
           );
         } else {
@@ -63,21 +65,49 @@ export const saveCheckpoint = (checkpoint) => {
   });
 };
 
-// ✅ Pending (unsynced) checkpoints fetch karo
-export const getPendingCheckpoints = (callback) => {
-  db.transaction(tx => {
-    tx.executeSql(
-      `SELECT * FROM checkpoints WHERE synced = 0`,
-      [],
-      (txObj, { rows: { _array } }) => callback(_array)
-    );
+// ✅ Pending (unsynced) checkpoints fetch karo - Promise-based
+export const getPendingCheckpoints = () => {
+  return new Promise((resolve, reject) => {
+    db.transaction(tx => {
+      tx.executeSql(
+        `SELECT * FROM checkpoints WHERE synced = 0`,
+        [],
+        (txObj, { rows }) => {
+          const result = [];
+          for (let i = 0; i < rows.length; i++) {
+            result.push(rows.item(i));
+          }
+          resolve(result);
+        },
+        (error) => {
+          console.error('Error fetching pending checkpoints:', error);
+          reject(error);
+        }
+      );
+    });
   });
 };
 
-// ✅ Checkpoint ko synced mark karo
-export const markSynced = (id) => {
+// ✅ Checkpoint ko synced mark karo - supports both id and checkpoint_id+event_id
+export const markSynced = (id, event_id = null, checkpoint_id = null) => {
   db.transaction(tx => {
-    tx.executeSql(`UPDATE checkpoints SET synced = 1 WHERE id = ?`, [id]);
+    if (event_id && checkpoint_id) {
+      // Mark by checkpoint_id and event_id (more reliable for retry logic)
+      tx.executeSql(
+        `UPDATE checkpoints SET synced = 1 WHERE checkpoint_id = ? AND event_id = ?`,
+        [checkpoint_id, event_id],
+        () => console.log(`✅ Checkpoint ${checkpoint_id} marked as synced`),
+        (error) => console.error('Error marking checkpoint as synced:', error)
+      );
+    } else {
+      // Mark by id (legacy support)
+      tx.executeSql(
+        `UPDATE checkpoints SET synced = 1 WHERE id = ?`,
+        [id],
+        () => console.log(`✅ Checkpoint with id ${id} marked as synced`),
+        (error) => console.error('Error marking checkpoint as synced:', error)
+      );
+    }
   });
 };
 
