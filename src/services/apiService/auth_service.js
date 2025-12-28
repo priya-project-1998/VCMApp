@@ -88,6 +88,32 @@ const AuthService = {
       return new ApiResponse("error", 500, error.message, null);
     }
   },
+
+  deleteAccount: async () => {
+    try {
+      const token = await AsyncStorage.getItem("authToken");
+      const headers = {
+        Authorization: `Bearer ${token}`,
+        "Content-Type": "application/json",
+      };
+      const body = JSON.stringify({ confirm: true });
+
+      const response = await fetch("https://rajasthanmotorsports.com/api/account/delete", {
+        method: "POST",
+        headers,
+        body,
+      });
+
+      if (response.ok) {
+        return { status: 200, message: "Account deleted successfully" };
+      } else {
+        const errorData = await response.json();
+        return { status: response.status, message: errorData.message || "Failed to delete account" };
+      }
+    } catch (error) {
+      return { status: 500, message: error.message || "An error occurred" };
+    }
+  },
 };
 
 export default AuthService;
